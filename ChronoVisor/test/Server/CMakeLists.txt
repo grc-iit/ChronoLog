@@ -1,0 +1,6 @@
+add_executable(chronovisorserver_test chronovisorserver_test.cpp)
+target_include_directories(chronovisorserver_test PRIVATE ${ChronoVisor_SOURCE_SIR}/include)
+target_link_libraries(chronovisorserver_test ChronoVisor_lib)
+add_dependencies(chronovisorserver_test ChronoVisor_lib)
+
+add_test(NAME chronovisorserver_test COMMAND chronovisorserver_test)

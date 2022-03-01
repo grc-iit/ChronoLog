@@ -1,0 +1,2 @@
+add_executable(high_res_clock_test high_res_clock_test.cpp)
+add_test(NAME HighResClock COMMAND high_res_clock_test)

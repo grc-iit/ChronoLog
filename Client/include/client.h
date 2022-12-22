@@ -10,7 +10,11 @@
 
 class ChronoLogClient {
 public:
-    ChronoLogClient() { CHRONOLOG_CONF->ConfigureDefaultClient("../../test/communication/server_list"); }
+    ChronoLogClient() //{ CHRONOLOG_CONF->ConfigureDefaultClient("../../test/communication/server_list"); }
+    {
+	CHRONOLOG_CONF->IS_SERVER = false;
+	adminRpcProxy_ = ChronoLog::Singleton<ChronoLogAdminRPCProxy>::GetInstance();
+     }
 
     ChronoLogClient(const std::string& server_list_file_path) {
         CHRONOLOG_CONF->ConfigureDefaultClient(server_list_file_path);

@@ -11,8 +11,6 @@
 #include <fstream>
 #include <sstream>
 
-#define NUM_CONNECTION (1)
-
 int main() 
 {
 
@@ -29,30 +27,22 @@ int main()
     std::cin >> portnum;
     int portno = std::stoi(portnum);
 
-    ChronoLogClient client(filename);
-    
-    std::string conn = "://";
-    std::string server_uri = CHRONOLOG_CONF->SOCKETS_CONF.string() + 
-	    	            conn +CHRONOLOG_CONF->RPC_SERVER_IP.string()+":"+
-			    std::to_string(CHRONOLOG_CONF->RPC_BASE_SERVER_PORT);
+    ChronoLogClient client;
 
-    std::vector<std::string> client_ids;
+    std::string conf = "ofi+sockets";    
+    std::string conn = "://";
+    std::string server_uri = conf + conn + hostname+":"+std::to_string(portno);
+
     int flags = 0;
     bool ret = false;
 
-    client_ids.reserve(NUM_CONNECTION);
-    for (int i = 0; i < NUM_CONNECTION; i++) client_ids.emplace_back(gen_random(8));
-    for (int i = 0; i < NUM_CONNECTION; i++) 
-    {
-        ret = client.Connect(server_uri, client_ids[i]);
-    }
+    std::string client_id = gen_random(8);
+
+    ret = client.Connect(server_uri, client_id);
 
     std::cout <<" connected to server address : "<<server_uri<<std::endl;
 
-    for (int i = 0; i < NUM_CONNECTION; i++) 
-    {
-        ret = client.Disconnect(client_ids[i], flags);
-    };
+    ret = client.Disconnect(client_id, flags);
 
     return 0;
 }

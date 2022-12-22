@@ -30,7 +30,7 @@ add_library(ChronoLogClient_lib STATIC
 target_include_directories(ChronoLogClient_lib PUBLIC include
         ../ChronoAPI/ChronoLog/include
         ../ChronoVisor/include)
-target_link_libraries(ChronoLogClient_lib thallium hcl)
+target_link_libraries(ChronoLogClient_lib thallium)
 
 #add_executable(ChronoLogClient main.cpp)
 #target_link_libraries(ChronoLogClient ChronoLogClient_lib)

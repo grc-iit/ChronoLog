@@ -29,7 +29,6 @@ int main()
     std::cin >> portnum;
     int portno = std::stoi(portnum);
 
-    std::cout <<" timeout = "<<HG_TIMEOUT<<std::endl;
     ChronoLogClient client(filename);
     
     std::string conn = "://";

@@ -36,7 +36,7 @@ target_link_libraries(ChronoLogClient_lib thallium hcl)
 #target_link_libraries(ChronoLogClient ChronoLogClient_lib)
 #add_dependencies(ChronoLogClient ChronoLogClient_lib)
 
-add_subdirectory(ClientAdmin)
+add_subdirectory(ChronoAdmin)
 
 if(BUILD_TESTING)
     enable_testing()

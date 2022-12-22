@@ -9,19 +9,25 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #define NUM_CONNECTION (1)
 
 int main() 
 {
 
-    std::string hostname = "localhost:1200";
+    std::string hostname;
+    std::string portnum;
     std::string filename = "server_list";
 
-    std::ofstream fs(filename,std::ios_base::out);
-    fs << hostname;
+    std::stringstream ss;
 
-    fs.close();
+    std::cout <<" Enter server hostname : "<<std::endl;
+    std::cin >> hostname;
+
+    std::cout <<" Enter server portnumber : "<<std::endl;
+    std::cin >> portnum;
+    int portno = std::stoi(portnum);
 
     ChronoLogClient client(filename);
     
@@ -40,6 +46,8 @@ int main()
     {
         ret = client.Connect(server_uri, client_ids[i]);
     }
+
+    std::cout <<" connected to server address : "<<server_uri<<std::endl;
 
     for (int i = 0; i < NUM_CONNECTION; i++) 
     {

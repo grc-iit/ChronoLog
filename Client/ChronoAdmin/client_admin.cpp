@@ -21,10 +21,10 @@ int main()
 
     std::stringstream ss;
 
-    std::cout <<" Enter server hostname : "<<std::endl;
+    std::cout <<" Enter server hostname (localhost) : "<<std::endl;
     std::cin >> hostname;
 
-    std::cout <<" Enter server portnumber : "<<std::endl;
+    std::cout <<" Enter server portnumber (5555) : "<<std::endl;
     std::cin >> portnum;
     int portno = std::stoi(portnum);
     char ip_add[16];

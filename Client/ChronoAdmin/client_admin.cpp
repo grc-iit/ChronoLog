@@ -3,12 +3,14 @@
 //
 
 #include <client.h>
-#include <log.h>
 #include <common.h>
 #include <cassert>
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string>
 
 int main() 
 {
@@ -25,12 +27,19 @@ int main()
     std::cout <<" Enter server portnumber : "<<std::endl;
     std::cin >> portnum;
     int portno = std::stoi(portnum);
+    char ip_add[16];
+    std::string host_ip;
+
+    struct hostent *he = gethostbyname(hostname.c_str());
+    in_addr **addr_list = (struct in_addr **) he->h_addr_list;
+    strcpy(ip_add, inet_ntoa(*addr_list[0]));
+    host_ip = std::string(ip_add);
 
     ChronoLogClient client;
 
     std::string conf = "ofi+sockets";    
     std::string conn = "://";
-    std::string server_uri = conf + conn + hostname+":"+std::to_string(portno);
+    std::string server_uri = conf + conn + host_ip + ":" + std::to_string(portno);
 
     int flags = 0;
     bool ret = false;

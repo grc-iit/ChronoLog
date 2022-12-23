@@ -3,7 +3,6 @@
 //
 
 #include <client.h>
-#include <global_var_client.h>
 #include <log.h>
 #include <common.h>
 #include <cassert>

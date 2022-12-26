@@ -34,6 +34,11 @@ int main()
     std::string host_ip;
 
     struct hostent *he = gethostbyname(hostname.c_str());
+    if(he == 0) 
+    {
+	std::cout <<" hostname not found, Exiting"<<std::endl;
+	exit(-1);
+    }
     in_addr **addr_list = (struct in_addr **) he->h_addr_list;
     strcpy(ip_add, inet_ntoa(*addr_list[0]));
     host_ip = std::string(ip_add);

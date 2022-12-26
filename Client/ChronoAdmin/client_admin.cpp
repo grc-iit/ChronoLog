@@ -18,8 +18,11 @@ int main()
     std::string hostname;
     std::string portnum;
     std::string filename = "server_list";
+    std::string protocol = "ofi";
+    std::string provider; 
 
-    std::stringstream ss;
+    std::cout <<" Enter protocol (ofi provider), choose from tcp, sockets, shm, udp "<<std::endl;
+    std::cin >> provider;
 
     std::cout <<" Enter server hostname (localhost) : "<<std::endl;
     std::cin >> hostname;
@@ -35,9 +38,16 @@ int main()
     strcpy(ip_add, inet_ntoa(*addr_list[0]));
     host_ip = std::string(ip_add);
 
+    ChronoLogCharStruct host_ip_struct(host_ip);
+    ChronoLogCharStruct socket_struct(protocol+"+"+provider);
+
+    CHRONOLOG_CONF->SOCKETS_CONF = socket_struct;
+    CHRONOLOG_CONF->RPC_SERVER_IP = host_ip_struct;
+    CHRONOLOG_CONF->RPC_BASE_SERVER_PORT = portno;
+
     ChronoLogClient client;
 
-    std::string conf = "ofi+sockets";    
+    std::string conf = protocol + "+"+ provider;    
     std::string conn = "://";
     std::string server_uri = conf + conn + host_ip + ":" + std::to_string(portno);
 

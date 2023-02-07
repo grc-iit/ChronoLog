@@ -1,1 +1,0 @@
-cmd_/home/aparna/Desktop/ChronoLog/test/overhead/kmod/Module.symvers := sed 's/\.ko$$/\.o/' /home/aparna/Desktop/ChronoLog/test/overhead/kmod/modules.order | scripts/mod/modpost -m -a  -o /home/aparna/Desktop/ChronoLog/test/overhead/kmod/Module.symvers -e -i Module.symvers   -T -

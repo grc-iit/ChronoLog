@@ -1,1 +1,0 @@
-cmd_/home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.ko /home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.o /home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.mod.o;  true

@@ -1,0 +1,1 @@
+cmd_/home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.mod := { echo  /home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.o;  echo; } > /home/aparna/Desktop/ChronoLog/test/overhead/kmod/kmod_rdtsc_rdtscp.mod

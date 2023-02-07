@@ -72,35 +72,12 @@ option(CHRONOLOG_ENABLE_DOXYGEN "Enable Doxygen documentation generation." OFF)
 # TODO Should we consider the posibility of a user passing their own fflags through CMAKE_CXX_FLAGS
 #   Encapsulate everything around if(NOT CMAKE_CXX_FLAGS)
 #   Check Hermes for hwo they delete flags automatically
-#if(SET_WERROR)
-#    add_compile_options(-Wall)
-#    add_compile_options(-Wextra)
-#    add_compile_options(-Werror)
-#else()
-#    add_compile_options(-Wall)
-#    add_compile_options(-Wextra)
-#endif()
 
 # Change some compilation flags depending on the build type
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Compiling ChronoLog in Debug Mode")
 #    add_compile_options(-g3)
     add_compile_options(-O0)
-    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -O0 -g")
-
-    #if (HERMES_USE_ADDRESS_SANITIZER)
-    #    add_compile_options(-fsanitize=address)
-    #endif()
-
-    #if (HERMES_USE_THREAD_SANITIZER)
-    #    add_compile_options(-fsanitize=thread)
-    #endif()
-
-    #if (HERMES_USE_THREAD_SANITIZER AND HERMES_USE_ADDRESS_SANITIZER)
-    #    message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
-    #            "at the same time")
-    #endif()
 else()    
     message("Compiling ChronoLog in release Mode")
     add_compile_options(-O3 -lm)
@@ -133,13 +110,6 @@ endif()
 find_package(MPI REQUIRED COMPONENTS CXX)
 find_package(Boost REQUIRED)
 find_package(Thallium REQUIRED)
-#find_library(ROCKSDB_LIB rocksdb)
-#if(NOT ROCKSDB_LIB)
-#    message(FATAL_ERROR "rocksdb is required")
-#else()
-#    find_path(ROCKDSB_INCLUDE rocksdb)
-#    MESSAGE(STATUS "Found rocksdb at: ${ROCKSDB_INCLUDE}")
-#endif()
 #-----------------------------------------------------------------------------
 # Coverage
 #-----------------------------------------------------------------------------

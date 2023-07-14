@@ -27,7 +27,34 @@ int KeeperRegistry::InitializeRegistryService(uint16_t service_provider_id)
     keeperRegistryService =
 	    KeeperRegistryService::CreateKeeperRegistryService(registryEngine,service_provider_id, *this);
 
+<<<<<<< HEAD:ChronoKeeper/KeeperRegistryInstance.cpp
     registryState = INITIALIZED;
+=======
+        uint16_t provider_id = confManager.RPC_CONF.VISOR_KEEPER_CONF.VISOR_END_CONF.SERVICE_PROVIDER_ID;
+
+        margo_instance_id margo_id=margo_init(KEEPER_REGISTRY_SERVICE_NA_STRING.c_str(), MARGO_SERVER_MODE, 1, 2);
+
+        if(MARGO_INSTANCE_NULL == margo_id)
+        {  
+             std::cout<<"KeeperRegistryService: Failed to initialize margo_instance"<<std::endl;
+             return -1;
+         }
+         std::cout<<"KeeperRegistryService:margo_instance initialized with NA_STRING"
+             << "{"<<KEEPER_REGISTRY_SERVICE_NA_STRING<<"}" <<std::endl;
+
+        registryEngine =  new tl::engine(margo_id);
+ 
+        std::cout << "Starting KeeperRegistryService  at address " << registryEngine->self()
+        << " with provider id " << provider_id << std::endl;
+
+
+
+        keeperRegistryService =
+	    KeeperRegistryService::CreateKeeperRegistryService(*registryEngine, provider_id, *this);
+
+        registryState = INITIALIZED;
+    }
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4:ChronoVisor/src/KeeperRegistry.cpp
     return 1;
 
 }

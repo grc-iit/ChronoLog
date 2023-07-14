@@ -45,6 +45,7 @@ int main() {
         std::string attr = std::string("Priority=High");
         std::unordered_map<std::string, std::string> chronicle_attrs;
         chronicle_attrs.emplace("Priority", "High");
+        chronicle_attrs.emplace("Date", "2023-01-15");
         chronicle_attrs.emplace("IndexGranularity", "Millisecond");
         chronicle_attrs.emplace("TieringPolicy", "Hot");
         t1 = std::chrono::steady_clock::now();
@@ -68,7 +69,12 @@ int main() {
         t1 = std::chrono::steady_clock::now();
         ret = client.EditChronicleAttr(chronicle_names[i], key, "2023-01-15");
         t2 = std::chrono::steady_clock::now();
+<<<<<<< HEAD
         //ASSERT(ret, ==, CL_SUCCESS);
+=======
+        //FIXME:  is not working, the following assert will fail
+        //assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4
         duration_edit_chronicle_attr += (t2 - t1);
 
         std::vector<std::string> story_names;
@@ -84,6 +90,7 @@ int main() {
             t1 = std::chrono::steady_clock::now();
             ret = client.AcquireStory(chronicle_names[i], story_names[j], story_attrs, flags);
             t2 = std::chrono::steady_clock::now();
+<<<<<<< HEAD
             ASSERT(ret, ==, CL_SUCCESS);
             duration_acquire_story += (t2 - t1);
         }
@@ -96,6 +103,24 @@ int main() {
         std::vector<std::string> story_names_sorted = story_names;
         std::sort(story_names_sorted.begin(), story_names_sorted.end());
         assert(stories_names_retrieved == story_names_sorted);
+=======
+            assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
+            duration_acquire_story += (t2 - t1);
+        }
+
+        ret = client.Disconnect(); //client_id, flags);
+        assert(ret == CL_ERR_NO_KEEPERS || ret == CL_ERR_ACQUIRED);
+
+        t1 = std::chrono::steady_clock::now();
+        std::vector<std::string> stories_names_retrieved;
+        client.ShowStories( chronicle_names[i], stories_names_retrieved);
+        t2 = std::chrono::steady_clock::now();
+        duration_show_stories += (t2 - t1);
+        //std::sort(stories_names_retrieved.begin(), stories_names_retrieved.end());
+        //std::vector<std::string> story_names_sorted = story_names;
+        //std::sort(story_names_sorted.begin(), story_names_sorted.end());
+        //assert(stories_names_retrieved == story_names_sorted);
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4
 
         for (int j = 0; j < NUM_STORY; j++) {
             flags = 4;
@@ -119,7 +144,11 @@ int main() {
         t1 = std::chrono::steady_clock::now();
         ret = client.GetChronicleAttr(chronicle_names[i], key, value);
         t2 = std::chrono::steady_clock::now();
+<<<<<<< HEAD
         //ASSERT(ret, ==, CL_SUCCESS);
+=======
+        //FIXME:assert(ret == CL_SUCCESS);
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4
         //FIXME: returning data using parameter is not working, the following assert will fail
         //ASSERT(value, ==, "2023-01-15");
         duration_get_chronicle_attr += (t2 - t1);

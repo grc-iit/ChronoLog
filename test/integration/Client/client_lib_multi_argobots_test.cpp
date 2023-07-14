@@ -27,6 +27,7 @@ void thread_function(void *tt)
 	std::string server_uri = CHRONOLOG_CONF->SOCKETS_CONF.string();
 	server_uri += "://"+server_ip+":"+std::to_string(base_port);*/
     int flags = 0;
+<<<<<<< HEAD
 	uint64_t offset;
 	int ret;
 	std::string chronicle_name;
@@ -48,6 +49,44 @@ void thread_function(void *tt)
         ret = client->ReleaseStory(chronicle_name,story_name,flags);
 	ret = client->DestroyStory(chronicle_name,story_name,flags);
 	ret = client->DestroyChronicle(chronicle_name,flags);
+=======
+    uint64_t offset;
+    int ret;
+    std::string chronicle_name;
+    if (t->tid % 2 == 0) chronicle_name = "Chronicle_1";
+    else chronicle_name = "Chronicle_2";
+    std::unordered_map<std::string, std::string> chronicle_attrs;
+    chronicle_attrs.emplace("Priority", "High");
+    chronicle_attrs.emplace("IndexGranularity", "Millisecond");
+    chronicle_attrs.emplace("TieringPolicy", "Hot");
+    ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
+    std::cout << "tid="<<t->tid<<" Createchronicle {"<<chronicle_name<<"} ret: " << ret << std::endl;
+    assert(ret == CL_SUCCESS || ret == CL_ERR_CHRONICLE_EXISTS || ret == CL_ERR_NO_KEEPERS);
+    flags = 1;
+    std::string story_name = gen_random(STORY_NAME_LEN);
+    std::unordered_map<std::string, std::string> story_attrs;
+    story_attrs.emplace("Priority", "High");
+    story_attrs.emplace("IndexGranularity", "Millisecond");
+    story_attrs.emplace("TieringPolicy", "Hot");
+    flags = 2;
+    auto acquire_ret= client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
+    std::cout << "tid="<<t->tid<<" AcquireStory {"<<chronicle_name<<":"<<story_name<<"} ret: " << acquire_ret.first << std::endl;
+    assert(acquire_ret.first == CL_SUCCESS || acquire_ret.first == CL_ERR_NOT_EXIST || acquire_ret.first == CL_ERR_NO_KEEPERS);
+    ret = client->DestroyStory(chronicle_name, story_name);
+    std::cout << "tid="<<t->tid<<" DestroyStory {"<<chronicle_name<<":"<<story_name<<"} ret: " << ret<< std::endl;
+    assert(ret == CL_ERR_ACQUIRED || ret==CL_SUCCESS || ret==CL_ERR_NOT_EXIST || ret==CL_ERR_NO_KEEPERS);
+    ret = client->Disconnect();
+    std::cout <<"tid="<<t->tid<< " Disconnect{"<<"} ret: " << ret << std::endl;
+    assert(ret == CL_ERR_ACQUIRED || ret==CL_SUCCESS);
+    ret = client->ReleaseStory(chronicle_name, story_name);
+    std::cout << "tid="<<t->tid<<" ReleaseStory {"<<chronicle_name<<":"<<story_name<<"} ret: " << ret<< std::endl;
+    assert(ret == CL_SUCCESS || ret==CL_ERR_NO_KEEPERS || ret == CL_ERR_NOT_EXIST );
+     ret = client->DestroyStory(chronicle_name, story_name);
+    std::cout << "tid="<<t->tid<<" DestroyStory {"<<chronicle_name<<":"<<story_name<<"} ret: " << ret<< std::endl;
+    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED || ret == CL_ERR_NO_KEEPERS);
+    ret = client->DestroyChronicle(chronicle_name);
+    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED);
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4
 }
 
 int main(int argc,char **argv) {
@@ -116,7 +155,13 @@ int main(int argc,char **argv) {
    free(threads);
    free(t_args);
 
+<<<<<<< HEAD
    ret = client->Disconnect(client_id,flags);
+=======
+    ret = client->Disconnect();//client_id, flags);
+    std::cout << "main Disconnect ret: " << ret << std::endl;
+    assert(ret == CL_SUCCESS);
+>>>>>>> 105df6b6cebb07312cf919ade4bb90c617fa51f4
 
    delete client;
 

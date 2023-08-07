@@ -7,11 +7,12 @@ bool compare_fn(struct event &e1, struct event &e2)
     return e1.ts <= e2.ts;
 }
 
-void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v)
+void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v,event_metadata &em)
 {
 
+  int datasize = em.get_datasize();
   MPI_Datatype value_field;
-  MPI_Type_contiguous(VALUESIZE,MPI_CHAR,&value_field);
+  MPI_Type_contiguous(datasize,MPI_CHAR,&value_field);
   MPI_Type_commit(&value_field);
 
   struct event e;
@@ -63,7 +64,8 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
 
    splitter_counts_l[myrank] = mysplitters.size();
 
-   MPI_Request *reqs = (MPI_Request *)std::malloc(3*numprocs*sizeof(MPI_Request));
+   MPI_Request *reqs = new MPI_Request[3*numprocs];
+   assert(reqs != nullptr);
 
    int nreq = 0;
    for(int i=0;i<numprocs;i++)
@@ -154,8 +156,7 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
    std::vector<int> event_count(numprocs);
    std::fill(event_count.begin(),event_count.end(),0);
 
-   int datasize = VALUESIZE;
-   int keyvaluesize = sizeof(uint64_t)+VALUESIZE;
+   int keyvaluesize = sizeof(uint64_t)+datasize;
    for(int i=0;i<size;i++)
    {
 	int dest = -1;
@@ -224,8 +225,8 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
 	std::memcpy(&send_buffer[p],&((*events[index])[i].ts),sizeof(uint64_t));
 	uint64_t sts = *(uint64_t*)(&(send_buffer[p]));
 	p+=sizeof(uint64_t);
-	std::memcpy(&send_buffer[p],(*events[index])[i].data,VALUESIZE);
-	p+=VALUESIZE;
+	std::memcpy(&send_buffer[p],(*events[index])[i].data,datasize);
+	p+=datasize;
 	send_displ[dest]+=keyvaluesize;
    }
    
@@ -256,8 +257,14 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
    MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
    events[index]->clear();
-
-   data[index]->resize(total_recv_size*VALUESIZE);
+   try
+   {
+     data[index]->resize(total_recv_size*datasize);
+   }
+   catch(const std::exception &except)
+   {
+	std::cout<<except.what()<<std::endl;
+   }
 
    int k=0;
    for(int i=0;i<numprocs;i++)
@@ -268,10 +275,10 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
 	        uint64_t ts = *(uint64_t*)(&(recv_buffer[p]));
 		p += sizeof(uint64_t);
 		int q = k+c; 
-		std::memcpy(&((*data[index])[q*VALUESIZE]),&recv_buffer[p],VALUESIZE);
+		std::memcpy(&((*data[index])[q*datasize]),&recv_buffer[p],datasize);
 		struct event e;
 		e.ts = ts;
-		e.data = &((*data[index])[q*VALUESIZE]);
+		e.data = &((*data[index])[q*datasize]);
 		events[index]->push_back(e);
 	   }
 	   k+=recv_counts[i];
@@ -319,6 +326,6 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
 
    MPI_Type_free(&key_value);
    MPI_Type_free(&value_field);
- 
-   free(reqs); 
+
+   delete reqs; 
 }

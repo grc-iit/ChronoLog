@@ -1,6 +1,7 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
+#include "mds.h"
 #include "rw.h"
 #include <unistd.h>
 #include <netdb.h>

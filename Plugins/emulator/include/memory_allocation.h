@@ -21,7 +21,7 @@ struct node
 {
    KeyT key;
    ValueT value;
-   struct node*next;
+   struct node<KeyT,ValueT,HashFcn,EqualFcn> *next;
 };
 
 
@@ -47,7 +47,7 @@ class memory_pool
 	     memory_chunks = new boost::lockfree::queue<node_type*> (1024);
 	     active_queue = new boost::lockfree::queue<node_type*> (1024);
 	     assert (memory_chunks != nullptr && active_queue != nullptr);
-	     node_type *chunk = (node_type *)std::malloc(chunk_size*sizeof(node_type));
+	     node_type *chunk = (node_type*)std::malloc(chunk_size*sizeof(node_type));
 	     assert (chunk != nullptr);
 	     for(uint32_t i=0;i<chunk_size;i++)
 	     {
@@ -65,10 +65,13 @@ class memory_pool
 	 {
 		int n = 0;
 		node_type *chunk = nullptr;
-		while(memory_chunks->pop(chunk))
+		while(!memory_chunks->empty())
 		{
-		   n++;
-		   std::free(chunk);
+		   chunk = nullptr;
+		   if(memory_chunks->pop(chunk))
+		   {
+		      std::free(chunk);
+		   }
 		}
 		delete memory_chunks;
 		delete active_queue;

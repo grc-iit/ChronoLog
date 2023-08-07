@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include "event_metadata.h"
 
 class dsort
 {
@@ -39,7 +40,7 @@ class dsort
 	       data[index] = inp_d;
 	   }
 
-	   void sort_data(int,int,int,uint64_t&,uint64_t&);
+	   void sort_data(int,int,int,uint64_t&,uint64_t&,event_metadata &);
 
 	   std::vector<struct event> * get_sorted_data(int index)
 	   {

@@ -30,6 +30,7 @@
 #include "distributed_map.h"
 #include "event.h"
 #include "ClockSync.h" 
+#include "event_metadata.h"
 
 namespace tl=thallium;
 
@@ -62,6 +63,7 @@ class databuffers
 	 for(int i=0;i<atomicbuffers.size();i++)
 	 {
 		 delete atomicbuffers[i]->buffer;
+		 delete atomicbuffers[i]->datamem;
 		 delete atomicbuffers[i];
 	 }
      }
@@ -92,7 +94,7 @@ class databuffers
   void clear_write_buffer(int index);
   void clear_write_buffer_no_lock(int index);
   void set_valid_range(int index,uint64_t &n1,uint64_t &n2);
-  bool add_event(event &e,int index);
+  bool add_event(event &e,int index,event_metadata&);
   std::vector<struct event> * get_write_buffer(int index);
   atomic_buffer* get_atomic_buffer(int index);
 

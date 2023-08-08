@@ -179,7 +179,15 @@ public:
 	      p2.second.second = em;
 	      write_names.insert(p2);
 	      ds->create_sort_buffer();
-	      nm->create_nvme_buffer(s,em);
+	      try
+	      {
+	         nm->create_nvme_buffer(s,em);
+	      }
+	      catch(const std::exception &except)
+	      {
+		std::cout <<except.what()<<std::endl;
+		exit(-1);
+	      }
 	      num_dropped.push_back(0);
 	      batch_size.push_back(maxsize);
 	    }
@@ -240,15 +248,14 @@ public:
 	    int pid = dm->GetValue(ts,index);
 	    return pid;
 	}
-	int get_nvme_proc(int index,uint64_t ts)
+	int get_nvme_proc(std::string &s,uint64_t ts)
 	{
-	   int index_r = nm->get_proc(index,ts);
+	   int index_r = nm->get_proc(s,ts);
 	   return index_r;
 	}
 	void find_nvme_event(std::string &s,uint64_t ts, struct event &e)
 	{
-	    int index = nm->buffer_index(s);
-	    nm->find_event(index,ts,e); 
+	    nm->find_event(s,ts,e); 
 	}
 	void get_nvme_buffer(std::vector<struct event> *buffer1,std::vector<struct event> *buffer2,std::string &s,int tag)
 	{

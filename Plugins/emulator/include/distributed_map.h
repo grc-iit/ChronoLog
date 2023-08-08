@@ -166,14 +166,22 @@ class distributed_hashmap
    }
    bool LocalInsert(KeyT &k,ValueT &v,int index)
   {
-      if(!CM->NearTime(k) || !(k>=range[index].first && k <= range[index].second))
+      try
       {
+        if(!CM->NearTime(k) || !(k>=range[index].first && k <= range[index].second))
+        {
 	   dropped_events.fetch_add(1);
 	   return false;
+        }
+        uint32_t b = my_tables[index]->insert(k,v);
+        if(b == INSERTED) return true;
+        else return false;
       }
-      uint32_t b = my_tables[index]->insert(k,v);
-      if(b == INSERTED) return true;
-      else return false;
+      catch(const std::exception& except)
+      {
+	std::cout<<except.what()<<std::endl;
+	exit(-1);
+      }
   }
   bool LocalFind(KeyT &k,int index)
   {

@@ -53,6 +53,7 @@ void read_write_process::create_events(int num_events,std::string &s,double arri
     catch(const std::exception &except)
     {
 	std::cout <<except.what()<<std::endl;
+	exit(-1);
     }
 
     int num_dropped = 0;
@@ -77,10 +78,21 @@ void read_write_process::sort_events(std::string &s)
 {
       m1.lock();
       auto r = write_names.find(s);
-      int index = (r->second).first;
-      event_metadata em = (r->second).second;
+      int index = -1;
+      event_metadata em;
+      if(r != write_names.end())
+      {
+        index = (r->second).first;
+        em = (r->second).second;
+      }
       m1.unlock();
       int nm_index = nm->buffer_index(s);
+
+      if(index == -1 || nm_index == -1)
+      {
+	throw std::runtime_error("write stream or nvme file does not exist");
+      }
+
       while(nm->get_buffer(nm_index,nm_index,1)==false);
       
       boost::upgrade_lock<boost::shared_mutex> lk1(myevents[index]->m);
@@ -254,6 +266,7 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     std::vector<hid_t> dset_ids;
     std::vector<hid_t> type_ids;
     std::vector<event_metadata> metadata;
+    std::vector<int> valid_id;
 
     for(int i=0;i<sts.size();i++)
     {
@@ -268,6 +281,8 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     int datasize = em.get_datasize();
     int keyvaluesize = sizeof(uint64_t)+datasize;
     metadata.push_back(em);
+
+    if(data_arrays[i].second == nullptr || total_records[i]==0) continue;
 
     adims[0] = datasize;
     hid_t s1 = H5Tarray_create(H5T_NATIVE_CHAR,1,adims);
@@ -347,6 +362,7 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     H5Pclose(gapl);
     H5Fclose_async(fid,es_id);
     filespaces.push_back(file_dataspace);
+    valid_id.push_back(i);
     }
 
     int prefix = 0;
@@ -357,9 +373,10 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
         H5Sclose(filespaces[i]);
 	H5Tclose(type_ids[2*i]);
 	H5Tclose(type_ids[2*i+1]);
-	for(int j=0;j<bcounts[i];j++)
+	int id = valid_id[i];
+	for(int j=0;j<bcounts[id];j++)
         H5Sclose(memspaces[prefix+j]);
-	std::string filename = "file"+sts[i]+".h5";
+	std::string filename = "file"+sts[id]+".h5";
 	int ps = -1;
 	m1.lock();
 	auto r = std::find(file_names.begin(),file_names.end(),filename);
@@ -368,25 +385,30 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
         m1.unlock();
 	if(ps !=-1)
 	{
-	  (*file_interval)[ps].second.store(maxkeys[i]);
+	  (*file_interval)[ps].second.store(maxkeys[id]);
 	}
 
 	if(clear_nvme) 
 	{
-	   int nm_index = nm->buffer_index(sts[i]);
-	   int tag_p = 100;
-	   int keyvaluesize = sizeof(uint64_t)+metadata[i].get_datasize();
-	   while(nm->get_buffer(nm_index,tag_p,2)==false);
-	   nm->erase_from_nvme(sts[i],data_arrays[i].second->size()/keyvaluesize,bcounts[i]);
-	   nm->release_buffer(nm_index);
+	   int nm_index = nm->buffer_index(sts[id]);
+	   if(nm_index==-1)
+	   {
+		throw std::runtime_error("nvme file does not exist");
+	   }
+	   else
+	   {
+	     int tag_p = 100;
+	     int keyvaluesize = sizeof(uint64_t)+metadata[i].get_datasize();
+	     while(nm->get_buffer(nm_index,tag_p,2)==false);
+	     nm->erase_from_nvme(sts[id],data_arrays[id].second->size()/keyvaluesize,bcounts[id]);
+	     nm->release_buffer(nm_index);
+	   }
 	}
-	delete data_arrays[i].second;
-	prefix += bcounts[i];
+	if(data_arrays[id].second != nullptr) delete data_arrays[id].second;
+	prefix += bcounts[id];
     }
 
     H5Sclose(attr_space[0]);
-    //H5Tclose(s2);
-    //H5Tclose(s1);
     H5Pclose(async_fapl);
     H5Pclose(async_dxpl);
 
@@ -729,6 +751,16 @@ std::pair<std::vector<struct event>*,std::vector<char>*> read_write_process::cre
    std::fill(num_events_recorded.begin(),num_events_recorded.end(),0);
 
    auto r = write_names.find(s);
+
+   if(r==write_names.end()) 
+   {
+	throw std::runtime_error("stream does not exist"); 
+	std::pair<std::vector<struct event>*,std::vector<char>*> p;
+	p.first = nullptr;
+	p.second = nullptr;
+	return p;
+   }
+
    event_metadata em = (r->second).second;
    int datasize = em.get_datasize();
 
@@ -740,6 +772,14 @@ std::pair<std::vector<struct event>*,std::vector<char>*> read_write_process::cre
      int index;
      int tag_p = 100;
      int nm_index = nm->buffer_index(s);
+     if(nm_index == -1)
+     {
+	delete datamem;
+	throw std::runtime_error("nvme file does not exist");
+	std::pair<std::vector<struct event>*,std::vector<char>*> p;
+	p.first = nullptr; p.second = nullptr;
+	return p;
+     }
      while(nm->get_buffer(nm_index,tag_p,3)==false);
      nm->fetch_buffer(datamem,s,index,tag_p,nblocks,blockcounts);
      //nm->erase_from_nvme(s,data_array->size(),nblocks);
@@ -823,6 +863,7 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
   std::vector<hid_t> lists;
   std::vector<hid_t> type_ids;
   std::vector<event_metadata> metadata;
+  std::vector<int> valid_id;
 
   for(int i=0;i<sts.size();i++)
   {
@@ -834,6 +875,10 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
         maxdims[0] = (hsize_t)H5S_UNLIMITED;
 
 	auto r = write_names.find(sts[i]);
+	if(data_arrays[i].second==nullptr||total_records[i]==0)
+	{
+	    continue;
+	}
         event_metadata em = (r->second).second;
 	int datasize = em.get_datasize();
 	metadata.push_back(em);
@@ -912,21 +957,23 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
         H5Gclose_async(grp_id,es_id);
         H5Fclose_async(fid,es_id);
         event_ids.push_back(es_id);
+	valid_id.push_back(i);
     }
 
     int prefix = 0;
     for(int i=0;i<event_ids.size();i++)
     {
+	int id = valid_id[i];
         H5ESwait(event_ids[i],H5ES_WAIT_FOREVER,&num,&op_failed);
         H5ESclose(event_ids[i]);
 	H5Sclose(filespaces[i]);
-	for(int j=0;j<bcounts[i];j++)
+	for(int j=0;j<bcounts[id];j++)
 	{
            H5Sclose(memspaces[prefix+j]);
 	}
 	H5Tclose(type_ids[2*i]);
 	H5Tclose(type_ids[2*i+1]);
-	std::string filename = "file"+sts[i]+".h5";
+	std::string filename = "file"+sts[id]+".h5";
 	int ps = -1;
 	m1.lock();
         file_names.insert(filename);
@@ -934,25 +981,30 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 	m1.unlock();
 	if(ps!=-1)
 	{
-	  (*file_interval)[ps].first.store(minkeys[i]);
-	  (*file_interval)[ps].second.store(maxkeys[i]);
+	  (*file_interval)[ps].first.store(minkeys[id]);
+	  (*file_interval)[ps].second.store(maxkeys[id]);
 	}
 	if(clear_nvme) 
 	{
 	   int keyvaluesize = sizeof(uint64_t)+metadata[i].get_datasize();
-	   int nm_index = nm->buffer_index(sts[i]);
-	   int tag_p = 100;
-	   while(nm->get_buffer(nm_index,tag_p,2)==false);
-	   nm->erase_from_nvme(sts[i],data_arrays[i].second->size()/keyvaluesize,bcounts[i]);
-	   nm->release_buffer(nm_index);
+	   int nm_index = nm->buffer_index(sts[id]);
+	   if(nm_index == -1)
+	   {
+		throw std::runtime_error("nvme file does not exist");
+	   }
+	   else
+	   {
+	     int tag_p = 100;
+	     while(nm->get_buffer(nm_index,tag_p,2)==false);
+	     nm->erase_from_nvme(sts[id],data_arrays[id].second->size()/keyvaluesize,bcounts[id]);
+	     nm->release_buffer(nm_index);
+	   }
 	}
-	delete data_arrays[i].second;
-	prefix += bcounts[i];
+	if(data_arrays[id].second != nullptr) delete data_arrays[id].second;
+	prefix += bcounts[id];
     }
    
     H5Sclose(attr_space[0]);
-    //H5Tclose(s2);
-    //H5Tclose(s1);
     H5Pclose(async_fapl);
     H5Pclose(async_dxpl);
 
@@ -993,8 +1045,16 @@ void read_write_process::pwrite(std::vector<std::string>& sts,std::vector<hsize_
 	}
    }
 
-   pwrite_files(sts_n,trec_n,off_n,darray_n,minkeys_n,maxkeys_n,clear_nvme,bcounts,blockcounts);
-   pwrite_extend_files(sts_e,trec_e,off_e,darray_e,minkeys_e,maxkeys_e,clear_nvme,bcounts,blockcounts);
+   try
+   {
+      pwrite_files(sts_n,trec_n,off_n,darray_n,minkeys_n,maxkeys_n,clear_nvme,bcounts,blockcounts);
+      pwrite_extend_files(sts_e,trec_e,off_e,darray_e,minkeys_e,maxkeys_e,clear_nvme,bcounts,blockcounts);
+   }
+   catch(const std::exception &except)
+   {
+	std::cout <<except.what()<<std::endl;
+	exit(-1);
+   }
 
 }
 
@@ -1004,7 +1064,15 @@ void read_write_process::data_stream(struct thread_arg_w *t)
    for(int i=0;i<4;i++)
    {
         create_events(t->num_events,t->name,1);
-	sort_events(t->name);
+	try
+	{
+	   sort_events(t->name);
+	}
+	catch(const std::exception &except)
+	{
+	   std::cout <<except.what()<<std::endl;
+	   exit(-1);
+	}
    }
 
 }
@@ -1097,8 +1165,16 @@ void read_write_process::io_polling(struct thread_arg_w *t)
 	      uint64_t min_key,max_key;
 	      int nblocks;
 	      std::vector<std::vector<int>> blockc;
-	      std::pair<std::vector<struct event>*,std::vector<char>*> data_rp = 
-	      create_data_spaces(r->name,offset,trecords,min_key,max_key,true,nblocks,blockc);
+	      std::pair<std::vector<struct event>*,std::vector<char>*> data_rp;
+	      try
+	      {
+	         data_rp = create_data_spaces(r->name,offset,trecords,min_key,max_key,true,nblocks,blockc);
+	      }
+	      catch(const std::exception &except)
+	      {
+		std::cout <<except.what()<<std::endl;
+		exit(-1);
+	      }
               snames.push_back(r->name);
               total_records.push_back(trecords);
               offsets.push_back(offset);

@@ -17,6 +17,7 @@ atomic_buffer* databuffers::create_write_buffer(int maxsize)
      catch(const std::exception &except)
      {
 	std::cout <<except.what()<<std::endl;
+	exit(-1);
      }
      m1.lock();
      atomicbuffers.push_back(a);

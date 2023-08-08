@@ -193,25 +193,6 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
    for(int i=0;i<numprocs;i++)
 	   total_recv_size += recv_counts[i];
 
-   int total_records;
-
-   std::vector<int> recv_sizes(numprocs);
-   std::fill(recv_sizes.begin(),recv_sizes.end(),0);
-
-   nreq = 0;
-   for(int i=0;i<numprocs;i++)
-   {
-	MPI_Isend(&total_recv_size,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
-	nreq++;
-	MPI_Irecv(&recv_sizes[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
-	nreq++;
-   }
-
-   MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
-
-   total_records = 0;
-   for(int i=0;i<numprocs;i++) total_records += recv_sizes[i];
-
    std::vector<char> send_buffer;
    std::vector<char> recv_buffer;
 
@@ -264,6 +245,7 @@ void dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
    catch(const std::exception &except)
    {
 	std::cout<<except.what()<<std::endl;
+	exit(-1);
    }
 
    int k=0;

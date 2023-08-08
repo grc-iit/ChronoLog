@@ -72,29 +72,42 @@ int main(int argc,char **argv)
 
   }*/
 
-  int numstories = 1;
+  int numstories = 4;
   std::vector<std::string> story_names;
   std::vector<int> total_events;
 
-  int numattrs = (int)VALUESIZE/sizeof(double);
+  int numattrs1 = 100;
+  int numattrs2 = 200;
+  event_metadata em1,em2;
+  em1.set_numattrs(numattrs1);
+  em2.set_numattrs(numattrs2);
 
-  event_metadata em;
-  em.set_numattrs(numattrs);
-  for(int i=0;i<numattrs;i++)
+  for(int i=0;i<numattrs1;i++)
   {
     std::string a = "attr"+std::to_string(i);
-    int vsize = sizeof(double);
+    int vsize = sizeof(char);
     bool is_signed = false;
     bool is_big_endian = true; 
-    em.add_attr(a,vsize,is_signed,is_big_endian);
+    em1.add_attr(a,vsize,is_signed,is_big_endian);
+  }
+
+  for(int i=0;i<numattrs2;i++)
+  {
+     std::string a = "attr"+std::to_string(i);
+     int vsize = sizeof(char);
+     bool is_signed = false;
+     bool is_big_endian = true;
+     em2.add_attr(a,vsize,is_signed,is_big_endian);
   }
 
   for(int i=0;i<numstories;i++)
   {
 	std::string name = "table"+std::to_string(i+1);
 	story_names.push_back(name);
-	total_events.push_back(512);
-	np->prepare_service(name,em,512);
+	total_events.push_back(2048);
+	if(i%2==0)
+	np->prepare_service(name,em1,2048);
+	else np->prepare_service(name,em2,2048);
   }
 
 
@@ -102,7 +115,7 @@ int main(int argc,char **argv)
 
   int num_writer_threads = 4;
 
-  int nbatches = 2;
+  int nbatches = 20;
 
   t1 = std::chrono::high_resolution_clock::now();
 
@@ -112,6 +125,7 @@ int main(int argc,char **argv)
 
   //np->generate_queries(story_names);
 
+  
   np->end_sessions();
 
   t2 = std::chrono::high_resolution_clock::now();

@@ -16,7 +16,13 @@ void nvme_buffers::create_nvme_buffer(std::string &s,event_metadata &em)
           std::string vecname = fname+"MyEventVector";
 	  std::string vecdname = fname+"MyEventDataVector";
           MyEventVect *ev = mf->construct<MyEventVect> (vecname.c_str()) (allocator_e);
-	  MyEventDataVect *ed = mf->construct<MyEventDataVect> (vecdname.c_str()) (allocator_c); 
+	  MyEventDataVect *ed = mf->construct<MyEventDataVect> (vecdname.c_str()) (allocator_c);
+	 if(mf->find<MyEventVect>(vecname.c_str()).first != ev ||
+	    mf->find<MyEventDataVect>(vecdname.c_str()).first != ed)
+	 {
+		throw std::runtime_error("nvme memory not mapped");
+		return;
+	 } 
           boost::shared_mutex *m = new boost::shared_mutex();
           file_locks.push_back(m);
           nvme_ebufs.push_back(ev);
@@ -71,6 +77,7 @@ void nvme_buffers::copy_to_nvme(std::string &s,std::vector<struct event> *inp,in
     catch(const std::exception &except)
     {
 	std::cout <<except.what()<<std::endl;
+	exit(-1);
     }
 
     int p = psize;
@@ -128,8 +135,6 @@ void nvme_buffers::erase_from_nvme(std::string &s, int numevents,int nblocks)
       auto r = nvme_fnames.find(fname);
       event_metadata em = (r->second).second;
 
-      if(r==nvme_fnames.end()) return;
-
       int index = r->second.first;
 
       MyEventVect *ev = nvme_ebufs[index];
@@ -144,6 +149,7 @@ void nvme_buffers::erase_from_nvme(std::string &s, int numevents,int nblocks)
       catch(const std::exception &except)
       {
 	std::cout <<except.what()<<std::endl;
+	exit(-1);
       }
 
 
@@ -306,8 +312,10 @@ void nvme_buffers::release_buffer(int index)
 
 }
 
-int nvme_buffers::get_proc(int index,uint64_t ts)
+int nvme_buffers::get_proc(std::string &s,uint64_t ts)
 {
+   int index = buffer_index(s);
+
    int pid = -1;
 
    int prev_value=0;
@@ -335,8 +343,19 @@ int nvme_buffers::get_proc(int index,uint64_t ts)
 
 }
 
-void nvme_buffers::find_event(int index,uint64_t ts,struct event &e)
+void nvme_buffers::find_event(std::string &s,uint64_t ts,struct event &e)
 {
+
+   std::string fname = prefix+s;
+   auto r = nvme_fnames.find(fname);
+
+   int index = -1;
+   event_metadata em;
+   if(r != nvme_fnames.end())
+   {
+      index = (r->second).first;
+      em = (r->second).second;
+   }
 
    int prev_value = 0;
    int new_value = 4;
@@ -350,14 +369,14 @@ void nvme_buffers::find_event(int index,uint64_t ts,struct event &e)
    MyEventVect *ev = nvme_ebufs[index];
 
    e.ts = UINT64_MAX;
+   int datasize = em.get_datasize();
 
    for(int i=0;i<ev->size();i++)
    {
 	if((*ev)[i].ts==ts)
 	{
 	   e.ts = (*ev)[i].ts;
-	   std::memcpy(e.data,(*ev)[i].data,VALUESIZE); 
-
+	   std::memcpy(e.data,(*ev)[i].data,datasize); 
 	}
    }
 
@@ -375,8 +394,6 @@ void nvme_buffers::fetch_buffer(std::vector<char> *data_mem,std::string &s,int &
      event_metadata em = (r->second).second;
      int datasize = em.get_datasize();
 
-     if(r==nvme_fnames.end()) return;
-
      index = r->second.first;
 
      MyEventVect *ev = nvme_ebufs[index];
@@ -390,6 +407,7 @@ void nvme_buffers::fetch_buffer(std::vector<char> *data_mem,std::string &s,int &
      catch(const std::exception &except)
      {
 	std::cout << except.what()<<std::endl;
+	exit(-1);
      }
      
      int p = 0;

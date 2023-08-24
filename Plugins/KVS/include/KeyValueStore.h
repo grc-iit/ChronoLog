@@ -11,6 +11,7 @@
 #include "h5_async_lib.h"
 #include <thread>
 #include <mutex>
+#include "Interface_Queues.h"
 
 template<typename N>
 struct kstream_args
@@ -30,7 +31,8 @@ class KeyValueStore
 	    int myrank;
 	    KeyValueStoreMDS *mds;
 	    data_server_client *ds;
-	    KeyValueStoreIO *io_layer; 
+	    KeyValueStoreIO *io_layer;
+	    Interface_Queues *if_q;
 	    KeyValueStoreAccessorRepository *tables;
 	    int io_count;
 	    int tag;
@@ -58,11 +60,17 @@ class KeyValueStore
            	std::vector<std::string> shmaddrs = ds->get_shm_addrs();
            	mds->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
 		mds->bind_functions();
-		MPI_Barrier(MPI_COMM_WORLD);
 		io_layer = new KeyValueStoreIO(numprocs,myrank);
 		io_layer->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
 		io_layer->bind_functions();
-		tables = new KeyValueStoreAccessorRepository(numprocs,myrank,io_layer,ds);
+		if_q = new Interface_Queues(numprocs,myrank);
+		if_q->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
+		std::string remfilename = "emulatoraddrs";
+		if_q->get_remote_addrs(remfilename);
+		if_q->bind_functions();
+		MPI_Barrier(MPI_COMM_WORLD);
+		bool b = if_q->PutKVSAddresses(myrank);
+		tables = new KeyValueStoreAccessorRepository(numprocs,myrank,io_layer,if_q,ds);
 		k_args.resize(MAXSTREAMS);
 	        kstreams.resize(MAXSTREAMS);
 	   }
@@ -141,6 +149,7 @@ class KeyValueStore
 
 		auto t1 = std::chrono::high_resolution_clock::now();
 
+		/*
     		for(int i=0;i<k->keys.size();i++)
     		{
 		        if(k->op[i]==0)
@@ -149,7 +158,7 @@ class KeyValueStore
         		  uint64_t ts_k = k->ts[i];
         		  ka->insert_entry<T,N>(pos,key,ts_k);
 			}
-    		}
+    		}*/
 
 		auto t2 = std::chrono::high_resolution_clock::now();
 
@@ -157,13 +166,13 @@ class KeyValueStore
 
 		t1 = std::chrono::high_resolution_clock::now();
 
-		 for(int i=0;i<k->keys.size();i++)
+		 /*for(int i=0;i<k->keys.size();i++)
     		 {
 		   if(k->op[i]==0 && i%100==0)
 		   {
       		      std::vector<uint64_t> values = ka->get_entry<T,N>(pos,k->keys[i]);
 		   }
-    		 }
+    		 }*/
 
 		 t2 = std::chrono::high_resolution_clock::now();
 
@@ -171,7 +180,7 @@ class KeyValueStore
 
 		 t1 = std::chrono::high_resolution_clock::now();
 
-		 ka->flush_invertedlist<T>(k->attr_name);
+		 //ka->flush_invertedlist<T>(k->attr_name);
 
 		 t2 = std::chrono::high_resolution_clock::now();
 
@@ -236,7 +245,26 @@ class KeyValueStore
 
                std::string type = ka->get_attribute_type(attr_name);
 
-   	       RunKeyValueStoreFunctions<T,N>(ka,k);
+		bool b = false; //ka->Emulator_Request();
+		std::string st = "table1";
+		N key = 0.5;
+		char databuf[100];
+		std::string data;
+		data.resize(100);
+
+		if_q->CreateEmulatorBuffer(512,st,myrank);
+		//for(int n=0;n<100;n++)
+		for(int i=0;i<512;i++)
+		{
+		   key = random()%RAND_MAX; 
+		   b = ka->Put<T,N,std::string>(pos,st,key,data);
+		   if(i < 100)
+		   {
+			//b = ka->Get<T,N>(pos,st,key);	
+		   }
+		   usleep(200000); 
+		}
+   	       //RunKeyValueStoreFunctions<T,N>(ka,k);
 	   }
 
            void get_testworkload(std::string &,std::vector<int>&,std::vector<uint64_t>&,int);
@@ -292,6 +320,8 @@ class KeyValueStore
 		MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
 		std::free(reqs);
+		std::string s = "endsession";
+		if_q->EndEmulatorSession(s,myrank);
 	   }
 	   ~KeyValueStore()
 	   {
@@ -300,6 +330,7 @@ class KeyValueStore
 		delete io_layer;
 		delete mds;
 		delete ds;
+		delete if_q;
 		H5close();
 
 	   }

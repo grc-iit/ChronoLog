@@ -32,16 +32,87 @@ void read_write_process::sync_clocks()
 
 }
 
+bool read_write_process::create_buffer(int &num_events,std::string &s)
+{
+    int datasize = 0;
+    int index = -1;
+    event_metadata em;
+    m1.lock();
+    auto r = write_names.find(s);
+    if(r != write_names.end())
+    {		
+	index = (r->second).first;
+	em = (r->second).second;
+    }
+    m1.unlock();
+    datasize = em.get_datasize();
+    assert(index != -1 && datasize > 0 && num_events > 0);
+
+    atomic_buffer *ab = dm->get_atomic_buffer(index);
+    ab->buffer_size.store(0);
+    try
+    {
+	ab->buffer->resize(num_events);
+	ab->datamem->resize(num_events*datasize);
+	for(int i=0;i<ab->valid->size();i++)
+		(*ab->valid)[i].store(0);
+    }
+    catch(const std::exception &except)
+    {
+	std::cout<<except.what()<<std::endl;
+	exit(-1);
+    }
+    return true;
+}
+
+uint64_t read_write_process::add_event(std::string &s,std::string &data)
+{
+    int index = -1;
+    event_metadata em;
+
+    m1.lock();
+    auto r = write_names.find(s);
+    if(r != write_names.end())
+    {
+	index = (r->second).first;
+	em = (r->second).second;
+    }
+    m1.unlock();
+
+    int datasize = em.get_datasize();
+
+    
+    atomic_buffer *ab = dm->get_atomic_buffer(index);
+
+    uint64_t ts = UINT64_MAX;
+
+    boost::shared_lock<boost::shared_mutex> lk(ab->m);
+    {
+      ts = CM->Timestamp();
+      bool b = dm->add_event(index,ts,data,em);
+      int p = numrecvevents.fetch_add(1);
+    }
+    return ts;
+}
+
 void read_write_process::create_events(int num_events,std::string &s,double arrival_rate)
 {
     int datasize = 0;
+    int index = -1;
+    event_metadata em;
     m1.lock();
     auto r = write_names.find(s);
-    int index = (r->second).first;
-    event_metadata em = (r->second).second;
+    if(r != write_names.end())
+    {
+      index = (r->second).first;
+      em = (r->second).second;
+    }
     m1.unlock();
+
     datasize = em.get_datasize();
-   
+  
+    assert(index != -1 && datasize >  0 && num_events > 0);
+
     atomic_buffer *ab = dm->get_atomic_buffer(index);
 
     ab->buffer_size.store(0);
@@ -49,6 +120,8 @@ void read_write_process::create_events(int num_events,std::string &s,double arri
     {
       ab->buffer->resize(num_events);
       ab->datamem->resize(num_events*datasize);
+      for(int i=0;i<ab->valid->size();i++)
+	      (*ab->valid)[i].store(0);
     }
     catch(const std::exception &except)
     {
@@ -74,11 +147,13 @@ void read_write_process::create_events(int num_events,std::string &s,double arri
 
 }
 
+
 void read_write_process::sort_events(std::string &s)
 {
       m1.lock();
       auto r = write_names.find(s);
       int index = -1;
+      int datasize = -1;
       event_metadata em;
       if(r != write_names.end())
       {
@@ -86,6 +161,7 @@ void read_write_process::sort_events(std::string &s)
         em = (r->second).second;
       }
       m1.unlock();
+      datasize = em.get_datasize();
       int nm_index = nm->buffer_index(s);
 
       if(index == -1 || nm_index == -1)
@@ -95,22 +171,27 @@ void read_write_process::sort_events(std::string &s)
 
       while(nm->get_buffer(nm_index,nm_index,1)==false);
       
-      boost::upgrade_lock<boost::shared_mutex> lk1(myevents[index]->m);
-      
-      ds->get_unsorted_data(myevents[index]->buffer,myevents[index]->datamem,index);
-      uint64_t min_v,max_v;
-      int numevents = myevents[index]->buffer_size.load();
-      myevents[index]->buffer_size.store(0);
-      ds->sort_data(index,index,numevents,min_v,max_v,em);
-      myevents[index]->buffer_size.store(myevents[index]->buffer->size());
+      boost::unique_lock<boost::shared_mutex> lk1(myevents[index]->m);
+      { 
+        ds->get_unsorted_data(myevents[index]->buffer,myevents[index]->datamem,index);
+        uint64_t min_v,max_v;
+        int numevents = myevents[index]->buffer_size.load();
+	int maxevents = myevents[index]->buffer->size();
+        myevents[index]->buffer_size.store(0);
+        if(ds->sort_data(index,index,numevents,min_v,max_v,em))
+        myevents[index]->buffer_size.store(myevents[index]->buffer->size());
 
-      uint64_t minv = std::min(min_v,(*write_interval)[index].first.load());
-      (*write_interval)[index].first.store(minv);
-      (*write_interval)[index].second.store(max_v);
+        uint64_t minv = std::min(min_v,(*write_interval)[index].first.load());
+        (*write_interval)[index].first.store(minv);
+        (*write_interval)[index].second.store(max_v);
       
-      nm->copy_to_nvme(s,myevents[index]->buffer,myevents[index]->buffer_size.load());
+        nm->copy_to_nvme(s,myevents[index]->buffer,myevents[index]->buffer_size.load());
       
-      clear_write_events(index,min_v,max_v);
+        clear_write_events(index,min_v,max_v);
+	myevents[index]->buffer->resize(maxevents);
+	myevents[index]->datamem->resize(maxevents*datasize);
+
+      }
       
       nm->release_buffer(nm_index);
 }
@@ -190,6 +271,7 @@ void read_write_process::spawn_write_streams(std::vector<std::string> &snames,st
         for(int i=0;i<snames.size();i++)
         {
                t_args[i].tid = i;
+	       t_args[i].endsession = false;
                int numevents = total_events[i];
                int events_per_proc = numevents/numprocs;
                int rem = numevents%numprocs;
@@ -201,7 +283,7 @@ void read_write_process::spawn_write_streams(std::vector<std::string> &snames,st
 	 std::function<void(struct thread_arg_w *)> DataFunc(
          std::bind(&read_write_process::data_stream,this,std::placeholders::_1));
 
-         for(int i=0;i<nbatches;i++)
+         while(true)
          {
                for(int j=0;j<num_threads;j++)
                {
@@ -221,6 +303,10 @@ void read_write_process::spawn_write_streams(std::vector<std::string> &snames,st
 
                 num_streams.store(num_threads);
                 while(num_streams.load()!=0);
+	        bool endbatch = true;
+		for(int j=0;j<num_threads;j++)
+		  if(t_args[j].endsession != true) endbatch = false;
+		if(endbatch) break;
 
            }
 
@@ -276,8 +362,23 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     std::string filename = "file"+sts[i]+".h5";
     fid = H5Fopen_async(filename.c_str(), H5F_ACC_RDWR, async_fapl,es_id);
 
+    event_metadata em;
+    int index = -1;
+    m1.lock();
     auto r = write_names.find(sts[i]);
-    event_metadata em = (r->second).second;
+    if(r != write_names.end())
+    {
+       em = (r->second).second;
+       index = (r->second).first;
+    }
+    m1.unlock();
+
+    if(index==-1) 
+    {
+	throw std::runtime_error("data stream buffer does not exist");
+	return;
+    }
+
     int datasize = em.get_datasize();
     int keyvaluesize = sizeof(uint64_t)+datasize;
     metadata.push_back(em);
@@ -809,21 +910,19 @@ std::pair<std::vector<struct event>*,std::vector<char>*> read_write_process::cre
    poffset = offset;
    trecords = total_records;
 
-   uint64_t min_key, max_key;
+   uint64_t min_key=UINT64_MAX, max_key=0;
 
-   if(myrank==0) min_key = *(uint64_t*)(&((*datamem)[0]));
-   if(myrank==numprocs-1) 
+
+   if(num_events_recorded[myrank]>0)
    {
-      int p = (num_events_recorded[myrank]-1)*keyvaluesize;
-      max_key = *(uint64_t*)(&((*datamem)[p]));
+     min_key = *(uint64_t*)(&((*datamem)[0]));
+     int p = (num_events_recorded[myrank]-1)*keyvaluesize;
+     max_key = *(uint64_t*)(&((*datamem)[p]));
    }
 
-   MPI_Bcast(&min_key,1,MPI_UINT64_T,0,MPI_COMM_WORLD);
+   MPI_Allreduce(&min_key,&minkey,1,MPI_UINT64_T,MPI_MIN,MPI_COMM_WORLD);
 
-   MPI_Bcast(&max_key,1,MPI_UINT64_T,numprocs-1,MPI_COMM_WORLD); 
-
-   minkey = min_key;
-   maxkey = max_key;
+   MPI_Allreduce(&max_key,&maxkey,1,MPI_UINT64_T,MPI_MAX,MPI_COMM_WORLD);
 
    if(myrank==0) std::cout <<" total_records = "<<total_records<<" minkey = "<<minkey<<" maxkey = "<<maxkey<<std::endl;
 
@@ -874,13 +973,30 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
         hsize_t maxdims[1];
         maxdims[0] = (hsize_t)H5S_UNLIMITED;
 
+	int index = -1;
+	event_metadata em;
+	m1.lock();
 	auto r = write_names.find(sts[i]);
+	if(r != write_names.end())
+	{
+	   index = (r->second).first;
+	   em = (r->second).second;
+	}
+	m1.unlock();
+
+
+	if(index == -1)
+	{
+	   throw std::runtime_error("data stream buffer does not exist");
+	   return;
+	}
+
 	if(data_arrays[i].second==nullptr||total_records[i]==0)
 	{
 	    continue;
 	}
-        event_metadata em = (r->second).second;
 	int datasize = em.get_datasize();
+	chunkdims[0] = em.get_chunksize();
 	metadata.push_back(em);
 
 	hid_t dataset_pl = H5Pcreate(H5P_DATASET_CREATE);
@@ -906,6 +1022,10 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
         hid_t fid = H5Fcreate_async(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, async_fapl, es_id);
         hid_t grp_id = H5Gcreate_async(fid, grp_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT, es_id);
         hid_t dataset1 = H5Dcreate_async(fid, DATASETNAME1,s2,file_dataspace, H5P_DEFAULT,dataset_pl, H5P_DEFAULT,es_id);
+
+	hsize_t dims[1];
+	dims[0] = total_records[i];
+	H5Dset_extent(dataset1, dims);
 
 	hsize_t block_w = 0;
 	
@@ -1058,10 +1178,89 @@ void read_write_process::pwrite(std::vector<std::string>& sts,std::vector<hsize_
 
 }
 
+int read_write_process::endsessioncount()
+{
+     int send_v = end_of_session.load();
+     std::vector<int> recv_v(numprocs);
+     std::fill(recv_v.begin(),recv_v.end(),0);
+     MPI_Request *reqs = new MPI_Request[2*numprocs];
+     int tag_p = 1500; 
+
+     int nreq = 0;
+     for(int i=0;i<numprocs;i++)
+     {
+	MPI_Isend(&send_v,1,MPI_INT,i,tag_p,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;
+	MPI_Irecv(&recv_v[i],1,MPI_INT,i,tag_p,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;
+     }
+
+     MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+    std::free(reqs);     
+
+    int count = 0;
+    for(int i=0;i<numprocs;i++) count += recv_v[i];
+    return count;
+
+}
+
 void read_write_process::data_stream(struct thread_arg_w *t)
 {
-   int niter = iters_per_batch;
-   for(int i=0;i<4;i++)
+
+   auto t1 = std::chrono::high_resolution_clock::now();
+   bool b = true; 
+
+   int numrounds = 0;
+
+   while(true)
+   {
+      int nprocs = endsessioncount();
+      t1 = std::chrono::high_resolution_clock::now();
+      if(nprocs==numprocs) 
+      {
+	  t->endsession = true;
+	  break;
+      }
+
+      if(numrounds == 4) break;
+
+      for(;;)
+      {
+        auto t2 = std::chrono::high_resolution_clock::now();
+        if(std::chrono::duration<double>(t2-t1).count() > 50 && b) 
+        {
+	   b = false;
+	   break;
+        }
+      }
+
+      try
+      {
+	  sort_events(t->name);
+	  if(myrank==0) std::cout <<" sort"<<std::endl;
+	  numrounds++;
+      }
+      catch(const std::exception &except)
+      {
+	  std::cout <<except.what()<<std::endl;
+	  exit(-1);
+      }
+      b = true;
+   }
+
+   try
+   {
+       sort_events(t->name);
+   }
+   catch(const std::exception &except)
+   {
+	std::cout <<except.what()<<std::endl;
+	exit(-1);
+   }
+
+
+   /*for(int i=0;i<4;i++)
    {
         create_events(t->num_events,t->name,1);
 	try
@@ -1073,7 +1272,7 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 	   std::cout <<except.what()<<std::endl;
 	   exit(-1);
 	}
-   }
+   }*/
 
 }
 
@@ -1099,46 +1298,23 @@ void read_write_process::io_polling(struct thread_arg_w *t)
 
      std::atomic_thread_fence(std::memory_order_seq_cst);
 
-     while(num_streams.load()==0 && end_of_session.load()==0 && io_queue_sync->empty());
+     while(num_streams.load()==0 && end_of_io_session.load()==0);
 
      int sync_async[3];
-     int sync_empty = io_queue_sync->empty() ? 0 : 1;
-     sync_async[0] = sync_empty;
+     sync_async[0] = 0;
      int async_empty = num_streams.load() == 0 ? 0 : 1;
      sync_async[1] = async_empty;
-     int end_sessions = end_of_session.load()==0 ? 0 : 1;
-     sync_async[2] = end_sessions;
+     int end_sessions = end_of_io_session.load()==0 ? 0 : 1;
+     sync_async[2] = io_queue_async->empty() ? end_sessions : 0;
 
      int sync_empty_all[3];
 
      MPI_Allreduce(&sync_async,&sync_empty_all,3,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
 
-     if(sync_empty_all[2]==numprocs) break;
-
-     if(sync_empty_all[0]==numprocs)
+     if(sync_empty_all[2]==numprocs) 
      {
-
-	    /*while(!io_queue_sync->empty())
-	    {
-		struct io_request *r = nullptr;
-
-		io_queue_sync->pop(r);
-
-		std::string file_name = "file";
-		file_name+=r->name+".h5";
-		uint64_t minkey = 0;
-		uint64_t maxkey = UINT64_MAX;
-		uint64_t minkey_f,maxkey_f;
-		uint64_t minkey_r = UINT64_MAX;
-		uint64_t maxkey_r = 0;
-		get_nvme_buffer(r->buf1,r->buf2,r->name,tag);
-		preaddata(file_name.c_str(),r->name,minkey,maxkey,minkey_f,maxkey_f,minkey_r,maxkey_r,r->buf3);
-		int tag = 100;
-		r->completed.store(1);
-	    }*/
-
+	     break;
      }
-
 
      if(sync_empty_all[1]==numprocs)
      {
@@ -1204,4 +1380,54 @@ void read_write_process::io_polling(struct thread_arg_w *t)
      }
 
   }
+}
+
+std::string read_write_process::GetEvent(std::string &s,uint64_t &ts,int s_id)
+{
+ if(ipaddrs[s_id].compare(myipaddr)==0)
+ {
+    tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[s_id]);
+    tl::remote_procedure rp = thallium_shm_client->define("EmulatorGetEvent");
+    return rp.on(ep)(s,ts);
+ }
+ else
+ {
+   tl::remote_procedure rp = thallium_client->define("EmulatorGetEvent");
+   return rp.on(serveraddrs[s_id])(s,ts);
+ }
+}
+
+std::string read_write_process::GetNVMEEvent(std::string &s,uint64_t &ts,int s_id)
+{
+
+   if(ipaddrs[s_id].compare(myipaddr)==0)
+   {
+	tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[s_id]);
+	tl::remote_procedure rp = thallium_shm_client->define("EmulatorGetNVMEEvent");
+	return rp.on(ep)(s,ts);
+   }
+   else
+   {
+	tl::remote_procedure rp = thallium_client->define("EmulatorGetNVMEEvent");
+	return rp.on(serveraddrs[s_id])(s,ts);
+   }
+}
+
+std::string read_write_process::FindEvent(std::string &s,uint64_t &ts)
+{
+   std::string eventstring;
+   int pid = get_event_proc(s,ts);
+   if(pid != -1)
+   {
+	return GetEvent(s,ts,pid);
+   }
+   else
+   {
+	pid = get_nvme_proc(s,ts);
+	if(pid != -1) 
+	{
+          return GetNVMEEvent(s,ts,pid);
+	}
+   }
+   return eventstring;
 }

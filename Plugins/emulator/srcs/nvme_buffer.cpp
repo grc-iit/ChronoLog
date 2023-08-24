@@ -41,13 +41,6 @@ void nvme_buffers::create_nvme_buffer(std::string &s,event_metadata &em)
 	  std::atomic<int> *bs = (std::atomic<int>*)std::malloc(sizeof(std::atomic<int>));
 	  bs->store(0);
 	  buffer_state.push_back(bs);
-	  std::vector<std::pair<uint64_t,uint64_t>> ranges(numprocs);
-	  for(int i=0;i<numprocs;i++)
-	  {
-		ranges[i].first = UINT64_MAX;
-		ranges[i].second = 0;
-	  }
-	  nvme_intervals.push_back(ranges);
 	  total_blocks[file_names.size()-1] = 0;
       }
 }
@@ -69,19 +62,32 @@ void nvme_buffers::copy_to_nvme(std::string &s,std::vector<struct event> *inp,in
     int psize = ev->size();
     int psized = ed->size();
 
-    try
+    if(numevents > 0)
     {
-      ev->resize(psize+numevents);
-      ed->resize(psized+numevents*datasize);
-    }
-    catch(const std::exception &except)
-    {
+      try
+      {
+        ev->resize(psize+numevents);
+        ed->resize(psized+numevents*datasize);
+      }
+      catch(const std::exception &except)
+      {
 	std::cout <<except.what()<<std::endl;
 	exit(-1);
+      }
     }
 
     int p = psize;
     int pd = psized;
+
+    uint64_t mints = UINT64_MAX;
+    uint64_t maxts = 0;
+
+    if(numevents > 0)
+    {
+	int len = numevents-1;
+	mints = (*inp)[0].ts;
+	maxts = (*inp)[len].ts;
+    }
 
     for(int i=0;i<numevents;i++)
     {
@@ -97,8 +103,7 @@ void nvme_buffers::copy_to_nvme(std::string &s,std::vector<struct event> *inp,in
 
     add_block(index,numevents);
 
-    update_interval(index);
-
+    update_interval(index,mints,maxts);
 }
 
 void nvme_buffers::add_block(int index,int numevents)
@@ -157,7 +162,7 @@ void nvme_buffers::erase_from_nvme(std::string &s, int numevents,int nblocks)
 
       remove_blocks(index,nblocks);
 
-      update_interval(index);
+      //update_interval(index);
 
 }
 
@@ -176,28 +181,34 @@ void nvme_buffers::remove_blocks(int index,int nc)
 
    for(int i=0;i<temp.size();i++)
       numblocks[index].push_back(temp[i]);
+
+   std::vector<std::vector<std::pair<uint64_t,uint64_t>>> temp_i;
+
+   for(int i=nc;i<nvme_intervals[index].size();i++)
+   {
+	   std::vector<std::pair<uint64_t,uint64_t>> block_range(numprocs);
+	   block_range.assign(nvme_intervals[index][i].begin(),nvme_intervals[index][i].end());
+	   temp_i.push_back(block_range);
+   }
+   nvme_intervals[index].clear();
+
+   for(int i=0;i<temp_i.size();i++)
+	   nvme_intervals[index].push_back(temp_i[i]);
+
 }
 
-void nvme_buffers::update_interval(int index)
+void nvme_buffers::update_interval(int index,uint64_t mints,uint64_t maxts)
 {
    int nreq = 0;
 
    MPI_Request *reqs = new MPI_Request[2*numprocs];
    assert(reqs != nullptr);
 
-   std::vector<uint64_t> send_range(2);
-
    MyEventVect *ev = nvme_ebufs[index];
 
-   int len = ev->size();
-
-   send_range[0] = UINT64_MAX; send_range[1] = 0;
-
-   if(len > 0)
-   {
-	send_range[0] = (*ev)[0].ts;
-	send_range[1] = (*ev)[len-1].ts;
-   }
+   std::vector<uint64_t> send_range(2);
+   send_range[0] = mints;
+   send_range[1] = maxts;
 
    std::vector<uint64_t> recv_ranges(2*numprocs);
 
@@ -211,11 +222,15 @@ void nvme_buffers::update_interval(int index)
 
    MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
+   std::vector<std::pair<uint64_t,uint64_t>> recvranges(numprocs);
+
    for(int i=0;i<numprocs;i++)
    {
-	nvme_intervals[index][i].first = recv_ranges[2*i];
-	nvme_intervals[index][i].second = recv_ranges[2*i+1];
+	recvranges[i].first = recv_ranges[2*i];
+	recvranges[i].second = recv_ranges[2*i+1];
    }
+
+   nvme_intervals[index].push_back(recvranges);
 
    delete reqs;
 }
@@ -328,13 +343,18 @@ int nvme_buffers::get_proc(std::string &s,uint64_t ts)
    }while(!buffer_state[index]->compare_exchange_strong(prev_value,new_value));
 
 
-   for(int i=0;i<numprocs;i++)
+   for(int i=0;i<nvme_intervals[index].size();i++)
    {
-      if(ts >= nvme_intervals[index][i].first &&
-	 ts <= nvme_intervals[index][i].second)
-      {
-	pid = i; break;
-      }
+       bool found = false;
+       for(int j=0;j<numprocs;j++)
+       {
+          if(ts >= nvme_intervals[index][i][j].first &&
+	   ts <= nvme_intervals[index][i][j].second)
+          {
+	    pid = j; found = true; break;
+          }
+        }
+        if(found) break;
    }
 
    buffer_state[index]->store(0);
@@ -343,7 +363,7 @@ int nvme_buffers::get_proc(std::string &s,uint64_t ts)
 
 }
 
-void nvme_buffers::find_event(std::string &s,uint64_t ts,struct event &e)
+bool nvme_buffers::find_event(std::string &s,uint64_t ts,struct event *e)
 {
 
    std::string fname = prefix+s;
@@ -366,23 +386,26 @@ void nvme_buffers::find_event(std::string &s,uint64_t ts,struct event &e)
 	new_value = 4;
    }while(!buffer_state[index]->compare_exchange_strong(prev_value,new_value));
 
+   bool ret = false;
+
    MyEventVect *ev = nvme_ebufs[index];
 
-   e.ts = UINT64_MAX;
+   e->ts = UINT64_MAX;
    int datasize = em.get_datasize();
 
    for(int i=0;i<ev->size();i++)
    {
 	if((*ev)[i].ts==ts)
 	{
-	   e.ts = (*ev)[i].ts;
-	   std::memcpy(e.data,(*ev)[i].data,datasize); 
+	   e->ts = (*ev)[i].ts;
+	   std::memcpy(e->data,(*ev)[i].data,datasize);
+	   ret = true;
+	   break; 
 	}
    }
 
-   std::cout <<" ts = "<<ts<<std::endl;
-
    buffer_state[index]->store(0);
+   return ret;
 
 }
 

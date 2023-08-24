@@ -63,7 +63,7 @@ struct response
   std::string attr_name;
   int id;
   int response_id;
-  struct event e;
+  std::string event;
   int sender;
   bool complete;
 };
@@ -98,8 +98,7 @@ void serialize(A &ar,struct response &e)
    ar & e.attr_name;
    ar & e.id;
    ar & e.response_id;
-   ar & e.e.ts;
-   ar & e.e.data;   
+   ar & e.event;
    ar & e.sender;
    ar & e.complete;
 }
@@ -281,7 +280,7 @@ class KeyValueStoreIO
 		s->name = r.name;
   		s->id = r.id;
   		s->response_id = r.response_id;
-  		s->e = r.e;
+  		s->event = r.event;
   		s->sender = r.sender;
   		s->complete = r.complete;
 		

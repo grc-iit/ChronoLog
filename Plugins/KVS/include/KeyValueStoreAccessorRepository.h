@@ -6,6 +6,7 @@
 #include "blockmap.h"
 
 #include "KeyValueStoreIO.h"
+#include "Interface_Queues.h"
 
 class KeyValueStoreAccessorRepository
 {
@@ -16,11 +17,13 @@ class KeyValueStoreAccessorRepository
 	      BlockMap<std::string,KeyValueStoreAccessor*,stringhash,stringequal> *accessor_maps;
 	      memory_pool<std::string,KeyValueStoreAccessor*,stringhash,stringequal> *t_pool;
 	      KeyValueStoreIO *io;
+	      Interface_Queues *if_q;
 	      data_server_client *d; 
    public:
-	      KeyValueStoreAccessorRepository(int np,int p,KeyValueStoreIO *io_layer,data_server_client *ds) : numprocs(np), myrank(p)
+	      KeyValueStoreAccessorRepository(int np,int p,KeyValueStoreIO *io_layer,Interface_Queues *ifq,data_server_client *ds) : numprocs(np), myrank(p)
 	      {
 		io = io_layer;
+		if_q = ifq;
 		d = ds;
 		t_pool = new memory_pool<std::string,KeyValueStoreAccessor*,stringhash,stringequal> (100);
 		std::string emptykey;
@@ -41,7 +44,7 @@ class KeyValueStoreAccessorRepository
 		bool b = false;
 		if(accessor_maps->find(s)==NOT_IN_TABLE)
 		{	
-			KeyValueStoreAccessor *ka = new KeyValueStoreAccessor(numprocs,myrank,m,io,d);
+			KeyValueStoreAccessor *ka = new KeyValueStoreAccessor(numprocs,myrank,m,io,if_q,d);
 			ret = accessor_maps->insert(s,ka);
 			if(ret==INSERTED||EXISTS) b = true;
 		}

@@ -40,7 +40,7 @@ class dsort
 	       data[index] = inp_d;
 	   }
 
-	   void sort_data(int,int,int,uint64_t&,uint64_t&,event_metadata &);
+	   bool sort_data(int,int,int,uint64_t&,uint64_t&,event_metadata &);
 
 	   std::vector<struct event> * get_sorted_data(int index)
 	   {

@@ -18,6 +18,8 @@ struct thread_arg_p
   int nbatches;
 };
 
+
+
 class emu_process
 {
 
@@ -31,6 +33,18 @@ private:
       std::string server_addr;
       //metadata_server *MS; 	
       //metadata_client *MC;
+      tl::engine *thallium_server;
+      tl::engine *thallium_shm_server;
+      tl::engine *thallium_client;
+      tl::engine *thallium_shm_client;
+      std::vector<tl::endpoint> serveraddrs;
+      std::vector<std::string> ipaddrs;
+      std::vector<std::string> shmaddrs;
+      std::vector<std::string> remoteshmaddrs;
+      std::vector<std::string> remoteipaddrs;
+      std::vector<std::string> remoteserveraddrs;
+      std::atomic<int> end_process;
+      std::string myipaddr;
       query_engine *QE;
       std::vector<struct thread_arg_p> t_args;
       std::vector<std::thread> dw;
@@ -50,39 +64,22 @@ public:
 	dsc = new data_server_client(numprocs,myrank,5555); 
 
 	rwp = new read_write_process(r,np,CM,num_cores_rw,dsc);
+	rwp->bind_functions();
 	QE = new query_engine(numprocs,myrank,dsc,rwp);
 	int nchars;
 	std::vector<char> addr_string;
 
-	if(myrank==0)
-	{
-	  char processor_name[1024];
-          int len = 0;
-          MPI_Get_processor_name(processor_name, &len);
-	  std::string myhostname;
-          myhostname.assign(processor_name);
-          char ip[16];
-          struct hostent *he = gethostbyname(myhostname.c_str());
-          auto **addr_list = (struct in_addr **) he->h_addr_list;
-          strcpy(ip, inet_ntoa(*addr_list[0]));
-	  std::string myipaddr;
-          myipaddr.assign(ip);
-	  nchars = myipaddr.length();
-	  for(int i=0;i<myipaddr.length();i++)
-		  addr_string.push_back(myipaddr[i]);
-	}
-	
-	MPI_Bcast(&nchars,1,MPI_INT,0,MPI_COMM_WORLD);
-
-	if(myrank != 0) addr_string.resize(nchars);
-
-	MPI_Bcast(addr_string.data(),nchars,MPI_CHAR,0,MPI_COMM_WORLD);
-	std::string addr_ip(addr_string.data());
-
-	int port_no = 1234;
-	server_addr = "ofi+sockets://"+addr_ip+":"+std::to_string(port_no);
-
 	t_args.resize(2);
+	end_process.store(0);
+	thallium_server = dsc->get_thallium_server();
+        thallium_shm_server = dsc->get_thallium_shm_server();
+        thallium_client = dsc->get_thallium_client();
+        thallium_shm_client = dsc->get_thallium_shm_client();
+        serveraddrs = dsc->get_serveraddrs();
+        ipaddrs = dsc->get_ipaddrs();
+        shmaddrs = dsc->get_shm_addrs();
+        myipaddr = ipaddrs[myrank];
+
 	/*MS = nullptr;
 	if(myrank==0)
 	{
@@ -120,6 +117,16 @@ public:
          rwp->spawn_write_streams(t->snames,t->total_events,t->nbatches);
       }
 
+      void bind_functions()
+      {
+	std::function<void(const tl::request &,std::string&)> EndSessions(
+        std::bind(&emu_process::ThalliumEndSessions,this,std::placeholders::_1,std::placeholders::_2));
+
+	thallium_server->define("EmulatorEndSessions",EndSessions);
+        thallium_shm_server->define("EmulatorEndSessions",EndSessions);
+
+      }
+
       void data_streams_s(std::vector<std::string> &snames, std::vector<int> &total_events, int &nbatches)
       {
 
@@ -141,10 +148,21 @@ public:
       void process_queries(struct thread_arg_p *t)
       {
 
-	   /*usleep(20000*128*30);
-	   uint64_t ts = 1687267769797971;
-	   if(myrank==2)
-	   QE->query_point(t->snames[0],ts);*/
+	   for(int n=0;n<5;n++)
+	   {
+
+	   usleep(20000*10);
+	  
+	   for(int i=0;i<10;i++)
+	   {
+	       uint64_t ts = CM->Timestamp();
+	       //QE->send_query(t->snames[0]);
+	       QE->query_point(t->snames[0],ts);
+	   }
+
+	   usleep(20000*10*128);
+	   }
+
 	   /*usleep(10*128*20000);
 	   QE->send_query(t->snames[0]);
 	   usleep(20000*128);
@@ -167,12 +185,29 @@ public:
 
       }
 
-      void end_sessions()
+      bool end_sessions(std::string &s)
+      {
+	rwp->end_session_flag();
+	end_process.store(1);
+	return true;
+      }
+
+      void end_sessions_t()
       {
 	for(int i=0;i<dw.size();i++) dw[i].join();
 	for(int i=0;i<qp.size();i++) qp[i].join();
-	rwp->end_sessions();
 	QE->end_sessions();
+	rwp->end_sessions();
+      }
+
+      void ThalliumEndSessions(const tl::request &req,std::string &s)
+      {
+	req.respond(end_sessions(s));
+      }
+
+      int process_end()
+      {
+	return end_process.load();
       }
       ~emu_process()
       {

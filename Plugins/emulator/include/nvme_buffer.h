@@ -41,7 +41,7 @@ class nvme_buffers
 	std::vector<boost::shared_mutex*> file_locks;
         std::string prefix;
 	std::vector<std::atomic<int>*> buffer_state;
-	std::vector<std::vector<std::pair<uint64_t,uint64_t>>> nvme_intervals;
+	std::vector<std::vector<std::vector<std::pair<uint64_t,uint64_t>>>> nvme_intervals;
 	std::vector<boost::mutex*> blocks;
 	std::mutex n1;
 	std::vector<int> total_blocks;
@@ -52,6 +52,7 @@ class nvme_buffers
 	   prefix = "/mnt/nvme/asasidharan/rank"+std::to_string(myrank);
 	   total_blocks.resize(MAXSTREAMS);
 	   numblocks.resize(MAXSTREAMS);
+	   nvme_intervals.resize(MAXSTREAMS);
 	}
 	~nvme_buffers()
 	{
@@ -73,9 +74,9 @@ class nvme_buffers
 
 	void create_nvme_buffer(std::string &s,event_metadata &em);
 	void copy_to_nvme(std::string &s,std::vector<struct event> *inp,int numevents);
-	void find_event(std::string&,uint64_t,struct event&);
+	bool find_event(std::string&,uint64_t,struct event*);
 	int get_proc(std::string&,uint64_t);
-	void update_interval(int);
+	void update_interval(int,uint64_t,uint64_t);
 	void add_block(int,int);
 	bool get_buffer(int,int,int);
 	int buffer_index(std::string&);

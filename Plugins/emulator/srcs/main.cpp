@@ -40,6 +40,8 @@ int main(int argc,char **argv)
 
   emu_process *np = new emu_process(size,rank,num_cores);
 
+  np->bind_functions();
+
   np->synchronize();
 
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -72,7 +74,7 @@ int main(int argc,char **argv)
 
   }*/
 
-  int numstories = 4;
+  int numstories = 1;
   std::vector<std::string> story_names;
   std::vector<int> total_events;
 
@@ -104,18 +106,17 @@ int main(int argc,char **argv)
   {
 	std::string name = "table"+std::to_string(i+1);
 	story_names.push_back(name);
-	total_events.push_back(2048);
+	total_events.push_back(4096);
 	if(i%2==0)
-	np->prepare_service(name,em1,2048);
-	else np->prepare_service(name,em2,2048);
+	np->prepare_service(name,em1,4096);
+	else np->prepare_service(name,em2,4096);
   }
-
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   int num_writer_threads = 4;
 
-  int nbatches = 20;
+  int nbatches = 1;
 
   t1 = std::chrono::high_resolution_clock::now();
 
@@ -125,13 +126,44 @@ int main(int argc,char **argv)
 
   //np->generate_queries(story_names);
 
-  
-  np->end_sessions();
+  //np->end_sessions_t();
+  //
+  /*std::string s = "endsessions";
+  np->end_sessions(s);
+*/
+  while(np->process_end()==0);
+
+  np->end_sessions_t();  
 
   t2 = std::chrono::high_resolution_clock::now();
   t = std::chrono::duration<double> (t2-t1).count();
 
-  MPI_Allreduce(&t,&total_time,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+  double send_v = t;
+  std::vector<double> recv_v(size);
+
+  MPI_Request *reqs = new MPI_Request[2*size];
+
+  int nreq = 0;
+  int tag = 300000;
+
+  for(int i=0;i<size;i++)
+  {
+	MPI_Isend(&send_v,1,MPI_DOUBLE,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;
+	MPI_Irecv(&recv_v[i],1,MPI_DOUBLE,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;
+  }
+
+  MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+  delete reqs;
+
+  if(rank==0)
+  {
+	std::cout <<" session flag "<<std::endl;
+  }
+
+  //np->end_sessions_t();
 
   delete np;
   MPI_Finalize();

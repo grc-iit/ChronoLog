@@ -16,12 +16,6 @@ struct event
 {
    uint64_t ts;
    char *data;
-   /*std::string pack_event(int length)
-   {
-	std::string p = std::to_string(ts);
-	p += std::string(data,length);
-	return p;
-   }*/
 };
 
 struct atomic_buffer
@@ -30,5 +24,10 @@ struct atomic_buffer
    std::atomic<int> buffer_size;
    std::vector<struct event> *buffer;
    std::vector<char> *datamem;
+   std::vector<std::atomic<int>> *valid;
 };
+
+std::string pack_event(struct event *,int);
+void unpack_event(struct event *,std::string &);
+
 #endif

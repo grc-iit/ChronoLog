@@ -33,7 +33,7 @@
 #include "data_server_client.h"
 #include <fstream>
 
-using namespace tl=thallium;
+namespace tl=thallium;
 
 
 class Interface_Queues
@@ -116,8 +116,6 @@ class Interface_Queues
 		filest.close();
 	   }
 
-
-
 	}
 
 	void bind_functions()
@@ -134,7 +132,7 @@ class Interface_Queues
 	bool LocalPutRequest(struct query_req &r)
 	{
 	   struct query_req * rq = new struct query_req();
-	   rq->name.assign(r.begin(),r.end());
+	   rq->name.assign(r.name.begin(),r.name.end());
 	   rq->minkey = r.minkey;
 	   rq->maxkey = r.maxkey;
 	   rq->id = r.id;
@@ -191,7 +189,7 @@ class Interface_Queues
 	   bool b = false;
 	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
 	   {
-		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id];
+		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
 	        tl::remote_procedure rp = thallium_shm_client->define("EmulatorRemotePutRequest");
 		b = rp.on(ep)(r);
 	   }
@@ -204,6 +202,104 @@ class Interface_Queues
 	   return b;
 	}
 
+	uint64_t PutEmulatorEvent(std::string &s,std::string &data,int s_id)
+	{
+	    uint64_t b = UINT64_MAX;
+	    if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	    {
+		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+		tl::remote_procedure rp = thallium_shm_client->define("EmulatorAddEvent");
+		b = rp.on(ep)(s,data);
+	    }
+	    else
+	    {
+		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+		tl::remote_procedure rp = thallium_client->define("EmulatorAddEvent");
+		b = rp.on(ep)(s,data);
+	    }
+	    return b;
+	}
+
+	bool CreateEmulatorBuffer(int numevents,std::string &s,int s_id)
+	{
+	    bool b = false;
+	    if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	    {
+		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+		tl::remote_procedure rp = thallium_shm_client->define("EmulatorCreateBuffer");
+		b = rp.on(ep)(numevents,s);
+	    }
+	    else
+	    {
+		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+		tl::remote_procedure rp = thallium_client->define("EmulatorCreateBuffer");
+		b = rp.on(ep)(numevents,s);
+	    }
+	    return  b;
+	}
+
+	bool EndEmulatorSession(std::string &s,int s_id)
+	{
+	   bool b = false;
+	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	   {
+	     tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+             tl::remote_procedure rp = thallium_shm_client->define("EmulatorEndSessions");
+	     b = rp.on(ep)(s);
+	   }
+	   else
+	   {
+	     tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+	     tl::remote_procedure rp = thallium_client->define("EmulatorEndSessions");
+	     b = rp.on(ep)(s);
+	   }
+	   return b;
+	}
+
+	bool PutKVSAddresses(int s_id)
+	{
+	   std::vector<std::string> lines;
+	   
+	   lines.push_back(std::to_string(nservers));
+
+	   for(int i=0;i<shmaddrs.size();i++)
+		lines.push_back(shmaddrs[i]);
+	   for(int i=0;i<ipaddrs.size();i++)
+		lines.push_back(ipaddrs[i]);
+	   for(int i=0;i<serveraddrs.size();i++)
+		lines.push_back(serveraddrs[i]);
+	   bool b = false;
+	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	   {
+	      tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+	      tl::remote_procedure rp = thallium_shm_client->define("EmulatorPutRemoteAddresses");
+	      b = rp.on(ep)(lines);
+
+	   }
+	   else
+	   {
+	     tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+	     tl::remote_procedure rp = thallium_client->define("EmulatorPutRemoteAddresses");
+	     b = rp.on(ep)(lines);
+	   }
+	   return b;
+	}
+
+	std::string GetEmulatorEvent(std::string &s,uint64_t &ts,int s_id)
+	{
+	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
+   	   {
+		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+		tl::remote_procedure rp = thallium_shm_client->define("EmulatorFindEvent");
+		return rp.on(ep)(s,ts);
+	   }		   
+	   else
+	   {
+		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+		tl::remote_procedure rp = thallium_client->define("EmulatorFindEvent");
+		return rp.on(ep)(s,ts);
+	   }
+	}
 
 	~Interface_Queues()
 	{

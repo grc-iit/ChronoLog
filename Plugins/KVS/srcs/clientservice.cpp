@@ -69,7 +69,7 @@ int main(int argc,char **argv)
    std::vector<uint64_t> tsf;
    std::vector<int> op;
    std::string tname = "timeseries.log";
-   k->get_ycsb_timeseries_workload(tname,fkeys,tsf,op);
+   //k->get_ycsb_timeseries_workload(tname,fkeys,tsf,op);
    /*
    std::vector<uint64_t> dkeys;
    std::vector<uint64_t> tsk;

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <cmath>
 
 class event_metadata
 {
@@ -18,6 +19,7 @@ class event_metadata
   std::vector<bool> is_signed;
   std::vector<bool> big_endian;
   int total_v;
+  int chunksize;
 
   public:
       event_metadata()
@@ -73,6 +75,15 @@ class event_metadata
 	   value_sizes.push_back(size2);
 	   is_signed.push_back(sig);
 	   big_endian.push_back(end);
+      }
+      int get_chunksize()
+      {
+	int dsize = sizeof(uint64_t);
+	for(int i=0;i<value_sizes.size();i++)
+		dsize += value_sizes[i];
+	double nevents = (double)CHUNKSIZE/(double)dsize;
+	int nevents_i = ceil(nevents);
+	return nevents_i; 
       }
       bool get_attr(std::string &s,int &v_size,bool &sign,bool &end)
       {

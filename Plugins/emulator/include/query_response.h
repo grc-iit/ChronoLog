@@ -30,6 +30,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define NOTFOUND 0
+
 
 struct query_resp
 {
@@ -41,6 +43,7 @@ struct query_resp
    std::string response;
    std::string output_file;
    bool complete;
+   int error_code;
 };
 
 template<typename A>
@@ -54,6 +57,7 @@ void serialize(A &ar,struct query_resp &e)
    ar & e.response;
    ar & e.output_file;
    ar & e.complete;
+   ar & e.error_code;
 }
 
 

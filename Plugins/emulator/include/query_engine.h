@@ -29,6 +29,7 @@ class query_engine
 	std::vector<std::thread> workers;
 	int numthreads;
 	std::atomic<int> end_session;
+	std::atomic<int> end_request;
 	std::atomic<int> query_number;
 	std::unordered_map<std::string,std::pair<int,int>> buffer_names;
 	std::vector<struct atomic_buffer*> sbuffers;
@@ -58,17 +59,29 @@ class query_engine
 	   S = new query_parser(numprocs,myrank);
 	   ds = rwp->get_sorter();
 	   end_session.store(0);
-	   numthreads = 1;
+	   end_request.store(0);
+	   numthreads = 2;
 	   t_args.resize(numthreads);
 	   workers.resize(numthreads);
 	   std::function<void(struct thread_arg_q *)> QSFunc(
            std::bind(&query_engine::service_query,this, std::placeholders::_1));
 
+	   std::function<void(struct thread_arg_q*)> QRFunc(
+	   std::bind(&query_engine::service_response,this,std::placeholders::_1));
+
 	   for(int i=0;i<numthreads;i++)
 	   {
              t_args[i].tid = i;
-	     std::thread qe{QSFunc,&t_args[i]};
-	     workers[i] = std::move(qe);
+	     if(i==0)
+	     {
+	        std::thread qe{QSFunc,&t_args[i]};
+	        workers[i] = std::move(qe);
+	     }
+	     else
+	     {
+		std::thread qr{QRFunc,&t_args[i]};
+		workers[i] = std::move(qr);
+	     }
 	   }
 
 	}
@@ -120,11 +133,8 @@ class query_engine
 
 	void end_sessions()
 	{
-	   if(myrank==0)
-	   {
-	      std::string s = "endsession";
-	      send_query(s);
-	   }
+	   std::string s = "endsession";
+	   send_query(s);
 
 	   for(int i=0;i<workers.size();i++) workers[i].join();
 	}
@@ -141,39 +151,10 @@ class query_engine
 	void sort_response(std::string&,int,std::vector<struct event>*,uint64_t&);
 	void get_range(std::vector<struct event>*,std::vector<struct event>*,std::vector<struct event>*,uint64_t minkeys[3],uint64_t maxkeys[3],int);
 	void service_query(struct thread_arg_q*);
+	void service_response(struct thread_arg_q*);
 	bool end_file_read(bool,int);
+	int count_end_of_session();
 
-	int create_buffer(std::string &s, int &sort_id)
-	{
-	   m1.lock();
-	   auto r1 = buffer_names.find(s);
-	   int index1 = -1;
-	   int index2 = -1;
-	   if(r1 == buffer_names.end())
-	   {
-		struct atomic_buffer *n = new struct atomic_buffer();
-		n->buffer_size.store(0);
-		n->buffer = new std::vector<struct event> ();
-		sbuffers.push_back(n);
-		index2 = ds->create_sort_buffer();
-		std::pair<std::string,std::pair<int,int>> p;
-		p.first.assign(s);
-		p.second.first = sbuffers.size()-1;
-		p.second.second = index2;
-		buffer_names.insert(p);	
-		index1 = sbuffers.size()-1;
-	   }
-	   else 
-	   {
-		index1 = r1->second.first;
-		index2 = r1->second.second;
-	   }
-	   m1.unlock();
-
-	   sort_id = index2;
-	   return index1;
-
-	}
 };
 
 #endif

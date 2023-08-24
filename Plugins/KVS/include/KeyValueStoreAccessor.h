@@ -33,6 +33,7 @@
 #include <arpa/inet.h>
 #include <cassert>
 #include "KeyValueStoreIO.h"
+#include "Interface_Queues.h"
 #include <mutex>
 
 namespace tl=thallium;
@@ -52,16 +53,18 @@ class KeyValueStoreAccessor
 	    std::vector<std::pair<std::string,void*>> lists;
 	    std::unordered_map<std::string,int> secondary_attributes;
 	    KeyValueStoreIO *kio;
+	    Interface_Queues *if_q;
 	    data_server_client *d;
 	    std::mutex accessor_mutex;
 
    public :
-	  KeyValueStoreAccessor(int np,int p,KeyValueStoreMetadata &m,KeyValueStoreIO *io,data_server_client *ds)
+	  KeyValueStoreAccessor(int np,int p,KeyValueStoreMetadata &m,KeyValueStoreIO *io,Interface_Queues *ifq,data_server_client *ds)
           {
 		numprocs = np;
 		myrank = p;
 		md = m;
 		kio = io;
+		if_q = ifq;
 		d = ds;
 	  }
 
@@ -139,11 +142,13 @@ class KeyValueStoreAccessor
 	  template<typename T>
 	  void fill_invertedlist(int);
 	  template <typename T,typename N,typename M>
-	  bool Put(N &key, M &value);
+	  bool Put(int,std::string &,N &key, M &value);
 	  template <typename T,typename N>
-          bool Get(N &key,char *value);
+          bool Get(int,std::string&,N&);
 	  void sort_on_secondary_key(std::string &attr_name);
-	  
+	  template<typename T,typename N>
+	  bool Emulator_Request(int,std::string &,N &);
+
 	  ~KeyValueStoreAccessor()
 	  {
 		for(int i=0;i<lists.size();i++)

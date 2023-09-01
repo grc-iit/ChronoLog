@@ -56,6 +56,7 @@ class KeyValueStoreAccessor
 	    Interface_Queues *if_q;
 	    data_server_client *d;
 	    std::mutex accessor_mutex;
+	    int inserts;
 
    public :
 	  KeyValueStoreAccessor(int np,int p,KeyValueStoreMetadata &m,KeyValueStoreIO *io,Interface_Queues *ifq,data_server_client *ds)
@@ -66,11 +67,16 @@ class KeyValueStoreAccessor
 		kio = io;
 		if_q = ifq;
 		d = ds;
+		inserts=0;
 	  }
 
 	  KeyValueStoreMetadata & get_metadata()
 	  {
 		return md;
+	  }
+	  int get_inserts()
+	  {
+		return inserts;
 	  }
 
 	  std::string get_attribute_type(std::string &attr_name)

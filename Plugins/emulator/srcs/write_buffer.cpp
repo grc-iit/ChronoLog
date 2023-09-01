@@ -52,22 +52,42 @@ void databuffers::set_valid_range(int index,uint64_t &n1,uint64_t &n2)
         dmap->set_valid_range(index,n1,n2);
 }
 
-bool databuffers::add_event(int index,uint64_t ts,std::string &data,event_metadata &em)
+int databuffers::add_event(int index,uint64_t ts,std::string &data,event_metadata &em)
 {
 
 	int datasize = em.get_datasize();
 	int v = myrank;
-	bool b = dmap->Insert(ts,v,index);
+	int b = dmap->Insert(ts,v,index);
 
-	if(b)
+	if(b==1)
 	{
-	   int ps = atomicbuffers[index]->buffer_size.fetch_add(1);
-	   assert (ps < atomicbuffers[index]->buffer->size());
-	   (*atomicbuffers[index]->buffer)[ps].ts = ts;
-	   char *dest = &((*atomicbuffers[index]->datamem)[ps*datasize]);
-           (*atomicbuffers[index]->buffer)[ps].data = dest;
-	   std::memcpy(dest,data.c_str(),datasize);
-	   (*atomicbuffers[index]->valid)[ps].store(1);
+	   bool d = false;
+	   int prev = 0,next = 0;
+	   int maxsize = atomicbuffers[index]->buffer->size();
+
+	   do
+	   {
+		d = false;
+		prev = atomicbuffers[index]->buffer_size.load();
+		if(prev == maxsize) break;
+		next = prev+1;
+	   }while(!(d=atomicbuffers[index]->buffer_size.compare_exchange_strong(prev,next)));
+
+	   if(d)
+	   {
+	     int ps = prev; //atomicbuffers[index]->buffer_size.fetch_add(1);
+	     (*atomicbuffers[index]->buffer)[ps].ts = ts;
+	     char *dest = &((*atomicbuffers[index]->datamem)[ps*datasize]);
+             (*atomicbuffers[index]->buffer)[ps].data = dest;
+	     std::memcpy(dest,data.c_str(),datasize);
+	     (*atomicbuffers[index]->valid)[ps].store(1);
+	     return 1;
+	    }
+	    else 
+	    {
+		    return 2;
+	    }
+	   //else b = false;
 	}
 	return b;
 
@@ -81,14 +101,14 @@ bool databuffers::add_event(event &e,int index,event_metadata &em)
 
       auto t1 = std::chrono::high_resolution_clock::now();
 
-      bool b = dmap->Insert(key,v,index);
+      int b = dmap->Insert(key,v,index);
 
       auto t2 = std::chrono::high_resolution_clock::now();
       double t = std::chrono::duration<double> (t2-t1).count();
       if(max_t < t) max_t = t;
       int datasize = em.get_datasize();
 
-      if(b)
+      if(b==1)
       {
 	      int bc = 0;
 	      int numuints = std::ceil(datasize/sizeof(uint64_t));
@@ -114,17 +134,33 @@ bool databuffers::add_event(event &e,int index,event_metadata &em)
 		}
 		if(end) break;
 	      }
-	     
-              int ps = atomicbuffers[index]->buffer_size.fetch_add(1);
-	      assert (ps < atomicbuffers[index]->buffer->size());
-              (*atomicbuffers[index]->buffer)[ps].ts = e.ts;
-	      char *dest = &((*atomicbuffers[index]->datamem)[ps*datasize]);
-	      (*atomicbuffers[index]->buffer)[ps].data = dest;
-	      std::memcpy(dest,data,datasize);
-              (*atomicbuffers[index]->valid)[ps].store(1);
-              event_count++;
+	    
+	     bool d = false;
+	     int prev = 0,next = 0;
+	     int maxsize = atomicbuffers[index]->buffer->size();
+
+	     do
+	     {
+		d=false;
+		prev = atomicbuffers[index]->buffer_size.load();
+		if(prev == maxsize) break;
+		next = prev+1;	
+	     }while(!(d=atomicbuffers[index]->buffer_size.compare_exchange_strong(prev,next))); 
+	      
+	     if(d)
+	     {
+		int ps = prev;
+                (*atomicbuffers[index]->buffer)[ps].ts = e.ts;
+	        char *dest = &((*atomicbuffers[index]->datamem)[ps*datasize]);
+	        (*atomicbuffers[index]->buffer)[ps].data = dest;
+	        std::memcpy(dest,data,datasize);
+                (*atomicbuffers[index]->valid)[ps].store(1);
+                event_count++;
+		return true;
+	     }
+	     else return false;
       }
-      return b;
+      return false;
 }
 
 std::vector<struct event> * databuffers::get_write_buffer(int index)

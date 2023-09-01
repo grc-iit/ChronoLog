@@ -151,7 +151,7 @@ class ClockSynchronization
 	if(diff <= 2*maxError+delay+epsilon) return true;
 	else 
 	{
-		throw std::runtime_error("Timestamp out of range");
+		//throw std::runtime_error("Timestamp out of range");
 		return false;
 	}
      }

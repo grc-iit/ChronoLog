@@ -41,7 +41,7 @@ int main(int argc,char **argv)
    KeyValueStoreMetadata m3(sname3,n,types,names,lens,len);
    KeyValueStoreMetadata m4(sname4,n,types,names,lens,len);
 
-   std::string sname5 = "timeseries";
+   std::string sname5 = "table1";
    n = 1;
    types.clear(); types.push_back("float");
    names.clear(); names.push_back("value");
@@ -68,7 +68,7 @@ int main(int argc,char **argv)
    std::vector<float> fkeys;
    std::vector<uint64_t> tsf;
    std::vector<int> op;
-   std::string tname = "timeseries.log";
+   //std::string tname = "timeseries.log";
    //k->get_ycsb_timeseries_workload(tname,fkeys,tsf,op);
    /*
    std::vector<uint64_t> dkeys;

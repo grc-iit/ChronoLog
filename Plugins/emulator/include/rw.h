@@ -62,7 +62,6 @@ private:
       std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> *read_interval;
       std::vector<struct atomic_buffer*> myevents;
       std::vector<struct atomic_buffer*> readevents;
-      std::atomic<int> numrecvevents;
       dsort *ds;
       data_server_client *dsc;
       std::vector<struct thread_arg_w> t_args;
@@ -116,7 +115,6 @@ public:
 	   end_of_io_session.store(0);
 	   num_streams.store(0);
 	   num_io_threads = 1;
-	   numrecvevents.store(0);
 	   file_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   write_interval =  new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   read_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
@@ -184,6 +182,11 @@ public:
 	   std::function<void(const tl::request &,std::string &,uint64_t&)> FindEvent(
            std::bind(&read_write_process::ThalliumFindEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
+	   std::function<void(const tl::request &,std::string &)> CheckFile(
+	   std::bind(&read_write_process::ThalliumCheckFile,this,std::placeholders::_1,std::placeholders::_2));
+
+	   thallium_server->define("EmulatorCheckFile",CheckFile);
+	   thallium_shm_server->define("EmulatorCheckFile",CheckFile);	   
 	   thallium_server->define("EmulatorFindEvent",FindEvent);
 	   thallium_shm_server->define("EmulatorFindEvent",FindEvent);
 	   thallium_server->define("EmulatorGetNVMEEvent",GetNVMEEvent);
@@ -443,6 +446,15 @@ public:
 	   }
 
 	}
+	bool file_exists(std::string &s)
+	{
+	   bool found = false;
+	   m1.lock();
+	   auto r = std::find(file_names.begin(),file_names.end(),s);
+	   if(r != file_names.end()) found = true;
+	   m1.unlock();
+	   return found;
+	}
 
         bool get_range_in_read_buffers(std::string &s,uint64_t &min_v,uint64_t &max_v)
 	{
@@ -507,6 +519,10 @@ public:
 	{
 	    return dm->num_dropped_events();
 	}
+	void ThalliumCheckFile(const tl::request &req,std::string &s)
+	{
+	   req.respond(file_exists(s));
+	}
 	void ThalliumCreateBuffer(const tl::request &req, int &num_events,std::string &s)
         {
                 req.respond(create_buffer(num_events,s));
@@ -559,7 +575,7 @@ public:
 	void data_stream(struct thread_arg_w*);
 	void sync_clocks();
 	bool create_buffer(int &,std::string &);
-	uint64_t add_event(std::string&,std::string&);
+	std::vector<uint64_t> add_event(std::string&,std::string&);
         int endsessioncount();	
 };
 

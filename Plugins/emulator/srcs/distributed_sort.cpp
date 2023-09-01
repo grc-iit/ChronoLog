@@ -62,8 +62,6 @@ bool dsort::sort_data(int index,int tag,int size,uint64_t& min_v,uint64_t &max_v
    for(int i=0;i<numprocs;i++) num_splitters += splitter_counts[i];
 
    
-   if(myrank==0)
-   std::cout <<" num_splitters = "<<num_splitters<<" numevents = "<<local_events<<" index = "<<index<<" tag = "<<tag<<std::endl;
    if(num_splitters==0) return false;
 
    if(num_splitters > 0)

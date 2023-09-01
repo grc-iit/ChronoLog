@@ -252,18 +252,83 @@ class KeyValueStore
 		std::string data;
 		data.resize(100);
 
-		if_q->CreateEmulatorBuffer(512,st,myrank);
-		//for(int n=0;n<100;n++)
-		for(int i=0;i<512;i++)
+		if_q->CreateEmulatorBuffer(8192,st,myrank);
+
+		
+		MPI_Request *reqs = new MPI_Request[2*numprocs];
+		int nreq = 0;
+
+		int send_v = 1;
+		std::vector<int> recv_v(numprocs);
+		std::fill(recv_v.begin(),recv_v.end(),0);
+
+		for(int i=0;i<numprocs;i++)
 		{
-		   key = random()%RAND_MAX; 
-		   b = ka->Put<T,N,std::string>(pos,st,key,data);
-		   if(i < 100)
-		   {
-			//b = ka->Get<T,N>(pos,st,key);	
-		   }
-		   usleep(200000); 
+		  MPI_Isend(&send_v,1,MPI_INT,i,1000,MPI_COMM_WORLD,&reqs[nreq]);
+		  nreq++;
+		  MPI_Irecv(&recv_v[i],1,MPI_INT,i,1000,MPI_COMM_WORLD,&reqs[nreq]);
+		  nreq++;
 		}
+
+		MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+		std::vector<N> keys;
+		bool exit = false;
+		for(int n=0;n<64;n++)
+		{
+		  exit = false;
+		  for(int i=0;i<512;i++)
+		  {
+		    key = random()%RAND_MAX; 
+
+		    if(!ka->Put<T,N,std::string>(pos,st,key,data))
+		    {
+			exit = true; break;
+		    }
+		    if(n==0&&i<10)
+		    {
+			keys.push_back(key);
+			b = ka->Get<T,N>(pos,st,key);
+		    }
+
+		    usleep(20000); 
+		 }
+	
+		nreq = 0;
+		send_v = exit ? 1 : 0;
+		std::fill(recv_v.begin(),recv_v.end(),0);
+
+		for(int i=0;i<numprocs;i++)
+		{
+		  MPI_Isend(&send_v,1,MPI_INT,i,1000,MPI_COMM_WORLD,&reqs[nreq]);
+		  nreq++;
+		  MPI_Irecv(&recv_v[i],1,MPI_INT,i,1000,MPI_COMM_WORLD,&reqs[nreq]);
+		  nreq++;
+		}
+
+		MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+		int recvv=0;
+		for(int i=0;i<numprocs;i++) recvv+=recv_v[i];
+
+		if(recvv != 0) break;
+
+		  if(n > 0 && n%32==0)
+		  {
+		     ka->flush_invertedlist<T>(attr_name);
+		  }
+
+		  if(n%32==0)
+		  {
+		    ka->cache_invertedtable<T> (attr_name);
+		  }
+
+		  if(n==63)
+		  for(int i=0;i<keys.size();i++)
+		    b = ka->Get<T,N>(pos,st,keys[i]);
+
+		}
+
    	       //RunKeyValueStoreFunctions<T,N>(ka,k);
 	   }
 

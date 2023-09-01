@@ -164,24 +164,17 @@ class distributed_hashmap
    {
 	 CM = C;
    }
-   bool LocalInsert(KeyT &k,ValueT &v,int index)
+   int LocalInsert(KeyT &k,ValueT &v,int index)
   {
-      try
+      if(!CM->NearTime(k) || !(k>=range[index].first && k <= range[index].second))
       {
-        if(!CM->NearTime(k) || !(k>=range[index].first && k <= range[index].second))
-        {
-	   dropped_events.fetch_add(1);
-	   return false;
-        }
-        uint32_t b = my_tables[index]->insert(k,v);
-        if(b == INSERTED) return true;
-        else return false;
+	 dropped_events.fetch_add(1);
+	 return 2;
       }
-      catch(const std::exception& except)
-      {
-	std::cout<<except.what()<<std::endl;
-	exit(-1);
-      }
+        
+      uint32_t b = my_tables[index]->insert(k,v);
+      if(b == INSERTED) return 1;
+      else return 0;
   }
   bool LocalFind(KeyT &k,int index)
   {
@@ -265,7 +258,7 @@ class distributed_hashmap
   {
 	req.respond(LocalGetValue(k,s));
   }
-  bool Insert(KeyT &k, ValueT &v,int index)
+  int Insert(KeyT &k, ValueT &v,int index)
   {
     int destid = serverLocation(k,index);
     assert (destid >= 0 && destid < nservers);

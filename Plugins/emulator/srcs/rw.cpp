@@ -65,7 +65,7 @@ bool read_write_process::create_buffer(int &num_events,std::string &s)
     return true;
 }
 
-uint64_t read_write_process::add_event(std::string &s,std::string &data)
+std::vector<uint64_t> read_write_process::add_event(std::string &s,std::string &data)
 {
     int index = -1;
     event_metadata em;
@@ -86,13 +86,20 @@ uint64_t read_write_process::add_event(std::string &s,std::string &data)
 
     uint64_t ts = UINT64_MAX;
 
+    std::vector<uint64_t> res;
+
+    int b = 0;
+
     boost::shared_lock<boost::shared_mutex> lk(ab->m);
     {
       ts = CM->Timestamp();
-      bool b = dm->add_event(index,ts,data,em);
-      int p = numrecvevents.fetch_add(1);
+      b = dm->add_event(index,ts,data,em);
+      if(b!=1) ts = UINT64_MAX;
     }
-    return ts;
+    res.push_back(ts);
+    res.push_back(b);
+
+    return res;
 }
 
 void read_write_process::create_events(int num_events,std::string &s,double arrival_rate)
@@ -1223,7 +1230,7 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 	  break;
       }
 
-      if(numrounds == 4) break;
+      if(numrounds == 2) break;
 
       for(;;)
       {
@@ -1238,7 +1245,6 @@ void read_write_process::data_stream(struct thread_arg_w *t)
       try
       {
 	  sort_events(t->name);
-	  if(myrank==0) std::cout <<" sort"<<std::endl;
 	  numrounds++;
       }
       catch(const std::exception &except)
@@ -1419,6 +1425,7 @@ std::string read_write_process::FindEvent(std::string &s,uint64_t &ts)
    int pid = get_event_proc(s,ts);
    if(pid != -1)
    {
+
 	return GetEvent(s,ts,pid);
    }
    else

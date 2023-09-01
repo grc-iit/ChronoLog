@@ -45,15 +45,18 @@ bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
    std::string data = std::to_string(key);
    data += value;  
       
-   uint64_t ts =  UINT64_MAX;
+   std::vector<uint64_t> ts;
    ts = if_q->PutEmulatorEvent(s,data,myrank);
    bool b = false;
-   if(ts != UINT64_MAX)
+   if(ts[0] != UINT64_MAX)
    {
 	T *invlist = reinterpret_cast<T*>(lists[pos].second);
-	b = invlist->put_entry(key,ts);
+	b = invlist->put_entry(key,ts[0]);
+	if(b) inserts++;
+	return true;
    }
-   return b;
+   else if(ts[1]==2) return false;
+   else return true;
 }
 
 template<typename T,typename N>
@@ -66,12 +69,47 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key)
    std::vector<uint64_t> values;
 
    T *invlist = reinterpret_cast<T*>(lists[pos].second);
-   int ret = invlist->get_entry(key,values);
+   int pid = invlist->get_entry(key,values);
 
    if(values.size()>0)
    {
      ts = values[0];
      std::string eventstring = if_q->GetEmulatorEvent(s,ts,myrank);
+     if(eventstring.length()==0)
+     {	
+	if(!invlist->CheckLocalFileExists())
+	{
+	   std::string filename = "file";
+	   filename += s+".h5";
+	   if(if_q->CheckFileExistence(filename,myrank))
+	   {
+		invlist->LocalFileExists();
+	   }
+	}
+
+	if(invlist->CheckLocalFileExists())
+	{
+	   invlist->get_events(key,values,pid);
+	}
+     }
+		
+   }
+   else
+   {
+	pid = invlist->partition_no(key);
+
+	if(!invlist->CheckLocalFileExists())
+	{
+	   std::string filename = "file";
+	   filename +=  s + ".h5";
+	   if(if_q->CheckFileExistence(filename,myrank))
+	   {
+		invlist->LocalFileExists();
+	   }
+	}
+
+	invlist->get_events(key,values,pid);	
+
    }
    return false;
 
@@ -118,6 +156,18 @@ void KeyValueStoreAccessor::cache_invertedtable(std::string &attr_name)
    if(pos==-1) return;
 
    T *invlist = reinterpret_cast<T*>(lists[pos].second);
+
+   if(!invlist->CheckLocalFileExists())
+   {
+	std::string filename = "file";
+	filename += "table1.h5";
+
+	if(if_q->CheckFileExistence(filename,myrank))
+	{
+	   invlist->LocalFileExists();
+	}
+   }
+
    invlist->cache_latest_table();
 }
 
@@ -134,6 +184,16 @@ void KeyValueStoreAccessor::flush_invertedlist(std::string &attr_name)
 
     T *invlist = reinterpret_cast<T*>(lists[pos].second);
 
+    if(!invlist->CheckLocalFileExists())
+    {
+           std::string filename = "file";
+           filename += "table1.h5";
+           if(if_q->CheckFileExistence(filename,myrank))
+           {
+                invlist->LocalFileExists();
+           }
+    }
+    
     struct sync_request *r = new struct sync_request();
     std::string type = md.get_type(attr_name);
     int keytype = 0;

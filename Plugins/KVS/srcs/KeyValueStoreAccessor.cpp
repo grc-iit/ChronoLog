@@ -2,7 +2,16 @@
 template<typename T,typename N>
 int KeyValueStoreAccessor::add_new_inverted_list(std::string &table,std::string &attr_name,int size,int ntables,N &emptykey,data_server_client *d,KeyValueStoreIO *io,int c)
 {
-      T *invlist = new T(numprocs,myrank,size,ntables,emptykey,table,attr_name,d,io,c); 
+      T *invlist = new T(numprocs,myrank,size,ntables,emptykey,table,attr_name,d,io,c);
+
+      std::string type = md.get_type(attr_name);
+      int keytype = 0;
+      if(type.compare("int")==0) keytype = 0;
+      else if(type.compare("unsignedlong")==0) keytype=1;
+      else if(type.compare("float")==0) keytype=2;
+      else if(type.compare("double")==0) keytype=3;
+      
+      kio->add_query_service(keytype,(void*)invlist); 
       invlist->bind_functions();
 
       std::pair<std::string,void*> sp;
@@ -41,10 +50,16 @@ bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
 {
    if(pos >= lists.size()) return false;
 
-   
-   std::string data = std::to_string(key);
-   data += value;  
-      
+   char keyarray[8];
+   N key_t = key;
+   char *arr = (char *)(&key_t);
+   for(int i=0;i<8;i++)
+   {
+	keyarray[i] = arr[i];
+   }
+   std::string key_s(keyarray,8);
+   std::string data = key_s+value;  
+     
    std::vector<uint64_t> ts;
    ts = if_q->PutEmulatorEvent(s,data,myrank);
    bool b = false;
@@ -57,6 +72,27 @@ bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
    }
    else if(ts[1]==2) return false;
    else return true;
+}
+
+
+template<typename T,typename N>
+bool KeyValueStoreAccessor::openfilerw(int pos,std::string &s)
+{
+   std::string filename = "file";
+   filename += s+".h5";
+
+   bool b = if_q->CheckFileExistence(filename,myrank);
+
+   T *invlist = reinterpret_cast<T*>(lists[pos].second);
+   bool ret = invlist->open_file(b);
+   return ret;
+}	
+
+template<typename T,typename N>
+void KeyValueStoreAccessor::closefilerw(int pos)
+{
+  T *invlist = reinterpret_cast<T*>(lists[pos].second);
+  invlist->close_file();
 }
 
 template<typename T,typename N>
@@ -86,11 +122,8 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key)
 		invlist->LocalFileExists();
 	   }
 	}
-
-	if(invlist->CheckLocalFileExists())
-	{
-	   invlist->get_events(key,values,pid);
-	}
+	
+	invlist->AddPending(key,values,pid);
      }
 		
    }
@@ -107,8 +140,7 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key)
 		invlist->LocalFileExists();
 	   }
 	}
-
-	invlist->get_events(key,values,pid);	
+	invlist->AddPending(key,values,pid);	
 
    }
    return false;

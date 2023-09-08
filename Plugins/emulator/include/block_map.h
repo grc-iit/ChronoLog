@@ -301,16 +301,19 @@ class BlockMap
 	{
 	  for(int i=0;i<maxSize;i++)
 	  {
-	     node_type *n = (*table)[i].head->next;
-	     while(n != nullptr)
+	     boost::unique_lock<boost::mutex> lk((*table)[i].mutex_t);
 	     {
+	       node_type *n = (*table)[i].head->next;
+	       while(n != nullptr)
+	       {
 		node_type *nn = n->next;
 		n->next = nullptr;
 		pl->memory_pool_push(n);
 		n = nn;
 		(*table)[i].num_nodes--;
+	      }
+	      (*table)[i].head->next = nullptr; 
 	     }
-	     (*table)[i].head->next = nullptr; 
 	  }
 	  return true;
 	}
@@ -320,13 +323,15 @@ class BlockMap
 	   int num_entries = 0;
 	   for(int i=0;i<maxSize;i++)
 	   {
-	     node_type *n = (*table)[i].head->next;
-
-	     while(n != nullptr)
+	     boost::unique_lock<boost::mutex> lk((*table)[i].mutex_t);
 	     {
+	       node_type *n = (*table)[i].head->next;
+	       while(n != nullptr)
+	       {
 		values.push_back(n->value);
 		n = n->next;
 		num_entries++;
+	       }
 	     }
 	   }
 	   //std::cout <<" num_entries = "<<num_entries<<" allocated = "<<allocated.load()<<std::endl;
@@ -340,14 +345,16 @@ class BlockMap
 	   int num_entries=0;
 	   for(int i=0;i<maxSize;i++)
 	   {
-		node_type *n = (*table)[i].head->next;
-
-		while(n != nullptr)
+		boost::unique_lock<boost::mutex> lk((*table)[i].mutex_t);
 		{
+		  node_type *n = (*table)[i].head->next;
+		  while(n != nullptr)
+		  {
 		   (*keys)[i].push_back(n->key);
 		   (*values)[i].push_back(n->value);
 		   n = n->next;
 		   num_entries++;
+		 }
 		}
 	   }
 	   return false;

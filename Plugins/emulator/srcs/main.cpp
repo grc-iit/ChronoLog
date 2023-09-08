@@ -80,7 +80,7 @@ int main(int argc,char **argv)
   std::vector<std::string> story_names;
   std::vector<int> total_events;
 
-  int numattrs1 = 100;
+  int numattrs1 = 108;
   int numattrs2 = 200;
   event_metadata em1,em2;
   em1.set_numattrs(numattrs1);

@@ -2,7 +2,6 @@
 #include "KeyValueStore.h"
 
 
-
 void KeyValueStore::createKeyValueStoreEntry(std::string &s, KeyValueStoreMetadata &m)
 {
    std::vector<std::string> pk;

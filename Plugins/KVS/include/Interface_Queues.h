@@ -65,10 +65,6 @@ class Interface_Queues
 	   response_queue = new boost::lockfree::queue<struct query_resp*> (128);
 
 
-
-
-
-
 	}
 	void server_client_addrs(tl::engine *t_server,tl::engine *t_client,tl::engine *t_server_shm, tl::engine *t_client_shm,std::vector<std::string> &ips,std::vector<std::string> &shm_addrs,std::vector<tl::endpoint> &saddrs)
         {

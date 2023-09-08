@@ -50,17 +50,7 @@ int main(int argc,char **argv)
    KeyValueStoreMetadata m5(sname5,n,types,names,lens,len);
    
 
-   /*k->createKeyValueStoreEntry(sname1,m1);
-   k->createKeyValueStoreEntry(sname2,m2);
-   k->createKeyValueStoreEntry(sname3,m3);
-   k->createKeyValueStoreEntry(sname4,m4);*/
-   k->createKeyValueStoreEntry(sname5,m5);
-
-   /*k->addKeyValueStoreInvList(sname1,names[0]);  
-   k->addKeyValueStoreInvList(sname2,names[0]);
-   k->addKeyValueStoreInvList(sname3,names[0]);
-   k->addKeyValueStoreInvList(sname4,names[0]);*/
-   k->addKeyValueStoreInvList(sname5,names[0]);
+   k->start_session(sname5,names[0],m5);
 
    std::vector<int> keys1;
    std::vector<uint64_t> ts1;
@@ -90,12 +80,11 @@ int main(int argc,char **argv)
    std::vector<uint64_t> ts4;
    k->get_testworkload(sname4,keys4,ts4,0);
 */
-   k->spawn_kvstream<float_invlist,float>(sname5,names[0],fkeys,tsf,op);
    /*k->spawn_kvstream<integer_invlist,int>(sname2,names[0],keys2,ts2);
    k->spawn_kvstream<integer_invlist,int>(sname3,names[0],keys3,ts3);
    k->spawn_kvstream<integer_invlist,int>(sname4,names[0],keys4,ts4);
 */
-   k->end_io_session();
+   k->close_sessions();
 
 
    MPI_Barrier(MPI_COMM_WORLD);

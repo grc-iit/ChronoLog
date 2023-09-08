@@ -9,6 +9,7 @@
 #include "data_server_client.h"
 #include "KeyValueStoreIO.h"
 #include "util_t.h"
+#include <boost/lockfree/queue.hpp>
 
 namespace tl=thallium;
 
@@ -30,8 +31,15 @@ struct KeyIndex
 struct keydata
 {
   uint64_t ts;
-  char data[8];
+  char data[108];
 
+};
+
+template<class KeyT,class ValueT>
+struct event_req
+{
+ KeyT key;
+ std::vector<ValueT> values;
 };
 
 template<class KeyT>
@@ -57,7 +65,7 @@ class hdf5_invlist
 	   std::string filename;
 	   std::string attributename;
 	   std::string rpc_prefix;
-	   bool file_exists;
+	   std::atomic<bool> file_exists;
 	   data_server_client *d;
 	   tl::engine *thallium_server;
            tl::engine *thallium_shm_server;
@@ -78,12 +86,14 @@ class hdf5_invlist
 	   int nbits_r;
 	   std::vector<int> cached_keyindex_mt;
 	   std::vector<struct KeyIndex<KeyT>> cached_keyindex;
+	   boost::lockfree::queue<struct event_req<KeyT,ValueT>*> *pending_gets;
 	   int tables_per_proc;
 	   int numtables;
 	   std::vector<int> table_ids;
 	   int pre_table;
 	   int numevents;
 	   int io_count;
+	   boost::mutex invmutex;
    public:
 	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c) : numprocs(n), myrank(p), io_count(c)
 	   {
@@ -128,7 +138,7 @@ class hdf5_invlist
 	     rpc_prefix = filename+attributename;
 	     d = ds;
 	     io_t = io;
-	     file_exists = false;
+	     file_exists.store(false);
 	     tl::engine *t_server = d->get_thallium_server();
              tl::engine *t_server_shm = d->get_thallium_shm_server();
              tl::engine *t_client = d->get_thallium_client();
@@ -152,6 +162,7 @@ class hdf5_invlist
 	     kv1 = H5Tcreate(H5T_COMPOUND,sizeof(struct KeyIndex<KeyT>));
     	     H5Tinsert(kv1,"key",HOFFSET(struct KeyIndex<KeyT>,key),H5T_NATIVE_FLOAT);
     	     H5Tinsert(kv1,"index",HOFFSET(struct KeyIndex<KeyT>,index),H5T_NATIVE_UINT64);
+	     pending_gets = new boost::lockfree::queue<struct event_req<KeyT,ValueT>*> (128);
 	   }
 
 	   void bind_functions()
@@ -162,6 +173,9 @@ class hdf5_invlist
 	       std::function<void(const tl::request &,KeyT&)> getEntryFunc(
 	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumLocalGetEntry,this,std::placeholders::_1,std::placeholders::_2));		       
 
+	       std::function<void(const tl::request &,KeyT &,std::vector<ValueT>&)> addPendingEvent(
+	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumAddPending,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+
 	       std::string fcnname1 = rpc_prefix+"RemotePutEntry";
                thallium_server->define(fcnname1.c_str(),putEntryFunc);
                thallium_shm_server->define(fcnname1.c_str(),putEntryFunc);
@@ -170,6 +184,9 @@ class hdf5_invlist
 	       thallium_server->define(fcnname2.c_str(),getEntryFunc);
 	       thallium_shm_server->define(fcnname2.c_str(),getEntryFunc);
 
+	       std::string fcnname3 = rpc_prefix+"RemoteGetReq";
+	       thallium_server->define(fcnname3.c_str(),addPendingEvent);
+	       thallium_shm_server->define(fcnname3.c_str(),addPendingEvent);
 	       
 	       MPI_Request *reqs = (MPI_Request *)std::malloc(2*numprocs*sizeof(MPI_Request));
 	       int nreq = 0;
@@ -202,6 +219,7 @@ class hdf5_invlist
 	          delete invlist->bm;
 		  delete invlist->ml;
 		  delete invlist;
+		  delete pending_gets;
 	         }
 		H5Tclose(kv1);
 	   }
@@ -265,17 +283,45 @@ class hdf5_invlist
 		   return rp.on(serveraddrs[destid])(k);
 		}
 	   }
+	   bool AddPending(KeyT &key,std::vector<ValueT> &values,int destid)
+	   {
+		if(ipaddrs[destid].compare(myipaddr)==0)
+		{
+		   tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[destid]);
+		   std::string fcnname = rpc_prefix+"RemoteGetReq";
+		   tl::remote_procedure rp = thallium_shm_client->define(fcnname.c_str());
+		   return rp.on(ep)(key,values);
+		}
+		else
+		{
+		   std::string fcnname = rpc_prefix+"RemoteGetReq";
+		   tl::remote_procedure rp = thallium_client->define(fcnname.c_str());
+		   return rp.on(serveraddrs[destid])(key,values);
+		}
+	   }
 	   bool CheckLocalFileExists()
 	   {
-		   return file_exists;
+		   return file_exists.load();
 	   }
 
 	   void LocalFileExists()
 	   {
-		file_exists = true;
+		file_exists.store(true);
 	   }
 
-	   std::vector<struct keydata> get_events(KeyT&,std::vector<ValueT> &,int);
+	   bool add_pending(KeyT &key,std::vector<ValueT> &values)
+	   {
+		struct event_req<KeyT,ValueT> *q = new struct event_req<KeyT,ValueT>();
+		q->key = key;
+		q->values.assign(values.begin(),values.end());
+		return pending_gets->push(q);
+	   }
+	   void ThalliumAddPending(const tl::request &req,KeyT &key,std::vector<ValueT> &values)
+	   {
+		req.respond(add_pending(key,values));
+	   }
+
+	   std::vector<struct keydata> get_events();
 	   void create_async_io_request(KeyT &,std::vector<ValueT>&);
 	   void create_sync_io_request();
 	   bool put_entry(KeyT&,ValueT&);

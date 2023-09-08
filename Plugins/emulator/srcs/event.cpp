@@ -4,7 +4,11 @@
 
 std::string pack_event(struct event* e,int length)
 {
-   std::string s = std::to_string(e->ts);
+   char tss[8];
+   char *tsstring = (char*)(&e->ts);
+   for(int i=0;i<8;i++)
+     tss[i] = tsstring[i];
+   std::string s(tss,8);
    s += std::string(e->data,length);
    return s;
 }

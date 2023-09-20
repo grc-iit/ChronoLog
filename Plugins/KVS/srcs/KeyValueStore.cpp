@@ -29,10 +29,16 @@ void KeyValueStore::get_testworkload(std::string &s,std::vector<int>&keys,std::v
    create_integertestinput(s,numprocs,myrank,offset,keys,ts);
 }
 
-void KeyValueStore::get_ycsb_timeseries_workload(std::string &s,std::vector<float> &keys,std::vector<uint64_t> &ts,std::vector<int>&op)
+void KeyValueStore::get_ycsb_test(std::string& s,std::vector<uint64_t>&keys,std::vector<std::string> &values)
+{
+   create_ycsb_input(s,numprocs,myrank,keys,values);
+}
+
+
+void KeyValueStore::get_ycsb_timeseries_workload(std::string &s,std::vector<uint64_t> &keys,std::vector<float> &values,std::vector<int>&op)
 {
 
-   create_timeseries_testinput(s,numprocs,myrank,keys,ts,op);
+   create_timeseries_testinput(s,numprocs,myrank,keys,values,op);
 
 }
 
@@ -42,7 +48,7 @@ void KeyValueStore::get_dataworld_workload(std::string &s,std::vector<uint64_t> 
     create_dataworld_testinput(s,numprocs,myrank,keys,ts,op);
 }
 
-void KeyValueStore::addKeyValueStoreInvList(std::string &s,std::string &attr_name)
+void KeyValueStore::addKeyValueStoreInvList(std::string &s,std::string &attr_name,int maxsize)
 {
       if(!tables->find_accessor(s))
       {
@@ -52,7 +58,7 @@ void KeyValueStore::addKeyValueStoreInvList(std::string &s,std::string &attr_nam
 	   if(!tables->add_accessor(s,m)) return;
       }
 
-      tables->create_invertedlist(s,attr_name,io_count);
+      tables->create_invertedlist(s,attr_name,io_count,maxsize);
       io_count++;
 }
 

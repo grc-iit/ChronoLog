@@ -10,6 +10,7 @@
 #include "KeyValueStoreIO.h"
 #include "util_t.h"
 #include <boost/lockfree/queue.hpp>
+#include <typeinfo>
 
 namespace tl=thallium;
 
@@ -31,7 +32,7 @@ struct KeyIndex
 struct keydata
 {
   uint64_t ts;
-  char data[108];
+  char *data;
 
 };
 
@@ -94,8 +95,15 @@ class hdf5_invlist
 	   int numevents;
 	   int io_count;
 	   boost::mutex invmutex;
+	   int datasize;
+	   hid_t datatype;
+	   std::string respfile1;
+	   std::ofstream ost;
+	   std::string respfile2;
+	   std::ofstream ost1;
+	   int flush_count;
    public:
-	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c) : numprocs(n), myrank(p), io_count(c)
+	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c,int data_size) : numprocs(n), myrank(p), io_count(c)
 	   {
 	     tag = 20000;
 	     tag += io_count;
@@ -110,8 +118,8 @@ class hdf5_invlist
 	     int rem = ntables%numprocs;
 	     if(myrank < rem) numtables = tables_per_proc+1;
 	     else numtables = tables_per_proc;
-
-	     if(myrank==0) std::cout <<" totalsize = "<<totalsize<<" number of tables = "<<ntables<<" totalbits = "<<nbits<<" nbits_per_table = "<<nbits_r<<std::endl;
+	     datasize = data_size;
+	     if(myrank==0) std::cout <<" totalsize = "<<totalsize<<" number of tables = "<<ntables<<" totalbits = "<<nbits<<" nbits_per_table = "<<nbits_r<<" datasize = "<<datasize<<std::endl;
 
 	     dir = "/home/asasidharan/FrontEnd/build/emu/"; 
 	     maxsize = numtables*pow(2,nbits_r);
@@ -132,6 +140,7 @@ class hdf5_invlist
 		table_ids.push_back(prefix+i);
 	     }
 
+	     flush_count = 0;
 	     emptyKey = emptykey;
 	     filename = table;
 	     attributename = attr;
@@ -139,6 +148,10 @@ class hdf5_invlist
 	     d = ds;
 	     io_t = io;
 	     file_exists.store(false);
+	     respfile1 = filename+attributename+std::to_string(myrank);
+	     ost = std::ofstream(respfile1.c_str(),std::ios_base::out); 
+	     respfile2 = filename+attributename+std::to_string(myrank)+std::to_string(1);
+	     ost1 = std::ofstream(respfile2.c_str(),std::ios_base::out);
 	     tl::engine *t_server = d->get_thallium_server();
              tl::engine *t_server_shm = d->get_thallium_shm_server();
              tl::engine *t_client = d->get_thallium_client();
@@ -159,9 +172,20 @@ class hdf5_invlist
 	     invlist = new struct invnode<KeyT,ValueT,hashfcn,equalfcn> ();
 	     invlist->ml = new memory_pool<KeyT,ValueT,hashfcn,equalfcn> (100);
 	     invlist->bm = new BlockMap<KeyT,ValueT,hashfcn,equalfcn>(size,invlist->ml,emptykey);
+	     KeyT key;
+	     /*int v_i;float v_f;double v_d;unsigned long v_l;
+	     if(typeid(key)==typeid(v_i))
+		datatype = H5Tcopy(H5T_NATIVE_INT);
+	     else if(typeid(key)==typeid(v_f))
+		datatype = H5Tcopy(H5T_NATIVE_FLOAT);
+	     else if(typeid(key)==typeid(v_d))
+		datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
+	     else if(typeid(key)==typeid(v_l))
+		datatype = H5Tcopy(H5T_NATIVE_UINT64);
+
 	     kv1 = H5Tcreate(H5T_COMPOUND,sizeof(struct KeyIndex<KeyT>));
-    	     H5Tinsert(kv1,"key",HOFFSET(struct KeyIndex<KeyT>,key),H5T_NATIVE_FLOAT);
-    	     H5Tinsert(kv1,"index",HOFFSET(struct KeyIndex<KeyT>,index),H5T_NATIVE_UINT64);
+    	     H5Tinsert(kv1,"key",HOFFSET(struct KeyIndex<KeyT>,key),datatype);
+    	     H5Tinsert(kv1,"index",HOFFSET(struct KeyIndex<KeyT>,index),H5T_NATIVE_UINT64);*/
 	     pending_gets = new boost::lockfree::queue<struct event_req<KeyT,ValueT>*> (128);
 	   }
 
@@ -213,17 +237,24 @@ class hdf5_invlist
 	   {
 	        if(invlist != nullptr) 
 	        {
-		  /*std::vector<uint64_t> ts;
-		  invlist->bm->get_map(ts);
-		  std::cout <<" rank = "<<myrank<<" attribute_name = "<<attributename<<" numvalues = "<<ts.size()<<std::endl;*/
 	          delete invlist->bm;
 		  delete invlist->ml;
 		  delete invlist;
 		  delete pending_gets;
 	         }
-		H5Tclose(kv1);
+		if(ost.is_open()) ost.close();
+		if(ost1.is_open()) ost1.close();
+		//H5Tclose(kv1);
 	   }
+	  
+	   void add_event_file(std::string &eventstring)
+	   {
+		if(ost1.is_open())
+		{
+		   ost1 << eventstring << std::endl;
+		}
 
+	   }
 	   bool LocalPutEntry(KeyT &k,ValueT& v)
 	   {
 		bool b = false;
@@ -327,12 +358,15 @@ class hdf5_invlist
 	   bool put_entry(KeyT&,ValueT&);
 	   int get_entry(KeyT&,std::vector<ValueT>&);
 	   void fill_invlist_from_file(std::string&,int);
-	   void flush_table_file(int);
+	   void flush_table_file(int,bool);
 	   int partition_no(KeyT &k);	
            void cache_latest_table();	   
 	   void add_entries_to_tables(std::string&,std::vector<struct keydata>*,uint64_t,int); 
 	   void get_entries_from_tables(std::vector<struct KeyIndex<KeyT>> &,int&,int&,uint64_t);
 	   std::vector<struct KeyIndex<KeyT>> merge_keyoffsets(std::vector<struct KeyIndex<KeyT>>&,std::vector<struct KeyIndex<KeyT>>&,std::vector<int>&);
+
+	   void create_index_file();
+	   void update_index_file();
 };
 
 #include "../srcs/invertedlist.cpp"

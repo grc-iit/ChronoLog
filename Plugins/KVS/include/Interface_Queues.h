@@ -217,6 +217,26 @@ class Interface_Queues
 	    }
 	}
 
+	bool CreateEmulatorStream(std::string &s,std::vector<std::string> &metadata,int s_id)
+	{
+	   bool b = false;
+	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	   {
+		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+		tl::remote_procedure rp = thallium_shm_client->define("EmulatorPrepareStream");
+		std::chrono::duration<double,std::ratio<20>> second;
+		b = rp.on(ep).timed(second,s,metadata);
+	   }
+           else
+	   {
+		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+		tl::remote_procedure rp = thallium_client->define("EmulatorPrepareStream");
+		std::chrono::duration<double,std::ratio<20>> second;
+		b = rp.on(ep).timed(second,s,metadata);
+	   }	
+	   return b;
+
+	}	
 	bool CreateEmulatorBuffer(int numevents,std::string &s,int s_id)
 	{
 	    bool b = false;
@@ -253,6 +273,24 @@ class Interface_Queues
 	     tl::remote_procedure rp = thallium_client->define("EmulatorEndSessions");
 	     std::chrono::duration<double> second;
 	     b = rp.on(ep).timed(second,s);
+	   }
+	   return b;
+	}
+
+	bool ShutDownEmulator(std::string &s,int s_id)
+	{
+	   bool b = false;
+	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
+	   {
+	     tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
+	     tl::remote_procedure rp = thallium_shm_client->define("ShutDownEmulator");
+	     b = rp.on(ep)(s);
+	   }
+	   else
+	   {
+	      tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
+	      tl::remote_procedure rp = thallium_client->define("ShutDownEmulator");
+	      b = rp.on(ep)(s);
 	   }
 	   return b;
 	}

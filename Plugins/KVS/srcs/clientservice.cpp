@@ -42,15 +42,20 @@ int main(int argc,char **argv)
    KeyValueStoreMetadata m4(sname4,n,types,names,lens,len);
 
    std::string sname5 = "table1";
-   n = 1;
-   types.clear(); types.push_back("float");
-   names.clear(); names.push_back("value");
-   lens.clear(); lens.push_back(sizeof(float));
-   len = names.size()*sizeof(float);
+   n = 2;
+   types.clear(); types.push_back("double");
+   names.clear(); names.push_back("value1");
+   lens.clear(); lens.push_back(sizeof(double));
+   types.push_back("char");
+   names.push_back("value2");
+   lens.push_back(100); 
+   len = sizeof(double)+100;
    KeyValueStoreMetadata m5(sname5,n,types,names,lens,len);
    
 
-   k->start_session(sname5,names[0],m5);
+   int id = k->start_session(sname5,names[0],m5,32768);
+
+   k->create_keyvalues<double_invlist,double>(id,4096);
 
    std::vector<int> keys1;
    std::vector<uint64_t> ts1;

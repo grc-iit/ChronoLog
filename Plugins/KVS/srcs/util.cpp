@@ -113,7 +113,104 @@ void create_integertestinput(std::string &name,int numprocs,int myrank,int offse
 
 }
 
-void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,std::vector<float> &keys,std::vector<uint64_t> &ts,std::vector<int>&op)
+void create_ycsb_input(std::string &filename,int numprocs,int myrank,std::vector<uint64_t> &keys,std::vector<std::string> &values)
+{
+
+   int columnsize = 100;
+
+   std::ifstream ist(filename.c_str(),std::ios_base::in);
+   std::vector<std::string> lines;
+
+   if(ist.is_open())
+   {
+     std::string line;
+     while(getline(ist,line))
+     {
+        std::stringstream ss(line);
+        std::string string1;
+        ss >> string1;
+        if(string1.compare("INSERT")==0)
+        lines.push_back(line);
+     }
+
+     std::string str1 = "usertable";
+     std::string str2 = "user";
+     std::vector<std::string> fields;
+     fields.push_back("field0=");
+     fields.push_back("field1=");
+     fields.push_back("field2=");
+     fields.push_back("field3=");
+     fields.push_back("field4=");
+     fields.push_back("field5=");
+     fields.push_back("field6=");
+     fields.push_back("field7=");
+     fields.push_back("field8=");
+     fields.push_back("field9=");
+     std::string b1 = "[";
+     std::string b2 = "]";
+
+     int totalrecords = lines.size();
+     int records_per_proc = totalrecords/numprocs;
+     int rem = totalrecords%numprocs;
+
+     int numrecords = records_per_proc;
+     if(myrank < rem) numrecords++;
+
+     int offset = 0;
+     for(int i=0;i<myrank;i++)
+     {
+	if(i < rem) offset += records_per_proc+1;
+	else offset += records_per_proc;
+
+     }
+
+     for(int i=offset;i<offset+numrecords;i++)
+     {
+       int pos1 = lines[i].find(str1.c_str())+str1.length();
+       std::string substr1 = lines[i].substr(pos1);
+       std::stringstream ss(substr1);
+       std::string tss;
+       ss >> tss;
+       int pos2 = tss.find(str2.c_str())+str2.length();
+       std::string substr2 = tss.substr(pos2);
+       uint64_t key = std::stoul(substr2,nullptr);
+       std::vector<std::string> fieldstrings;
+       fieldstrings.resize(fields.size());
+       std::string data;
+       for(int j=0;j<fields.size();j++)
+       {
+         pos1 = lines[i].find(fields[j].c_str())+fields[j].length();
+         substr1 = lines[i].substr(pos1);
+         pos2 = substr1.find("field");
+         fieldstrings[j].resize(columnsize);
+         if(pos2 != std::string::npos)
+         {
+           substr1 = lines[i].substr(pos1,pos2-1);
+           for(int k=0;k<substr1.length();k++)
+           fieldstrings[j][k] = substr1[k];
+         }
+         else
+         {
+            pos2 = substr1.find("]");
+            if(pos2 != std::string::npos)
+            {
+              substr1 = lines[i].substr(pos1,pos2-1);
+              for(int k=0;k<substr1.length();k++)
+              fieldstrings[j][k] = substr1[k];
+            }
+         }
+         data += fieldstrings[j];
+       }
+       keys.push_back(key);
+       values.push_back(data);
+     }
+
+     ist.close();
+   }
+
+}
+
+void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,std::vector<uint64_t> &keys,std::vector<float> &values,std::vector<int>&op)
 {
    if(myrank==0)
    {
@@ -159,15 +256,15 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
          ess >> valuestr;
          float value = std::stof(valuestr,nullptr);
 
-         ts.push_back(tsu);
-         keys.push_back(value);
+         keys.push_back(tsu);
+         values.push_back(value);
        }
        else
        {
 	  uint64_t tsu = UINT64_MAX;
 	  float value = 0;
-	  ts.push_back(tsu);
-	  keys.push_back(value);
+	  keys.push_back(tsu);
+	  values.push_back(value);
 	
        }
      }
@@ -177,7 +274,7 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
 
    }
    
-   int numrecords = ts.size();
+   int numrecords = keys.size();
    int totalrecords = 0;
    MPI_Allreduce(&numrecords,&totalrecords,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -189,7 +286,7 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
 
    if(myrank != 0) 
    {
-      ts.resize(numrecords);
+      values.resize(numrecords);
       keys.resize(numrecords);
       op.resize(numrecords);
    }
@@ -206,14 +303,14 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
 	else nrecords = records_per_proc;
 	if(i != 0)
 	{
-	  MPI_Isend(&ts[offset],nrecords,MPI_UINT64_T,i,123,MPI_COMM_WORLD,&reqs[nreq]);
+	  MPI_Isend(&keys[offset],nrecords,MPI_UINT64_T,i,123,MPI_COMM_WORLD,&reqs[nreq]);
 	  nreq++;
         }
 	offset += nrecords;
    }
    else
    {
-	MPI_Irecv(ts.data(),numrecords,MPI_UINT64_T,0,123,MPI_COMM_WORLD,&reqs[nreq]);
+	MPI_Irecv(keys.data(),numrecords,MPI_UINT64_T,0,123,MPI_COMM_WORLD,&reqs[nreq]);
 	nreq++;
    }
 
@@ -222,8 +319,8 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
    if(myrank==0)
    {
 	std::vector<uint64_t> temp;
-	temp.assign(ts.begin(),ts.begin()+numrecords);
-	ts.assign(temp.begin(),temp.end());
+	temp.assign(keys.begin(),keys.begin()+numrecords);
+	keys.assign(temp.begin(),temp.end());
 
    }
 
@@ -238,14 +335,14 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
 
       if(i != 0)
       {
-	MPI_Isend(&keys[offset],nrecords,MPI_FLOAT,i,123,MPI_COMM_WORLD,&reqs[nreq]);
+	MPI_Isend(&values[offset],nrecords,MPI_FLOAT,i,123,MPI_COMM_WORLD,&reqs[nreq]);
 	nreq++;
       }
       offset += nrecords;
    }
    else
    {
-	MPI_Irecv(keys.data(),numrecords,MPI_FLOAT,0,123,MPI_COMM_WORLD,&reqs[nreq]);
+	MPI_Irecv(values.data(),numrecords,MPI_FLOAT,0,123,MPI_COMM_WORLD,&reqs[nreq]);
 	nreq++;
    }
 
@@ -254,8 +351,8 @@ void create_timeseries_testinput(std::string &filename,int numprocs,int myrank,s
    if(myrank==0)
    {
 	std::vector<float> temp;
-	temp.assign(keys.begin(),keys.begin()+numrecords);
-	keys.assign(temp.begin(),temp.end());
+	temp.assign(values.begin(),values.begin()+numrecords);
+	values.assign(temp.begin(),temp.end());
    }
 
    offset = 0;

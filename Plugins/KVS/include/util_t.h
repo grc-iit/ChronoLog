@@ -82,6 +82,7 @@ struct doublehashfunc
 
 int nearest_power_two(int n);
 void create_integertestinput(std::string&,int,int,int,std::vector<int> &keys,std::vector<uint64_t> &ts);
-void create_timeseries_testinput(std::string&,int,int,std::vector<float>&,std::vector<uint64_t>&,std::vector<int>&);
+void create_ycsb_input(std::string &,int,int,std::vector<uint64_t>&,std::vector<std::string>&);
+void create_timeseries_testinput(std::string&,int,int,std::vector<uint64_t>&,std::vector<float>&,std::vector<int>&);
 void create_dataworld_testinput(std::string&,int,int,std::vector<uint64_t>&,std::vector<uint64_t>&,std::vector<int>&);
 #endif

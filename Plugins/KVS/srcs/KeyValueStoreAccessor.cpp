@@ -1,8 +1,8 @@
 
 template<typename T,typename N>
-int KeyValueStoreAccessor::add_new_inverted_list(std::string &table,std::string &attr_name,int size,int ntables,N &emptykey,data_server_client *d,KeyValueStoreIO *io,int c)
+int KeyValueStoreAccessor::add_new_inverted_list(std::string &table,std::string &attr_name,int size,int ntables,N &emptykey,data_server_client *d,KeyValueStoreIO *io,int c,int data_size)
 {
-      T *invlist = new T(numprocs,myrank,size,ntables,emptykey,table,attr_name,d,io,c);
+      T *invlist = new T(numprocs,myrank,size,ntables,emptykey,table,attr_name,d,io,c,data_size);
 
       std::string type = md.get_type(attr_name);
       int keytype = 0;
@@ -50,16 +50,12 @@ bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
 {
    if(pos >= lists.size()) return false;
 
-   char keyarray[8];
-   N key_t = key;
-   char *arr = (char *)(&key_t);
-   for(int i=0;i<8;i++)
-   {
-	keyarray[i] = arr[i];
-   }
-   std::string key_s(keyarray,8);
-   std::string data = key_s+value;  
-     
+   int ksize = sizeof(N);
+
+   std::string data = value;
+
+   assert(data.length()==value.length());
+
    std::vector<uint64_t> ts;
    ts = if_q->PutEmulatorEvent(s,data,myrank);
    bool b = false;
@@ -109,10 +105,10 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key)
 
    if(values.size()>0)
    {
-     ts = values[0];
+     ts = values[values.size()-1];
      std::string eventstring = if_q->GetEmulatorEvent(s,ts,myrank);
      if(eventstring.length()==0)
-     {	
+     {
 	if(!invlist->CheckLocalFileExists())
 	{
 	   std::string filename = "file";
@@ -125,12 +121,13 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key)
 	
 	invlist->AddPending(key,values,pid);
      }
+     else invlist->add_event_file(eventstring);
 		
    }
    else
    {
 	pid = invlist->partition_no(key);
-
+	
 	if(!invlist->CheckLocalFileExists())
 	{
 	   std::string filename = "file";
@@ -187,12 +184,14 @@ void KeyValueStoreAccessor::cache_invertedtable(std::string &attr_name)
    int pos = get_inverted_list_index(attr_name);
    if(pos==-1) return;
 
+   std::string tname = md.db_name();
+
    T *invlist = reinterpret_cast<T*>(lists[pos].second);
 
    if(!invlist->CheckLocalFileExists())
    {
 	std::string filename = "file";
-	filename += "table1.h5";
+	filename += tname+".h5";
 
 	if(if_q->CheckFileExistence(filename,myrank))
 	{
@@ -204,9 +203,11 @@ void KeyValueStoreAccessor::cache_invertedtable(std::string &attr_name)
 }
 
 template<typename T>
-void KeyValueStoreAccessor::flush_invertedlist(std::string &attr_name)
+void KeyValueStoreAccessor::flush_invertedlist(std::string &attr_name,bool p)
 {
     int offset = md.locate_offset(attr_name);
+
+    std::string tname = md.db_name();
 
     if(offset==-1) return;
 
@@ -219,7 +220,7 @@ void KeyValueStoreAccessor::flush_invertedlist(std::string &attr_name)
     if(!invlist->CheckLocalFileExists())
     {
            std::string filename = "file";
-           filename += "table1.h5";
+           filename += tname+".h5";
            if(if_q->CheckFileExistence(filename,myrank))
            {
                 invlist->LocalFileExists();
@@ -240,6 +241,7 @@ void KeyValueStoreAccessor::flush_invertedlist(std::string &attr_name)
     r->offset = offset;
     r->keytype = keytype;
     r->flush = true;
+    r->persist = p;
 
     bool ret = kio->LocalPutSyncRequest(r);
 

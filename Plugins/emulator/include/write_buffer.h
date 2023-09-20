@@ -91,7 +91,7 @@ class databuffers
 	return dmap->GetValue(ts,index);
 
   } 
-  atomic_buffer* create_write_buffer(int maxsize);
+  atomic_buffer* create_write_buffer(int,int);
   void clear_write_buffer(int index);
   void clear_write_buffer_no_lock(int index);
   void set_valid_range(int index,uint64_t &n1,uint64_t &n2);

@@ -14,6 +14,7 @@
 #include <boost/lockfree/queue.hpp>
 //#include "h5_async_lib.h"
 #include <thread>
+#include <fstream>
 
 using namespace boost;
 
@@ -31,6 +32,9 @@ struct io_request
    std::string name;
    bool from_nvme;
    bool read_op;
+   int tid;
+   uint64_t mints;
+   uint64_t maxts;
    std::vector<struct event> *buf1;
    std::vector<struct event> *buf2;
    std::vector<struct event> *buf3;
@@ -86,6 +90,10 @@ private:
       std::vector<std::string> shmaddrs;
       std::string myipaddr;
       int iters_per_batch;
+      std::atomic<int> *enable_stream;
+      std::atomic<int> cstream;
+      std::atomic<int> *w_reqs_pending;
+      std::atomic<int> *r_reqs_pending;
 public:
 	read_write_process(int r,int np,ClockSynchronization<ClocksourceCPPStyle> *C,int n,data_server_client *rc) : myrank(r), numprocs(np), numcores(n), dsc(rc)
 	{
@@ -114,10 +122,16 @@ public:
 	   end_of_session.store(0);
 	   end_of_io_session.store(0);
 	   num_streams.store(0);
+	   cstream.store(0);
 	   num_io_threads = 1;
 	   file_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   write_interval =  new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   read_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
+	   enable_stream = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+	   w_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+	   r_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+	   t_args.resize(MAXSTREAMS);
+	   workers.resize(MAXSTREAMS);
 
 	   for(int i=0;i<MAXSTREAMS;i++)
 	   {
@@ -127,13 +141,13 @@ public:
 		(*write_interval)[i].second.store(0);
 		(*read_interval)[i].first.store(UINT64_MAX);
 		(*read_interval)[i].second.store(0);
+		enable_stream[i].store(0);
+		w_reqs_pending[i].store(0);
+		r_reqs_pending[i].store(0);
 
 	   }
 	   std::function<void(struct thread_arg_w *)> IOFunc(
            std::bind(&read_write_process::io_polling,this, std::placeholders::_1));
-
-	   std::function<void(struct thread_arg_w*)> IOFuncSeq(
-	   std::bind(&read_write_process::io_polling_seq,this,std::placeholders::_1));
 
 	   t_args_io.resize(num_io_threads);
 	   io_threads.resize(num_io_threads);
@@ -157,6 +171,9 @@ public:
 	   delete file_interval;
 	   delete write_interval;
 	   delete read_interval;
+	   std::free(enable_stream);
+	   std::free(w_reqs_pending);
+	   std::free(r_reqs_pending);
 	   H5close();
 
 	}
@@ -185,6 +202,11 @@ public:
 	   std::function<void(const tl::request &,std::string &)> CheckFile(
 	   std::bind(&read_write_process::ThalliumCheckFile,this,std::placeholders::_1,std::placeholders::_2));
 
+	   std::function<void(const tl::request &,std::string &,std::vector<std::string> &)> AddService(
+	   std::bind(&read_write_process::ThalliumPrepareStream,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+
+	   thallium_server->define("EmulatorPrepareStream",AddService);
+	   thallium_shm_server->define("EmulatorPrepareStream",AddService);
 	   thallium_server->define("EmulatorCheckFile",CheckFile);
 	   thallium_shm_server->define("EmulatorCheckFile",CheckFile);	   
 	   thallium_server->define("EmulatorFindEvent",FindEvent);
@@ -209,6 +231,8 @@ public:
 	}
 	void end_sessions()
 	{
+		for(int i=0;i<cstream.load();i++)
+			workers[i].join();
 		end_of_io_session.store(1);
 		for(int i=0;i<num_io_threads;i++) io_threads[i].join();
 
@@ -218,6 +242,7 @@ public:
 		io_queue_sync->push(r);
 	}
 	void spawn_write_streams(std::vector<std::string> &,std::vector<int> &,int);
+	void spawn_write_stream(int,std::string&);
 	dsort *get_sorter()
 	{
 		return ds;
@@ -228,7 +253,7 @@ public:
 	    if(write_names.find(s)==write_names.end())
 	    {
 	      struct atomic_buffer *ev = nullptr;
-	      ev = dm->create_write_buffer(maxsize);
+	      ev = dm->create_write_buffer(maxsize,em.get_datasize());
 	      myevents.push_back(ev);
 	      int n = myevents.size()-1;
 	      //numrecvevents[n].store(0);
@@ -418,6 +443,52 @@ public:
 		m1.unlock();
 		return em;
 	}
+	bool add_metadata_buffers(std::string &s,std::vector<std::string> &m)
+	{
+		event_metadata em;
+		int i = 0;
+		std::string tname = m[0];
+		i++;
+		std::size_t num;
+                int numattrs = std::stoi(m[i].c_str(),&num);
+		i++;
+		em.set_numattrs(numattrs);
+		std::vector<std::string> attrtypes;
+		std::vector<std::string> attrnames;
+		std::vector<int> attrsizes;
+		for(int j=0;j<numattrs;j++)
+		{
+		   std::string st = m[i];
+		   attrtypes.push_back(st);
+		   i++;
+		}
+		for(int j=0;j<numattrs;j++)
+		{
+		   std::string st = m[i];
+		   attrnames.push_back(st);
+		   i++;
+		}
+		for(int j=0;j<numattrs;j++)
+		{
+		   std::string st = m[i];
+		   int size = std::stoi(st.c_str(),&num);
+		   attrsizes.push_back(size);
+		   i++;
+		}
+		int datalen = std::stoi(m[i].c_str(),&num);
+		for(int j=0;j<numattrs;j++)
+		{
+		   bool is_signed = false;
+		   bool is_big_endian = true;
+		   em.add_attr(attrnames[j],attrsizes[j],is_signed,is_big_endian);
+		}
+		create_write_buffer(s,em,8192);
+		int streamid = cstream.fetch_add(1);
+		enable_stream[streamid].store(1);
+		spawn_write_stream(streamid,s);
+		return true;
+	}
+
 	int get_stream_index(std::string &s)
 	{
 	   int index = -1;
@@ -527,6 +598,11 @@ public:
         {
                 req.respond(create_buffer(num_events,s));
         }
+	void ThalliumPrepareStream(const tl::request &req,std::string &s,std::vector<std::string> &m)
+	{
+		req.respond(add_metadata_buffers(s,m));
+	
+	}
         void ThalliumAddEvent(const tl::request &req, std::string &s,std::string &data)
 	{
 	        req.respond(add_event(s,data));
@@ -565,13 +641,10 @@ public:
 	void pwrite_extend_files(std::vector<std::string>&,std::vector<hsize_t>&,std::vector<hsize_t>&,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>&,std::vector<uint64_t>&,std::vector<uint64_t>&,bool,std::vector<int>&,std::vector<std::vector<std::vector<int>>>&);
 	void pwrite(std::vector<std::string>&,std::vector<hsize_t>&,std::vector<hsize_t>&,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>&,std::vector<uint64_t>&,std::vector<uint64_t>&,bool,std::vector<int>&,std::vector<std::vector<std::vector<int>>>&);
 	void pwrite_files(std::vector<std::string> &,std::vector<hsize_t> &,std::vector<hsize_t>&,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>&,std::vector<uint64_t>&,std::vector<uint64_t>&,bool,std::vector<int>&,std::vector<std::vector<std::vector<int>>>&);
-	bool preaddata(const char*,std::string &s,uint64_t,uint64_t,uint64_t&,uint64_t&,uint64_t&,uint64_t&,std::vector<struct event>*);
-	void preadappend(const char*,const char*,std::string&);
-	bool preadfileattr(const char*);
+	bool pread(std::vector<std::vector<io_request*>>&,int);
 	std::pair<std::vector<struct event>*,std::vector<char>*>
 	create_data_spaces(std::string &,hsize_t&,hsize_t&,uint64_t&,uint64_t&,bool,int&,std::vector<std::vector<int>>&);
 	void io_polling(struct thread_arg_w*);
-	void io_polling_seq(struct thread_arg_w*);
 	void data_stream(struct thread_arg_w*);
 	void sync_clocks();
 	bool create_buffer(int &,std::string &);

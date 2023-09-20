@@ -50,11 +50,6 @@ int main(int argc,char **argv)
 
   double t = std::chrono::duration<double>(t2-t1).count();
 
-  double total_time = 0;
-  MPI_Allreduce(&t,&total_time,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
-
-  if(rank==0) std::cout <<" numprocs = "<<size<<" sync time = "<<total_time<<std::endl;
-
   /*metadata_client *CC = np->getclientobj();
 
 
@@ -76,35 +71,7 @@ int main(int argc,char **argv)
 
   }*/
 
-  int numstories = 1;
-  std::vector<std::string> story_names;
-  std::vector<int> total_events;
-
-  int numattrs1 = 108;
-  int numattrs2 = 200;
-  event_metadata em1,em2;
-  em1.set_numattrs(numattrs1);
-  em2.set_numattrs(numattrs2);
-
-  for(int i=0;i<numattrs1;i++)
-  {
-    std::string a = "attr"+std::to_string(i);
-    int vsize = sizeof(char);
-    bool is_signed = false;
-    bool is_big_endian = true; 
-    em1.add_attr(a,vsize,is_signed,is_big_endian);
-  }
-
-  for(int i=0;i<numattrs2;i++)
-  {
-     std::string a = "attr"+std::to_string(i);
-     int vsize = sizeof(char);
-     bool is_signed = false;
-     bool is_big_endian = true;
-     em2.add_attr(a,vsize,is_signed,is_big_endian);
-  }
-
-  for(int i=0;i<numstories;i++)
+  /*for(int i=0;i<numstories;i++)
   {
 	std::string name = "table"+std::to_string(i+1);
 	story_names.push_back(name);
@@ -112,9 +79,7 @@ int main(int argc,char **argv)
 	if(i%2==0)
 	np->prepare_service(name,em1,8192*size);
 	else np->prepare_service(name,em2,8192*size);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
+  }*/
 
   int num_writer_threads = 4;
 
@@ -122,9 +87,7 @@ int main(int argc,char **argv)
 
   t1 = std::chrono::high_resolution_clock::now();
 
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  np->data_streams_s(story_names,total_events,nbatches);
+  //np->data_streams_s(story_names,total_events,nbatches);
 
   //np->generate_queries(story_names);
 
@@ -135,7 +98,7 @@ int main(int argc,char **argv)
 */
   while(np->process_end()==0);
 
-  np->end_sessions_t();  
+  //np->end_sessions_t();  
 
   t2 = std::chrono::high_resolution_clock::now();
   t = std::chrono::duration<double> (t2-t1).count();

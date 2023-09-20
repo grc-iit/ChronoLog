@@ -122,6 +122,11 @@ public:
 	std::function<void(const tl::request &,std::string&)> EndSessions(
         std::bind(&emu_process::ThalliumEndSessions,this,std::placeholders::_1,std::placeholders::_2));
 
+	std::function<void(const tl::request &,std::string &)> EndEmulator(
+	std::bind(&emu_process::ThalliumEndProcess,this,std::placeholders::_1,std::placeholders::_2));
+
+	thallium_server->define("ShutDownEmulator",EndEmulator);
+	thallium_shm_server->define("ShutDownEmulator",EndEmulator);
 	thallium_server->define("EmulatorEndSessions",EndSessions);
         thallium_shm_server->define("EmulatorEndSessions",EndSessions);
 
@@ -188,10 +193,18 @@ public:
       bool end_sessions(std::string &s)
       {
 	rwp->end_session_flag();
-	end_process.store(1);
+	for(int i=0;i<dw.size();i++) dw[i].join();
+	for(int i=0;i<qp.size();i++) qp[i].join();
+	QE->end_sessions();
+	rwp->end_sessions();
 	return true;
       }
 
+      bool end_emu_process(std::string &s)
+      {
+	end_process.store(1);
+	return true;
+      }
       void end_sessions_t()
       {
 	for(int i=0;i<dw.size();i++) dw[i].join();
@@ -205,6 +218,10 @@ public:
 	req.respond(end_sessions(s));
       }
 
+      void ThalliumEndProcess(const tl::request &req,std::string &s)
+      {
+	req.respond(end_emu_process(s));
+      }
       int process_end()
       {
 	return end_process.load();

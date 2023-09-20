@@ -2,7 +2,7 @@
 #include <boost/container_hash/hash.hpp>
 
 
-atomic_buffer* databuffers::create_write_buffer(int maxsize)
+atomic_buffer* databuffers::create_write_buffer(int maxsize,int datasize)
 {
      int total_size = 65536*2;
      uint64_t maxkey = UINT64_MAX;
@@ -12,7 +12,7 @@ atomic_buffer* databuffers::create_write_buffer(int maxsize)
      try
      {
        a->buffer = new std::vector<struct event> (maxsize);
-       a->datamem = new std::vector<char> (maxsize*VALUESIZE);
+       a->datamem = new std::vector<char> (maxsize*datasize);
        a->valid = new std::vector<std::atomic<int>> (maxsize);
      }
      catch(const std::exception &except)

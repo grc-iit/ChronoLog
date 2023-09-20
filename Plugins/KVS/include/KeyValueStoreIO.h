@@ -44,6 +44,7 @@ struct request
   double doublekey;
   int sender;
   bool flush;
+  bool persist;
 };
 
 struct sync_request
@@ -55,6 +56,7 @@ struct sync_request
    int offset;
    bool flush;
    bool fill;
+   bool persist;
 };
 
 struct response

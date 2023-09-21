@@ -114,9 +114,6 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 
      hid_t fid = H5Fopen(fname.c_str(),H5F_ACC_RDONLY,fapl);
 
-     std::string d_string = attributename;
-     std::string s_string = attributename+"attr";
-     
      hsize_t adims[1];
      adims[0] = datasize;
      int keydatasize = sizeof(uint64_t)+datasize; 
@@ -147,7 +144,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	   std::string dstring = "Data1";   
            hid_t dataset_t = H5Dopen(fid,dstring.c_str(),H5P_DEFAULT);
 	   hid_t file_dataspace = H5Dget_space(dataset_t);
-
+	/*
 	   if(cached_keyindex_mt.size()>0 && cached_keyindex.size()>0)
 	   for(int n=0;n<worklist1.size();n++)
 	   {
@@ -183,9 +180,9 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	
 	       H5Sclose(mem_dataspace);
 	     }
-	   }
-	   H5Sclose(file_dataspace);
+	   }*/
 	   H5Dclose(dataset_t);
+	   H5Sclose(file_dataspace);
 
      }
      
@@ -214,7 +211,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 
        int pos = 4;
 
-       for(int n=0;n<worklist2.size();n++)
+       /*for(int n=0;n<worklist2.size();n++)
        {
          std::vector<int> blockids;
 	 std::vector<ValueT> values;
@@ -272,16 +269,16 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	    delete buffer;
 	    H5Sclose(mem_dataspace);
        }
-      }
+      }*/
 
-       H5Sclose(file_dataspace);
        H5Aclose(attr_id);
        H5Dclose(dataset1);
+       H5Sclose(file_dataspace);
     } 
      
+     H5Fclose(fid);
      H5Tclose(s1);
      H5Tclose(s2);
-     H5Fclose(fid);
      H5Pclose(fapl);
      H5Pclose(xfer_plist);
 
@@ -629,11 +626,15 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::flush_table_file(int offset,boo
 
  if(myrank==0) std::cout <<" total_keys = "<<total_keys<<std::endl;
 
+ if(cached_keyindex_mt.size()==0) 
+ {
+    cached_keyindex_mt.resize(2*maxsize);
+    std::fill(cached_keyindex_mt.begin(),cached_keyindex_mt.end(),0);
+ }
 
   int offset_t = pre_table*2*pow(2,nbits_r);
 
   int prev_keys = 0;
-  if(cached_keyindex_mt.size()!=0)
   for(int i=0;i<maxsize;i++) prev_keys += cached_keyindex_mt[2*i];
 
   int prev_total = 0;
@@ -711,6 +712,13 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::update_index_file()
     hid_t dataset_t = H5Dopen(fid,dtable.c_str(),H5P_DEFAULT);
     hid_t file_dataspace_t = H5Dget_space(dataset_t);
 
+    int cache_size = cached_keyindex.size();
+    int max_cache_size = 0;
+
+    MPI_Allreduce(&cache_size,&max_cache_size,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+
+    if(max_cache_size > 0)
+    {
     hsize_t toffset = pre_table*2*pow(2,nbits_r);
 
     hsize_t lsize = 2*maxsize;
@@ -743,6 +751,7 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::update_index_file()
     flush_count++;
     H5Sclose(file_dataspace);
     H5Dclose(dataset_k);
+    }
     H5Sclose(file_dataspace_t);
     H5Dclose(dataset_t);
     H5Fclose(fid);

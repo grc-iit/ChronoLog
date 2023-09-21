@@ -6,9 +6,11 @@ void KeyValueStore::createKeyValueStoreEntry(std::string &s, KeyValueStoreMetada
 {
    std::vector<std::string> pk;
    m.packmetadata(pk);
-   bool b = mds->Insert(s,pk);
-
-   tables->add_accessor(s,m);
+   if(!mds->Find(s))
+   {
+     bool b = mds->Insert(s,pk);
+   }
+     tables->add_accessor(s,m);
 }
 
 bool KeyValueStore::findKeyValueStoreEntry(std::string &s,KeyValueStoreMetadata &m)

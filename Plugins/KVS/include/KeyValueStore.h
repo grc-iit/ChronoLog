@@ -134,6 +134,8 @@ class KeyValueStore
    	 	MPI_Request *reqs = new MPI_Request[2*numprocs];
 
 		bool end_loop = false;
+		int rate = 200;
+		int request_count=0;
 
 		while(true)
    		{
@@ -156,6 +158,7 @@ class KeyValueStore
       		  if(sum==numprocs) 
 		  {
 		     end_loop = true;
+		     rate = 100;
 		  }
 
       		  auto t1 = std::chrono::high_resolution_clock::now();
@@ -164,13 +167,19 @@ class KeyValueStore
         		auto t2 = std::chrono::high_resolution_clock::now();
 
         		double t = std::chrono::duration<double>(t2-t1).count();
-        		if(t > 100) break;
+        		if(t > rate) break;
       		  }
 		
 		  if(end_loop) 
 		  ka->flush_invertedlist<T>(attr_name,true);
-		  else ka->flush_invertedlist<T>(attr_name,false);
+		  else 
+		  {
+		     bool c = false;
+		     if(request_count/5==0) c = true;
+		     ka->flush_invertedlist<T>(attr_name,c);
+		  }
 		  if(end_loop) break;
+		  request_count++;
    	       }
 
    	       delete reqs;
@@ -439,7 +448,7 @@ class KeyValueStore
 	   int spawn_kvstream(std::string &s,std::string &a,int maxsize)
 	   {
 
-		int prev = nstreams.load();
+		int prev = nstreams.fetch_add(1);
 		k_args[prev].tname = s;
 		k_args[prev].attr_name = a;
 		k_args[prev].tid = prev;
@@ -454,8 +463,6 @@ class KeyValueStore
 		std::function<void(struct kstream_args *)> 
 		KVStream(std::bind(&KeyValueStore::cacheflushInvList<T,N>,this, std::placeholders::_1));
 	
-		nstreams.fetch_add(1);
-
 	 	std::thread t{KVStream,&k_args[prev]};	
 		kstreams[prev] = std::move(t);
 

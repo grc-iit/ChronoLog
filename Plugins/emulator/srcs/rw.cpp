@@ -218,58 +218,6 @@ void read_write_process::clear_write_events(int index,uint64_t& min_k,uint64_t& 
 
 }
 
-void read_write_process::clear_read_events(std::string &s)
-{
-   int index = -1;
-   m2.lock();
-   auto r = read_names.find(s);
-   if(r != read_names.end()) index = (r->second).first;
-   m2.unlock();
-
-   if(index==-1) return;
-
-   boost::upgrade_lock<boost::shared_mutex> lk(readevents[index]->m);
-
-   readevents[index]->buffer->clear();
-   (*read_interval)[index].first.store(UINT64_MAX);
-   (*read_interval)[index].second.store(0);
-}
-
- bool read_write_process::get_events_in_range_from_read_buffers(std::string &s,std::pair<uint64_t,uint64_t> &range,std::vector<struct event> &oup)
-{
-     uint64_t min = range.first; uint64_t max = range.second;
-     bool err = false;
-     int index = -1;
-     m2.lock();
-     auto r = read_names.find(s);
-     if(r != read_names.end()) index = r->second.first;
-     m2.unlock();
-
-     uint64_t min_s, max_s;
-             
-     if(index != -1)
-     {
-          min_s = (*read_interval)[index].first.load();
-          max_s = (*read_interval)[index].second.load();
-          if(!((max < min_s) && (min > max_s)))
-          {
-              min_s = std::max(min_s,min);
-              max_s = std::min(max_s,max);
-
-           }
-            
-	  boost::shared_lock<boost::shared_mutex> lk(readevents[index]->m);
-          for(int i=0;i<readevents[index]->buffer->size();i++)
-          {
-                 uint64_t ts = (*readevents[index]->buffer)[i].ts;
-                 if(ts >= min_s && ts <= max_s) oup.push_back((*readevents[index]->buffer)[i]);
-          }
-          err = true;
-        }
-
-        return err;
-}
-
 void read_write_process::spawn_write_stream(int index,std::string &sname)
 {
     t_args[index].tid = index;   
@@ -281,26 +229,6 @@ void read_write_process::spawn_write_stream(int index,std::string &sname)
 
     std::thread t{DataFunc,&t_args[index]};
     workers[index] = std::move(t);
-    /*
-    while(true)
-    {
-            std::thread st{DataFunc,&t_args[index]};
-            st.join();
-
-            struct io_request *r = new struct io_request();
-            r->name = t_args[index].name;
-            r->from_nvme = true;
-            io_queue_async->push(r);
-
-            num_streams.store(1);
-            while(num_streams.load()!=0);
-            bool endbatch = true;
-            if(t_args[index].endsession != true) endbatch = false;
-            if(endbatch) break;
-
-    }*/
-
-
 }
 
 void read_write_process::spawn_write_streams(std::vector<std::string> &snames,std::vector<int> &total_events,int nbatches)
@@ -325,32 +253,11 @@ void read_write_process::spawn_write_streams(std::vector<std::string> &snames,st
 	 std::function<void(struct thread_arg_w *)> DataFunc(
          std::bind(&read_write_process::data_stream,this,std::placeholders::_1));
 
-         while(true)
+         for(int j=0;j<num_threads;j++)
          {
-               for(int j=0;j<num_threads;j++)
-               {
-                      std::thread t{DataFunc,&t_args[j]};
-                      workers[j] = std::move(t);
-               }
-
-               for(int j=0;j<num_threads;j++) workers[j].join();
-
-               for(int j=0;j<num_threads;j++)
-               {
-                    struct io_request *r = new struct io_request();
-                    r->name = t_args[j].name;
-                    r->from_nvme = true;
-                    io_queue_async->push(r);
-                }
-
-                num_streams.store(num_threads);
-                while(num_streams.load()!=0);
-	        bool endbatch = true;
-		for(int j=0;j<num_threads;j++)
-		  if(t_args[j].endsession != true) endbatch = false;
-		if(endbatch) break;
-
-           }
+              std::thread t{DataFunc,&t_args[j]};
+              workers[j] = std::move(t);
+         }
 
 }
 
@@ -520,13 +427,13 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     {
         //H5ESwait(event_ids[i],H5ES_WAIT_FOREVER,&num,&op_failed);
 	//H5ESclose(event_ids[i]);
-        H5Sclose(filespaces[i]);
-	H5Tclose(type_ids[2*i]);
-	H5Tclose(type_ids[2*i+1]);
-	int id = valid_id[i];
-	for(int j=0;j<bcounts[id];j++)
+	int d = valid_id[i];
+        H5Sclose(filespaces[d]);
+	H5Tclose(type_ids[2*d]);
+	H5Tclose(type_ids[2*d+1]);
+	for(int j=0;j<bcounts[d];j++)
         H5Sclose(memspaces[prefix+j]);
-	std::string filename = "file"+sts[id]+".h5";
+	std::string filename = "file"+sts[d]+".h5";
 	int ps = -1;
 	m1.lock();
 	auto r = std::find(file_names.begin(),file_names.end(),filename);
@@ -535,12 +442,12 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
         m1.unlock();
 	if(ps !=-1)
 	{
-	  (*file_interval)[ps].second.store(maxkeys[id]);
+	  (*file_interval)[ps].second.store(maxkeys[d]);
 	}
 
 	if(clear_nvme) 
 	{
-	   int nm_index = nm->buffer_index(sts[id]);
+	   int nm_index = nm->buffer_index(sts[d]);
 	   if(nm_index==-1)
 	   {
 		throw std::runtime_error("nvme file does not exist");
@@ -548,14 +455,14 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
 	   else
 	   {
 	     int tag_p = 100;
-	     int keyvaluesize = sizeof(uint64_t)+metadata[i].get_datasize();
+	     int keyvaluesize = sizeof(uint64_t)+metadata[d].get_datasize();
 	     while(nm->get_buffer(nm_index,tag_p,2)==false);
-	     nm->erase_from_nvme(sts[id],data_arrays[id].second->size()/keyvaluesize,bcounts[id]);
+	     nm->erase_from_nvme(sts[d],data_arrays[d].second->size()/keyvaluesize,bcounts[d]);
 	     nm->release_buffer(nm_index);
 	   }
 	}
-	if(data_arrays[id].second != nullptr) delete data_arrays[id].second;
-	prefix += bcounts[id];
+	if(data_arrays[d].second != nullptr) delete data_arrays[d].second;
+	prefix += bcounts[d];
     }
 
     H5Sclose(attr_space[0]);
@@ -568,7 +475,7 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
 {
 
 
-   for(int i=0;i<maxstreams;i++)
+   for(int i=0;i<my_requests.size();i++)
    {
      std::string s = t_args[i].name;
      std::string filename = "file";
@@ -579,11 +486,11 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
      if(r == file_names.end()) end = true;
      m1.unlock();
 
-     int file_exists = end == true ? 1 : 0;
+     int file_exists = (end == true) ? 0 : 1;
 
      int file_exists_t = 0;
      MPI_Allreduce(&file_exists,&file_exists_t,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-
+     
      if(file_exists_t==numprocs)
      {
     
@@ -598,9 +505,9 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
        attr_space[0] = MAXBLOCKS*4+4;
        const char *attr_name[1];
 
-       std::string filename_r = s+"results"+std::to_string(myrank)+".txt";
+       //std::string filename_r = s+"results"+std::to_string(myrank)+".txt";
 
-       std::ofstream ost(filename_r.c_str(),std::ios::app);
+       //std::ofstream ost(filename_r.c_str(),std::ios::app);
 
        xfer_plist = H5Pcreate(H5P_DATASET_XFER);
        hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -647,7 +554,7 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
 
 	std::vector<char> *data_buffer = new std::vector<char> ();
 
-	for(int n=0;n<my_requests[i].size();n++)
+	/*for(int n=0;n<my_requests[i].size();n++)
 	{
              uint64_t mints = my_requests[i][n]->mints;
 	     uint64_t maxts = my_requests[i][n]->maxts;
@@ -695,17 +602,18 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
             }
 	    delete my_requests[i][n];
 	    my_requests[i][n] = nullptr;
-	}
+	}*/
 	     
        delete data_buffer;	       
-       H5Sclose(file_dataspace);
-       H5Pclose(xfer_plist);
        H5Aclose(attr_id);
        H5Dclose(dataset1);
+       H5Fclose(fid);  
+       H5Sclose(file_dataspace);
        H5Tclose(s2);
        H5Tclose(s1);
-       H5Fclose(fid);  
-       if(ost.is_open()) ost.close();
+       H5Pclose(xfer_plist);
+       H5Pclose(fapl);
+       //if(ost.is_open()) ost.close();
      }
    }
     return true;
@@ -960,17 +868,17 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
     int prefix = 0;
     for(int i=0;i<valid_id.size();i++)
     {
-	int id = valid_id[i];
+	int d = valid_id[i];
         //H5ESwait(event_ids[i],H5ES_WAIT_FOREVER,&num,&op_failed);
         //H5ESclose(event_ids[i]);
-	H5Sclose(filespaces[i]);
-	for(int j=0;j<bcounts[id];j++)
+	H5Sclose(filespaces[d]);
+	for(int j=0;j<bcounts[d];j++)
 	{
            H5Sclose(memspaces[prefix+j]);
 	}
-	H5Tclose(type_ids[2*i]);
-	H5Tclose(type_ids[2*i+1]);
-	std::string filename = "file"+sts[id]+".h5";
+	H5Tclose(type_ids[2*d]);
+	H5Tclose(type_ids[2*d+1]);
+	std::string filename = "file"+sts[d]+".h5";
 	int ps = -1;
 	m1.lock();
         file_names.insert(filename);
@@ -978,13 +886,13 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 	m1.unlock();
 	if(ps!=-1)
 	{
-	  (*file_interval)[ps].first.store(minkeys[id]);
-	  (*file_interval)[ps].second.store(maxkeys[id]);
+	  (*file_interval)[ps].first.store(minkeys[d]);
+	  (*file_interval)[ps].second.store(maxkeys[d]);
 	}
 	if(clear_nvme) 
 	{
-	   int keyvaluesize = sizeof(uint64_t)+metadata[i].get_datasize();
-	   int nm_index = nm->buffer_index(sts[id]);
+	   int keyvaluesize = sizeof(uint64_t)+metadata[d].get_datasize();
+	   int nm_index = nm->buffer_index(sts[d]);
 	   if(nm_index == -1)
 	   {
 		throw std::runtime_error("nvme file does not exist");
@@ -993,12 +901,12 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 	   {
 	     int tag_p = 100;
 	     while(nm->get_buffer(nm_index,tag_p,2)==false);
-	     nm->erase_from_nvme(sts[id],data_arrays[id].second->size()/keyvaluesize,bcounts[id]);
+	     nm->erase_from_nvme(sts[d],data_arrays[d].second->size()/keyvaluesize,bcounts[d]);
 	     nm->release_buffer(nm_index);
 	   }
 	}
-	if(data_arrays[id].second != nullptr) delete data_arrays[id].second;
-	prefix += bcounts[id];
+	if(data_arrays[d].second != nullptr) delete data_arrays[d].second;
+	prefix += bcounts[d];
     }
    
     H5Sclose(attr_space[0]);
@@ -1220,26 +1128,32 @@ void read_write_process::io_polling(struct thread_arg_w *t)
      std::fill(active_reqs.begin(),active_reqs.end(),0);
      MPI_Allreduce(pending_streams.data(),active_reqs.data(),active_valid_stream,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
 
-     int numreq = 0;
-     for(int i=0;i<active_reqs.size();i++)
-	     if(active_reqs[i]==numprocs) numreq++;
-     if(numreq > 0)
+     std::vector<std::vector<io_request*>> read_reqs;
+     read_reqs.resize(active_valid_stream);
+    
+     std::vector<io_request*> write_reqs;
+     write_reqs.resize(active_valid_stream);
+
+     for(int i=0;i<active_valid_stream;i++) write_reqs[i] = nullptr;
+
+     int num_req = 0;
+     for(int i=0;i<active_valid_stream;i++)
+	  if(active_reqs[i]==numprocs) num_req++;
+
+     snames.clear(); data.clear(); total_records.clear(); offsets.clear(); numrecords.clear();
+     minkeys.clear(); maxkeys.clear();
+     bcounts.clear(); blockcounts.clear();
+
+     std::vector<io_request*> inactive_reqs;
+
+     if(num_req > 0)
      {
-       snames.clear(); data.clear(); total_records.clear(); offsets.clear(); numrecords.clear();
-       minkeys.clear(); maxkeys.clear();
-       bcounts.clear(); blockcounts.clear();
+	  CM->SynchronizeClocks();
+	  CM->ComputeErrorInterval();
+     }
 
-        std::vector<io_request*> inactive_reqs;
-
-	std::vector<std::vector<io_request*>> read_reqs;
-	read_reqs.resize(active_valid_stream);
-
-	CM->SynchronizeClocks();
-	CM->ComputeErrorInterval();
-
-
-       while(!io_queue_async->empty())
-       {
+     while(!io_queue_async->empty())
+     {
          struct io_request *r=nullptr;
 
          io_queue_async->pop(r);
@@ -1248,39 +1162,48 @@ void read_write_process::io_polling(struct thread_arg_w *t)
          {
            if(r->tid < active_valid_stream && active_reqs[r->tid]==numprocs && r->read_op==false)
 	   {
-              hsize_t trecords, offset, numrecords;
-	      uint64_t min_key,max_key;
-	      int nblocks;
-	      std::vector<std::vector<int>> blockc;
-	      std::pair<std::vector<struct event>*,std::vector<char>*> data_rp;
-	      try
-	      {
-	         data_rp = create_data_spaces(r->name,offset,trecords,min_key,max_key,true,nblocks,blockc);
-	      }
-	      catch(const std::exception &except)
-	      {
+	       write_reqs[r->tid] = r;
+	   }
+	   else if(r->tid < active_valid_stream && r->read_op==true)
+	   {
+		read_reqs[r->tid].push_back(r);
+	   }
+	   else inactive_reqs.push_back(r);
+	 }
+       }
+        
+       for(int i=0;i<write_reqs.size();i++)
+       {
+	  io_request *r = write_reqs[i];
+
+	  if(r != nullptr)
+	  {
+            hsize_t trecords, offset, numrecords;
+	    uint64_t min_key,max_key;
+	    int nblocks;
+	    std::vector<std::vector<int>> blockc;
+	    std::pair<std::vector<struct event>*,std::vector<char>*> data_rp;
+	    try
+	    {
+	     data_rp = create_data_spaces(r->name,offset,trecords,min_key,max_key,true,nblocks,blockc);
+	    }
+	    catch(const std::exception &except)
+	    {
 		std::cout <<except.what()<<std::endl;
 		exit(-1);
-	      }
-              snames.push_back(r->name);
-              total_records.push_back(trecords);
-              offsets.push_back(offset);
-	      minkeys.push_back(min_key);
-	      maxkeys.push_back(max_key);
-              data.push_back(data_rp);
-	      bcounts.push_back(nblocks);
- 	      blockcounts.push_back(blockc);
-	      clear_nvme = true;
-	      delete r;
-	      w_reqs_pending[r->tid].store(0);
-          }
-	  else if(r->tid < active_valid_stream && r->read_op==true)
-	  {
-	     read_reqs[r->tid].push_back(r);
+	    }
+            snames.push_back(r->name);
+            total_records.push_back(trecords);
+            offsets.push_back(offset);
+	    minkeys.push_back(min_key);
+	    maxkeys.push_back(max_key);
+            data.push_back(data_rp);
+	    bcounts.push_back(nblocks);
+ 	    blockcounts.push_back(blockc);
+	    clear_nvme = true;
+	    delete r;
+	    w_reqs_pending[r->tid].store(0);
 	  }
-	  else inactive_reqs.push_back(r);
-
-         }
       }
 
       for(int i=0;i<inactive_reqs.size();i++)
@@ -1296,14 +1219,13 @@ void read_write_process::io_polling(struct thread_arg_w *t)
       bcounts.clear();
       blockcounts.clear();
 
-      pread(read_reqs,active_valid_stream);
-       
-      for(int i=0;i<active_valid_stream;i++)
-	   for(int j=0;j<read_reqs[i].size();j++)
-		 if(read_reqs[i][j] != nullptr)
-		   io_queue_async->push(read_reqs[i][j]);
+     pread(read_reqs,active_valid_stream);
 
-     }
+      for(int i=0;i<active_valid_stream;i++)
+           for(int j=0;j<read_reqs[i].size();j++)
+                 if(read_reqs[i][j] != nullptr)
+                   io_queue_async->push(read_reqs[i][j]);
+
      }
 
   }

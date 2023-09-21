@@ -60,12 +60,9 @@ private:
       boost::mutex m2;
       std::set<std::string> file_names;
       std::unordered_map<std::string,std::pair<int,event_metadata>> write_names;
-      std::unordered_map<std::string,std::pair<int,event_metadata>> read_names;
       std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> *file_interval;
       std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> *write_interval;
-      std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> *read_interval;
       std::vector<struct atomic_buffer*> myevents;
-      std::vector<struct atomic_buffer*> readevents;
       dsort *ds;
       data_server_client *dsc;
       std::vector<struct thread_arg_w> t_args;
@@ -126,7 +123,6 @@ public:
 	   num_io_threads = 1;
 	   file_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   write_interval =  new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
-	   read_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
 	   enable_stream = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
 	   w_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
 	   r_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
@@ -139,8 +135,6 @@ public:
 		(*file_interval)[i].second.store(0);
 		(*write_interval)[i].first.store(UINT64_MAX);
 		(*write_interval)[i].second.store(0);
-		(*read_interval)[i].first.store(UINT64_MAX);
-		(*read_interval)[i].second.store(0);
 		enable_stream[i].store(0);
 		w_reqs_pending[i].store(0);
 		r_reqs_pending[i].store(0);
@@ -160,17 +154,11 @@ public:
 	{
 	   delete dm;
 	   delete ds;
-	   for(int i=0;i<readevents.size();i++)
-	   {
-		delete readevents[i]->buffer;
-		delete readevents[i];
-	   }
 	   delete nm;
 	   delete io_queue_async;
 	   delete io_queue_sync;
 	   delete file_interval;
 	   delete write_interval;
-	   delete read_interval;
 	   std::free(enable_stream);
 	   std::free(w_reqs_pending);
 	   std::free(r_reqs_pending);
@@ -277,21 +265,6 @@ public:
 	    }
 	    m1.unlock();
 	}	
-	void create_read_buffer(std::string &s,event_metadata &em)
-	{
-	    m2.lock();
-	    auto r = read_names.find(s);;
-	    if(r==read_names.end())
-	    {
-	        struct atomic_buffer *ev = new struct atomic_buffer ();
-    	        ev->buffer = new std::vector<struct event> ();		
-		readevents.push_back(ev);
-		std::pair<int,event_metadata> p1(readevents.size()-1,em);
-		std::pair<std::string,std::pair<int,event_metadata>> p2(s,p1);
-		read_names.insert(p2);
-	    }	
-	    m2.unlock();
-	}
 	void get_events_from_map(std::string &s)
 	{
 	   int index = -1;
@@ -316,18 +289,6 @@ public:
 
 	   if(index==-1) return nullptr;
 	   else return dm->get_atomic_buffer(index);
-	}
-
-	atomic_buffer* get_read_buffer(std::string &s)
-	{
-	   m2.lock();
-	   int index = -1;
-	   auto r = read_names.find(s);
-	   if(r != read_names.end()) index = (r->second).first;
-	   m2.unlock();
-	
-	   if(index==-1) return nullptr;
-	   else return readevents[index];
 	}
 
 	void sort_events(std::string &);
@@ -527,28 +488,6 @@ public:
 	   return found;
 	}
 
-        bool get_range_in_read_buffers(std::string &s,uint64_t &min_v,uint64_t &max_v)
-	{
-	    min_v = UINT64_MAX; max_v = 0;
-	    bool err = false;
-	    int index = -1;
-	    m2.lock();
-	    auto r = read_names.find(s);
-	    if(r != read_names.end()) index = r->second.first;
-	    m2.unlock();
-
-	    if(index != -1)
-	    {
-		uint64_t minv = (*read_interval)[index].first.load();
-		uint64_t maxv = (*read_interval)[index].second.load();
-
-		min_v = (min_v < minv) ? min_v : minv;
-		max_v = (max_v > maxv) ? max_v : maxv;
-		err = true;
-	    }
-	    return err;
-	}
-
 	bool get_range_in_write_buffers(std::string &s,uint64_t &min_v,uint64_t &max_v)
 	{
 	    min_v = UINT64_MAX; max_v = 0;
@@ -636,7 +575,6 @@ public:
         bool get_events_in_range_from_read_buffers(std::string &s,std::pair<uint64_t,uint64_t> &range,std::vector<struct event> &oup);
 	void create_events(int num_events,std::string &s,double);
 	void clear_write_events(int,uint64_t&,uint64_t&);
-	void clear_read_events(std::string &s);
 	void get_range(std::string &s);
 	void pwrite_extend_files(std::vector<std::string>&,std::vector<hsize_t>&,std::vector<hsize_t>&,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>&,std::vector<uint64_t>&,std::vector<uint64_t>&,bool,std::vector<int>&,std::vector<std::vector<std::vector<int>>>&);
 	void pwrite(std::vector<std::string>&,std::vector<hsize_t>&,std::vector<hsize_t>&,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>&,std::vector<uint64_t>&,std::vector<uint64_t>&,bool,std::vector<int>&,std::vector<std::vector<std::vector<int>>>&);

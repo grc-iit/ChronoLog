@@ -62,7 +62,6 @@ class hdf5_invlist
 	   int totalsize;
 	   int maxsize;
 	   KeyT emptyKey;
-	   hid_t kv1;
 	   std::string filename;
 	   std::string attributename;
 	   std::string rpc_prefix;
@@ -105,7 +104,7 @@ class hdf5_invlist
    public:
 	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c,int data_size) : numprocs(n), myrank(p), io_count(c)
 	   {
-	     tag = 20000;
+	     tag = 2000;
 	     tag += io_count;
 	     totalsize = tsize;
 	     ntables = np;
@@ -172,20 +171,6 @@ class hdf5_invlist
 	     invlist = new struct invnode<KeyT,ValueT,hashfcn,equalfcn> ();
 	     invlist->ml = new memory_pool<KeyT,ValueT,hashfcn,equalfcn> (100);
 	     invlist->bm = new BlockMap<KeyT,ValueT,hashfcn,equalfcn>(size,invlist->ml,emptykey);
-	     KeyT key;
-	     /*int v_i;float v_f;double v_d;unsigned long v_l;
-	     if(typeid(key)==typeid(v_i))
-		datatype = H5Tcopy(H5T_NATIVE_INT);
-	     else if(typeid(key)==typeid(v_f))
-		datatype = H5Tcopy(H5T_NATIVE_FLOAT);
-	     else if(typeid(key)==typeid(v_d))
-		datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
-	     else if(typeid(key)==typeid(v_l))
-		datatype = H5Tcopy(H5T_NATIVE_UINT64);
-
-	     kv1 = H5Tcreate(H5T_COMPOUND,sizeof(struct KeyIndex<KeyT>));
-    	     H5Tinsert(kv1,"key",HOFFSET(struct KeyIndex<KeyT>,key),datatype);
-    	     H5Tinsert(kv1,"index",HOFFSET(struct KeyIndex<KeyT>,index),H5T_NATIVE_UINT64);*/
 	     pending_gets = new boost::lockfree::queue<struct event_req<KeyT,ValueT>*> (128);
 	   }
 
@@ -214,7 +199,6 @@ class hdf5_invlist
 	       
 	       MPI_Request *reqs = (MPI_Request *)std::malloc(2*numprocs*sizeof(MPI_Request));
 	       int nreq = 0;
-	       
 	       int send_v = 1;
 	       std::vector<int> recv_v(numprocs);
 	       std::fill(recv_v.begin(),recv_v.end(),0);
@@ -244,7 +228,6 @@ class hdf5_invlist
 	         }
 		if(ost.is_open()) ost.close();
 		if(ost1.is_open()) ost1.close();
-		//H5Tclose(kv1);
 	   }
 	  
 	   void add_event_file(std::string &eventstring)

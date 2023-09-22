@@ -144,7 +144,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	   std::string dstring = "Data1";   
            hid_t dataset_t = H5Dopen(fid,dstring.c_str(),H5P_DEFAULT);
 	   hid_t file_dataspace = H5Dget_space(dataset_t);
-	/*
+	
 	   if(cached_keyindex_mt.size()>0 && cached_keyindex.size()>0)
 	   for(int n=0;n<worklist1.size();n++)
 	   {
@@ -173,14 +173,14 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	       int ret = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET,&offset_r,NULL,&blocksize,NULL);
 	       ret = H5Dread(dataset_t,s2, mem_dataspace, file_dataspace, xfer_plist,e.data());
                std::string estring(e.data());		
-	       if(ost.is_open())
+	       /*if(ost.is_open())
 	       {
 		  ost << estring << std::endl;
-	       }	       
+	       }*/	       
 	
 	       H5Sclose(mem_dataspace);
 	     }
-	   }*/
+	   }
 	   H5Dclose(dataset_t);
 	   H5Sclose(file_dataspace);
 
@@ -211,7 +211,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 
        int pos = 4;
 
-       /*for(int n=0;n<worklist2.size();n++)
+       for(int n=0;n<worklist2.size();n++)
        {
          std::vector<int> blockids;
 	 std::vector<ValueT> values;
@@ -258,10 +258,10 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 		if(ts==values[values.size()-1])
 		{
 		   std::string eventstring(buffer->data()+i,buffer->data()+i+keydatasize);
-		   if(ost.is_open())
+		   /*if(ost.is_open())
 		   {
 			ost << eventstring << std::endl;
-		   }
+		   }*/
 		   break;
 		}
 	    }
@@ -269,7 +269,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	    delete buffer;
 	    H5Sclose(mem_dataspace);
        }
-      }*/
+      }
 
        H5Aclose(attr_id);
        H5Dclose(dataset1);
@@ -534,7 +534,6 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::flush_table_file(int offset,boo
  {
     if(block_index[i].size() > 0)
     {
-
     block_id = i;
 
     int nrecords = attrs[pos+block_id*4+3];
@@ -566,6 +565,7 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::flush_table_file(int offset,boo
 	  {
 		  k+=keydatasize;
 		  if(k==buffer->size()) break;
+		  ts = *(uint64_t*)(&((*buffer)[k]));
 	  }
 	  if(k==buffer->size()) break;
 	  if(Timestamp_order[p].index == ts)

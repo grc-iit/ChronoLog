@@ -144,7 +144,7 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	   std::string dstring = "Data1";   
            hid_t dataset_t = H5Dopen(fid,dstring.c_str(),H5P_DEFAULT);
 	   hid_t file_dataspace = H5Dget_space(dataset_t);
-	
+
 	   if(cached_keyindex_mt.size()>0 && cached_keyindex.size()>0)
 	   for(int n=0;n<worklist1.size();n++)
 	   {
@@ -169,7 +169,8 @@ std::vector<struct keydata> hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_even
 	     {
                hsize_t blocksize = 1;
 	       hid_t mem_dataspace = H5Screate_simple(1,&blocksize,NULL);
-	       std::vector<char> e(keydatasize);	
+	       std::vector<char> e(keydatasize);      
+
 	       int ret = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET,&offset_r,NULL,&blocksize,NULL);
 	       ret = H5Dread(dataset_t,s2, mem_dataspace, file_dataspace, xfer_plist,e.data());
                std::string estring(e.data());		
@@ -555,6 +556,7 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::flush_table_file(int offset,boo
     H5Sclose(mem_dataspace);
 
     int k = 0;
+    int r = 0;
     for(int j=0;j<block_index[i].size();j++)
     {
 	int p = block_index[i][j];
@@ -564,13 +566,14 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::flush_table_file(int offset,boo
 	  while(Timestamp_order[p].index > ts)
 	  {
 		  k+=keydatasize;
+		  r++;
 		  if(k==buffer->size()) break;
 		  ts = *(uint64_t*)(&((*buffer)[k]));
 	  }
 	  if(k==buffer->size()) break;
 	  if(Timestamp_order[p].index == ts)
 	  {
-	   Timestamp_order[p].index = pre+k;
+	   Timestamp_order[p].index = pre+r;
 	  }
 	  else if(Timestamp_order[p].index < ts)
 	  {

@@ -150,14 +150,14 @@ class KeyValueStoreAccessor
 	  template <typename T,typename N,typename M>
 	  bool Put(int,std::string &,N &key, M &value);
 	  template <typename T,typename N>
-          bool Get(int,std::string&,N&);
+          bool Get(int,std::string&,N&,int);
+	  template<typename T,typename N>
+	  bool Get_resp(int,std::string&,N&,int);
 	  void sort_on_secondary_key(std::string &attr_name);
 	  template<typename T,typename N>
 	  bool Emulator_Request(int,std::string &,N &);
 	  template<typename T,typename N>
-	  bool openfilerw(int,std::string&);
-	  template<typename T,typename N>
-	  void closefilerw(int);
+	  std::vector<std::pair<int,std::string>> Completed_Gets(int,std::string&);
 	  ~KeyValueStoreAccessor()
 	  {
 		for(int i=0;i<lists.size();i++)

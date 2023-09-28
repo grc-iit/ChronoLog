@@ -41,6 +41,19 @@ struct event_req
 {
  KeyT key;
  std::vector<ValueT> values;
+ int id;
+ int sender;
+ int type;
+ bool resp_queue;
+};
+
+template<class KeyT,class ValueT>
+struct event_resp
+{
+  KeyT key;
+  int id;
+  int type;
+  std::string eventstring;
 };
 
 template<class KeyT>
@@ -87,6 +100,7 @@ class hdf5_invlist
 	   std::vector<int> cached_keyindex_mt;
 	   std::vector<struct KeyIndex<KeyT>> cached_keyindex;
 	   boost::lockfree::queue<struct event_req<KeyT,ValueT>*> *pending_gets;
+	   boost::lockfree::queue<struct event_resp<KeyT,ValueT>*> *completed_gets;
 	   int tables_per_proc;
 	   int numtables;
 	   std::vector<int> table_ids;
@@ -101,6 +115,7 @@ class hdf5_invlist
 	   std::string respfile2;
 	   std::ofstream ost1;
 	   int flush_count;
+	   int index_writes;
    public:
 	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c,int data_size) : numprocs(n), myrank(p), io_count(c)
 	   {
@@ -140,6 +155,7 @@ class hdf5_invlist
 	     }
 
 	     flush_count = 0;
+	     index_writes = 0;
 	     emptyKey = emptykey;
 	     filename = table;
 	     attributename = attr;
@@ -172,6 +188,7 @@ class hdf5_invlist
 	     invlist->ml = new memory_pool<KeyT,ValueT,hashfcn,equalfcn> (100);
 	     invlist->bm = new BlockMap<KeyT,ValueT,hashfcn,equalfcn>(size,invlist->ml,emptykey);
 	     pending_gets = new boost::lockfree::queue<struct event_req<KeyT,ValueT>*> (128);
+	     completed_gets = new boost::lockfree::queue<struct event_resp<KeyT,ValueT>*>(128);
 	   }
 
 	   void bind_functions()
@@ -182,8 +199,11 @@ class hdf5_invlist
 	       std::function<void(const tl::request &,KeyT&)> getEntryFunc(
 	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumLocalGetEntry,this,std::placeholders::_1,std::placeholders::_2));		       
 
-	       std::function<void(const tl::request &,KeyT &,std::vector<ValueT>&)> addPendingEvent(
-	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumAddPending,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+	       std::function<void(const tl::request &,KeyT &,std::vector<ValueT>&,bool &,int&,int &)> addPendingEvent(
+	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumAddPending,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5,std::placeholders::_6));
+
+	       std::function<void(const tl::request &,KeyT &,std::string &,int &)> addResponse(
+	       std::bind(&hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::ThalliumAddResponse,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4));
 
 	       std::string fcnname1 = rpc_prefix+"RemotePutEntry";
                thallium_server->define(fcnname1.c_str(),putEntryFunc);
@@ -196,7 +216,11 @@ class hdf5_invlist
 	       std::string fcnname3 = rpc_prefix+"RemoteGetReq";
 	       thallium_server->define(fcnname3.c_str(),addPendingEvent);
 	       thallium_shm_server->define(fcnname3.c_str(),addPendingEvent);
-	       
+
+	       std::string fcname4 = rpc_prefix+"RemoteResp";
+	       thallium_server->define(fcname4.c_str(),addResponse);
+	       thallium_shm_server->define(fcname4.c_str(),addResponse);
+
 	       MPI_Request *reqs = (MPI_Request *)std::malloc(2*numprocs*sizeof(MPI_Request));
 	       int nreq = 0;
 	       int send_v = 1;
@@ -225,7 +249,9 @@ class hdf5_invlist
 		  delete invlist->ml;
 		  delete invlist;
 		  delete pending_gets;
+		  delete completed_gets;
 	         }
+		if(myrank==0) std::cout <<" numflushes = "<<flush_count<<" numindexwrites = "<<index_writes<<std::endl;
 		if(ost.is_open()) ost.close();
 		if(ost1.is_open()) ost1.close();
 	   }
@@ -297,20 +323,36 @@ class hdf5_invlist
 		   return rp.on(serveraddrs[destid])(k);
 		}
 	   }
-	   bool AddPending(KeyT &key,std::vector<ValueT> &values,int destid)
+	   bool AddPending(KeyT &key,std::vector<ValueT> &values,bool &b,int &id,int destid)
 	   {
 		if(ipaddrs[destid].compare(myipaddr)==0)
 		{
 		   tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[destid]);
 		   std::string fcnname = rpc_prefix+"RemoteGetReq";
 		   tl::remote_procedure rp = thallium_shm_client->define(fcnname.c_str());
-		   return rp.on(ep)(key,values);
+		   return rp.on(ep)(key,values,b,id,myrank);
 		}
 		else
 		{
 		   std::string fcnname = rpc_prefix+"RemoteGetReq";
 		   tl::remote_procedure rp = thallium_client->define(fcnname.c_str());
-		   return rp.on(serveraddrs[destid])(key,values);
+		   return rp.on(serveraddrs[destid])(key,values,b,id,myrank);
+		}
+	   }
+	   bool AddResponse(KeyT &key,std::string &event,int &id,int destid)
+	   {
+		if(ipaddrs[destid].compare(myipaddr)==0)
+		{
+		  tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[destid]);
+		  std::string fcname = rpc_prefix+"RemoteResp";
+		  tl::remote_procedure rp = thallium_shm_client->define(fcname.c_str());
+		  return rp.on(ep)(key,event,id);
+		}
+		else
+		{
+		  std::string fcname = rpc_prefix+"RemoteResp";
+		  tl::remote_procedure rp = thallium_client->define(fcname.c_str());
+		  return rp.on(serveraddrs[destid])(key,event,id);
 		}
 	   }
 	   bool CheckLocalFileExists()
@@ -323,16 +365,60 @@ class hdf5_invlist
 		file_exists.store(true);
 	   }
 
-	   bool add_pending(KeyT &key,std::vector<ValueT> &values)
+	   bool add_response(KeyT &key,std::string &event,int &id)
+	   {
+		struct event_resp<KeyT,ValueT> *r = new struct event_resp<KeyT,ValueT>();
+		r->key = key;
+		r->id = id;
+		r->eventstring.assign(event);
+		return completed_gets->push(r);
+	   }
+	   void ThalliumAddResponse(const tl::request &req,KeyT &key,std::string &event,int &id)
+	   {
+		req.respond(add_response(key,event,id));
+	   }
+	   bool add_pending(KeyT &key,std::vector<ValueT> &values,bool &b,int &id,int &sid)
 	   {
 		struct event_req<KeyT,ValueT> *q = new struct event_req<KeyT,ValueT>();
 		q->key = key;
 		q->values.assign(values.begin(),values.end());
+		q->resp_queue = b;
+		q->id = id;
+		q->sender = sid;
 		return pending_gets->push(q);
 	   }
-	   void ThalliumAddPending(const tl::request &req,KeyT &key,std::vector<ValueT> &values)
+	   void ThalliumAddPending(const tl::request &req,KeyT &key,std::vector<ValueT> &values,bool &b,int &id,int &sid)
 	   {
-		req.respond(add_pending(key,values));
+		req.respond(add_pending(key,values,b,id,sid));
+	   }
+	   bool EmptyPendingQueue()
+	   {
+		return pending_gets->empty();
+	   }
+	   std::vector<std::pair<int,std::string>> get_completed_ids()
+	   {
+		std::vector<std::pair<int,std::string>> completed_ids;
+		while(!completed_gets->empty())
+		{
+		   struct event_resp<KeyT,ValueT> *r=nullptr;
+		   if(completed_gets->pop(r))
+		   {
+		     std::pair<int,std::string> p;
+		     p.first = r->id;
+		     p.second.assign(r->eventstring.begin(),r->eventstring.end());
+		     completed_ids.push_back(p);
+		     delete r;
+		   }
+		}
+		return completed_ids;
+	   }
+	   int get_num_flushes()
+	   {
+		return flush_count;
+	   }
+	   int get_num_writes()
+	   {
+		return index_writes;
 	   }
 
 	   std::vector<struct keydata> get_events();

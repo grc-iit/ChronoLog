@@ -7,12 +7,25 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
 {
      
      int nreq = 0;  	
-     
+     int tag = 50000;     
      MPI_Request *reqs = (MPI_Request *)std::malloc(2*numprocs*sizeof(MPI_Request));
 
      myoffset = 0;maxError = 0;
+     
+     int send_v = 1;
+     std::vector<int> recv_v(numprocs);
+     std::fill(recv_v.begin(),recv_v.end(),0);
 
-     MPI_Barrier(MPI_COMM_WORLD);
+     for(int i=0;i<numprocs;i++)
+     {
+	MPI_Isend(&send_v,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;
+	MPI_Irecv(&recv_v[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	nreq++;	
+     }
+     MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+     nreq = 0;
 
      if(myrank==0)
      {
@@ -28,12 +41,10 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
        {
         	  
 	MPI_Status s;
-	MPI_Recv(&requests[i],1,MPI_INT,i,123,MPI_COMM_WORLD,&s);
+	MPI_Recv(&requests[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&s);
 	nreq++;
         t[i*3+0] = Timestamp();
        }
-
-       //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
        for(int i=1;i<numprocs;i++)
 	      t[i*3+1] = Timestamp();
@@ -42,11 +53,10 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
        for(int i=1;i<numprocs;i++)
        {
 	t[i*3+2] = Timestamp();
-	MPI_Send(&t[i*3],3,MPI_UINT64_T,i,123,MPI_COMM_WORLD);
+	MPI_Send(&t[i*3],3,MPI_UINT64_T,i,tag,MPI_COMM_WORLD);
 	nreq++;
        }
        
-       //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
    }
    else 
    {
@@ -55,11 +65,9 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
       int nreq = 0;
       int req = 1;
 
-      MPI_Send(&req,1,MPI_INT,0,123,MPI_COMM_WORLD);
+      MPI_Send(&req,1,MPI_INT,0,tag,MPI_COMM_WORLD);
       nreq++;
 
-
-      //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
       std::vector<uint64_t> resp;
       resp.resize(3);
@@ -67,11 +75,9 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
       MPI_Status et;
 
       nreq = 0;
-      MPI_Recv(resp.data(),3,MPI_UINT64_T,0,123,MPI_COMM_WORLD,&et);
+      MPI_Recv(resp.data(),3,MPI_UINT64_T,0,tag,MPI_COMM_WORLD,&et);
       nreq++;
       
-      //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
-
       uint64_t Tresp = Timestamp();
       int64_t offset1 = resp[0]-Treq;
       int64_t offset2 = resp[2]-Tresp;
@@ -87,7 +93,6 @@ void ClockSynchronization<Clocksource>::SynchronizeClocks()
    }
 
    std::free(reqs);
-   //std::cout <<" rank = "<<myrank<<" offset = "<<myoffset<<" timestamp = "<<Timestamp()<<std::endl;
 
 }
 
@@ -100,22 +105,24 @@ void ClockSynchronization<Clocksource>::ComputeErrorInterval()
           MPI_Request *reqs = (MPI_Request *)std::malloc(2*numprocs*sizeof(MPI_Request));
  	  int nreq = 0;
 
-	   /*int sreq=1;
+	   int sreq=1;
            std::vector<int> recvreq(numprocs);
            std::fill(recvreq.begin(),recvreq.end(),0);
 
+            int tag = 50000;
 
             nreq = 0;
             for(int i=0;i<numprocs;i++)
             {
-		MPI_Send(&sreq,1,MPI_INT,i,123,MPI_COMM_WORLD,&reqs[nreq]);
+		MPI_Isend(&sreq,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
 		nreq++;
-		MPI_Recv(&recvreq[i],1,MPI_INT,i,123,MPI_COMM_WORLD,&st);
+		MPI_Irecv(&recvreq[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
 		nreq++;
-            }*/
-	  MPI_Barrier(MPI_COMM_WORLD);
+            }
 	
-	    //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+	    MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+	    nreq = 0;
 
 	   if(myrank==0)
 	   {
@@ -130,7 +137,7 @@ void ClockSynchronization<Clocksource>::ComputeErrorInterval()
 	    for(int i=1;i<numprocs;i++)
 	    {
 		MPI_Status s;
-		MPI_Recv(&tstamps[i],1,MPI_UINT64_T,i,123,MPI_COMM_WORLD,&s);
+		MPI_Recv(&tstamps[i],1,MPI_UINT64_T,i,tag,MPI_COMM_WORLD,&s);
 		nreq++;
 		tstamps[i] += delay;
 		ts = Timestamp();
@@ -146,24 +153,22 @@ void ClockSynchronization<Clocksource>::ComputeErrorInterval()
 	    nreq = 0;
 	    for(int i=1;i<numprocs;i++)
 	    {
-		MPI_Send(&maxError,1,MPI_UINT64_T,i,123,MPI_COMM_WORLD);
+		MPI_Send(&maxError,1,MPI_UINT64_T,i,tag,MPI_COMM_WORLD);
 		nreq++;
 	    }
-	    //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
 	}
 	else
 	{
 	    uint64_t ts = Timestamp();
 
-	    MPI_Send(&ts,1,MPI_UINT64_T,0,123,MPI_COMM_WORLD);
+	    MPI_Send(&ts,1,MPI_UINT64_T,0,tag,MPI_COMM_WORLD);
 
 	    MPI_Status et;
 
 	    nreq =0;
-	    MPI_Recv(&maxError,1,MPI_UINT64_T,0,123,MPI_COMM_WORLD,&et);
+	    MPI_Recv(&maxError,1,MPI_UINT64_T,0,tag,MPI_COMM_WORLD,&et);
 	    nreq++;
-	    //MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 	}
 
 	std::vector<uint64_t> times1,times2;
@@ -174,19 +179,20 @@ void ClockSynchronization<Clocksource>::ComputeErrorInterval()
 
 	nreq = 0;
 
-
-	MPI_Allreduce(times1.data(),times2.data(),numprocs,MPI_UINT64_T,MPI_SUM,MPI_COMM_WORLD);
-
-	if(myrank==0) std::cout <<" maxError = "<<maxError<<std::endl;
+	uint64_t send_v = 1;
 
 	for(int i=0;i<numprocs;i++)
 	{
-	   uint64_t e;
-	   if(times2[i]>times2[myrank]) e = times2[i]-times2[myrank];
-	   else e = times2[myrank]-times2[i];
-	   //if(myrank==0) std::cout <<" e = "<<e<<" epsilon = "<<epsilon<<std::endl;
-	   assert(e >= 0 && e <= 2*maxError+delay+epsilon);
+	   MPI_Isend(&send_v,1,MPI_UINT64_T,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	   nreq++;
+	   MPI_Irecv(&times1[i],1,MPI_UINT64_T,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+	   nreq++;
 	}
+
+	MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+	if(myrank==0) std::cout <<" maxError = "<<maxError<<std::endl;
+
 	std::free(reqs);
 }
 template<typename Clocksource>

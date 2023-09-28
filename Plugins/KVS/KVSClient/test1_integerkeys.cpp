@@ -32,13 +32,31 @@ int main(int argc,char **argv)
    int len = sizeof(int)*2+200;
    KeyValueStoreMetadata m(sname,n,types,names,lens,len);
 
+   int tdw = 4096*8;
+   int td = tdw/size;
+
+   auto t1 = std::chrono::high_resolution_clock::now();
+    
    int s1 = k->start_session(sname,names[0],m,32768);
 
-   k->create_keyvalues<integer_invlist,int>(s1,4096,200000);
+   k->create_keyvalues<integer_invlist,int>(s1,td,200000);
 
    k->close_sessions();
 
    delete k;
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   auto t2 = std::chrono::high_resolution_clock::now();
+
+   double t = std::chrono::duration<double>(t2-t1).count();
+
+   double total_time = 0;
+   MPI_Allreduce(&t,&total_time,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+   if(rank==0) 
+   {
+	std::cout <<" num put-gets = "<<tdw<<std::endl;
+	std::cout <<" total time = "<<total_time<<std::endl;
+   }
    MPI_Finalize();
 
 }

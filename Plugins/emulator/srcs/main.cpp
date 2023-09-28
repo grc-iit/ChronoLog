@@ -50,37 +50,6 @@ int main(int argc,char **argv)
 
   double t = std::chrono::duration<double>(t2-t1).count();
 
-  /*metadata_client *CC = np->getclientobj();
-
-
-  if(rank != 0)
-  {
-
-  std::string client_id = "client";
-  client_id += std::to_string(rank);
-  CC->Connect(client_id);
-
-  std::string chronicle_name = "record";
-  CC->CreateChronicle(client_id,chronicle_name);
-
-  CC->AcquireChronicle(client_id,chronicle_name);
-
-  CC->ReleaseChronicle(client_id,chronicle_name);
-
-  CC->DestroyChronicle(client_id,chronicle_name);
-
-  }*/
-
-  /*for(int i=0;i<numstories;i++)
-  {
-	std::string name = "table"+std::to_string(i+1);
-	story_names.push_back(name);
-	total_events.push_back(8192*size);
-	if(i%2==0)
-	np->prepare_service(name,em1,8192*size);
-	else np->prepare_service(name,em2,8192*size);
-  }*/
-
   int num_writer_threads = 4;
 
   int nbatches = 1;

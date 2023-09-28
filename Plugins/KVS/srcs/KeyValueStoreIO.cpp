@@ -22,6 +22,7 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 
     consensus.resize(nservers*3);
 
+    bool end_io = false;
     while(true)
     {
 
@@ -33,8 +34,6 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
        op_type[1] = (sync_queue->empty()==true) ? 0 : 1;
       
        op_type[2] = service_queries.size();
-
-       bool end_io = false;
 
        if(op_type[0])
        {
@@ -58,6 +57,10 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
        for(int i=0;i<nservers;i++)
 	  if(consensus[3*i+2] < numqueries) numqueries = consensus[3*i+2];
        
+       int nprocs_sync = 0;
+       for(int i=0;i<nservers;i++)
+	       nprocs_sync += consensus[3*i+1];
+      
        for(int i=0;i<numqueries;i++)
        {
 	 if(service_queries[i].first==0)
@@ -83,9 +86,8 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 	 }
        }
 
-       int nprocs_sync = 0;
-       for(int i=0;i<nservers;i++)
-	       nprocs_sync += consensus[3*i+1];
+       if(end_io && nprocs_sync==0) break;
+
        if(nprocs_sync==nservers)
        {
 
@@ -157,7 +159,7 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 	   for(int i=0;i<common_reqs.size();i++) delete common_reqs[i];
 	   for(int i=0;i<sync_reqs.size();i++) sync_queue->push(sync_reqs[i]);
 
-	   if(end_io) break;
+	   //if(end_io) break;
        }
 	
     }

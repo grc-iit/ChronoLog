@@ -57,12 +57,15 @@ int main(int argc,char **argv)
    std::string sname3 = "table5";
    KeyValueStoreMetadata m3(sname3,n,types,names,lens,len);
 
+   auto t1 = std::chrono::high_resolution_clock::now();
 
    int s1 = k->start_session(sname,names[0],m,32768);
    int s2 = k->start_session(sname1,names[1],m1,32768);
    int s3 = k->start_session(sname2,names[0],m2,32768);
    int s4 = k->start_session(sname3,names[0],m3,32768);
 
+   int tdw = 4096*8;
+   int td = tdw/size;
    int numthreads = 4;
 
    std::vector<struct mthread_arg> args(numthreads);
@@ -72,7 +75,7 @@ int main(int argc,char **argv)
    {
 	args[i].k = k;
 	args[i].index = i;
-	args[i].nreq = 4096;
+	args[i].nreq = td;
 	args[i].rate = 200000;
 
 	std::thread t{wthread,&args[i]};
@@ -84,6 +87,15 @@ int main(int argc,char **argv)
    k->close_sessions();
 
    delete k;
+   auto t2 = std::chrono::high_resolution_clock::now();
+   double t = std::chrono::duration<double>(t2-t1).count();
+   double total_time = 0;
+   MPI_Allreduce(&t,&total_time,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+   if(rank==0) 
+   {
+	   std::cout <<" num put-get = "<<tdw*numthreads<<std::endl;
+	   std::cout <<" Total time = "<<total_time<<std::endl;
+   }
    MPI_Finalize();
 
 }

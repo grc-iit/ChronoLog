@@ -31,9 +31,9 @@ void KeyValueStore::get_testworkload(std::string &s,std::vector<int>&keys,std::v
    create_integertestinput(s,numprocs,myrank,offset,keys,ts);
 }
 
-void KeyValueStore::get_ycsb_test(std::string& s,std::vector<uint64_t>&keys,std::vector<std::string> &values)
+void KeyValueStore::get_ycsb_test(std::string& s,std::vector<uint64_t>&keys,std::vector<std::string> &values,std::vector<int>&op)
 {
-   create_ycsb_input(s,numprocs,myrank,keys,values);
+   create_ycsb_input(s,numprocs,myrank,keys,values,op);
 }
 
 

@@ -22,17 +22,17 @@ class KeeperDataStore
 
 enum DataStoreState
 {
-	UNKNOWN = 0,
-	RUNNING	=1,	//  active stories
-	SHUTTING_DOWN=2	// Shutting down services
+    UNKNOWN = 0,
+    RUNNING = 1,    //  active stories
+    SHUTTING_DOWN = 2    // Shutting down services
 };
 
 
 public:
     KeeperDataStore( IngestionQueue & ingestion_queue, StoryChunkExtractionQueue & extraction_queue)
-	      : state(UNKNOWN)
-	      , theIngestionQueue(ingestion_queue) 
-	      , theExtractionQueue(extraction_queue) 
+          : state(UNKNOWN)
+          , theIngestionQueue(ingestion_queue)
+          , theExtractionQueue(extraction_queue)
     {}
 
     ~KeeperDataStore();
@@ -44,7 +44,7 @@ public:
     { return (SHUTTING_DOWN == state); }
 
     int startStoryRecording(ChronicleName const&, StoryName const&, StoryId const&
-		      , uint64_t start_time, uint32_t time_chunk_ranularity=30, uint32_t access_window = 60 ); 
+              , uint64_t start_time, uint32_t time_chunk_ranularity=30, uint32_t access_window = 60 );
     int stopStoryRecording(StoryId const&);
 
     void collectIngestedEvents();
@@ -59,7 +59,7 @@ private:
     KeeperDataStore( KeeperDataStore const&) = delete;
     KeeperDataStore& operator= ( KeeperDataStore const&) = delete;
 
-    DataStoreState	state;
+    DataStoreState  state;
     std::mutex dataStoreStateMutex;
     IngestionQueue &   theIngestionQueue;
     StoryChunkExtractionQueue &   theExtractionQueue;

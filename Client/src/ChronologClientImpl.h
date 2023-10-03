@@ -19,11 +19,11 @@ namespace chronolog
 
 enum ChronologClientState
 {
-    UNKNOWN	 = 0,
-    CONNECTED = 1,
-    READING	  = 2,
-    WRITING	  = 3,
-    SHUTTING_DOWN = 4
+    UNKNOWN         = 0,
+    CONNECTED       = 1,
+    READING         = 2,
+    WRITING         = 3,
+    SHUTTING_DOWN   = 4
 };
 
 class ChronologClientImpl 

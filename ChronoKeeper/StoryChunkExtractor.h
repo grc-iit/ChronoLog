@@ -30,14 +30,15 @@ enum ExtractorState
 
 
 public:
-	StoryChunkExtractorBase()
-    : extractorState(UNKNOWN)
-	{ }
-	~StoryChunkExtractorBase();
+    StoryChunkExtractorBase()
+            : extractorState(UNKNOWN)
+    {}
+
+    ~StoryChunkExtractorBase();
 
     StoryChunkExtractionQueue & getExtractionQueue()
     {
-	    std::cout <<"ExtractionBase : chunkExtractionQueue.size="<<chunkExtractionQueue.size()<<std::endl;
+        std::cout <<"ExtractionBase : chunkExtractionQueue.size="<<chunkExtractionQueue.size()<<std::endl;
         return chunkExtractionQueue;
     }
 
@@ -57,8 +58,8 @@ public:
 
 private:
 
-	StoryChunkExtractorBase(StoryChunkExtractorBase const &) = delete;
-	StoryChunkExtractorBase & operator=(StoryChunkExtractorBase const &) = delete;
+    StoryChunkExtractorBase(StoryChunkExtractorBase const &) = delete;
+    StoryChunkExtractorBase &operator=(StoryChunkExtractorBase const &) = delete;
 
     ExtractorState extractorState;
     std::mutex      extractorMutex;

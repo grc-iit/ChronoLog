@@ -25,12 +25,12 @@ namespace chronolog
 class StoryChunk
 {
 public:
-   
+
     StoryChunk( StoryId const & story_id = 0, uint64_t start_time = 0, uint64_t end_time = 0)
-	   : storyId(story_id)
-	   , startTime(start_time)
-	   , endTime(end_time)
-	   , revisionTime(start_time)
+            : storyId(story_id),
+            startTime(start_time),
+            endTime(end_time),
+            revisionTime(start_time)
     { }
 
     ~StoryChunk() = default;
@@ -61,14 +61,14 @@ public:
 
     int insertEvent(LogEvent const& event)
     {
-      if((event.time() >= startTime)
-	      && (event.time() < endTime))
-      { 
-         logEvents.insert( std::pair<EventSequence,LogEvent>({event.time(),event.clientId, event.index()}, event));
-	  return 1;
-      }
-      else
-      {   return 0;   }
+        if ((event.time() >= startTime)
+            && (event.time() < endTime))
+        {
+            logEvents.insert(std::pair<EventSequence, LogEvent>({event.time(), event.clientId, event.index()}, event));
+            return 1;
+        }
+        else
+        { return 0; }
    }
 
 //INNA: TODO implement the functions!!!
@@ -79,7 +79,7 @@ public:
     {  return 0; }
 
     uint32_t mergeEvents(StoryChunk & other_chunk
-	          , uint64_t start_time, uint64_t end_time)
+              , uint64_t start_time, uint64_t end_time)
     {  return 0; }
 
 
@@ -88,7 +88,7 @@ public:
        , std::map<EventSequence,LogEvent>::iterator last_pos)
     { return 0;}
     uint32_t extractEvents( std::map<EventSequence,LogEvent>  & target_map
-	          , uint64_t start_time, uint64_t end_time)
+              , uint64_t start_time, uint64_t end_time)
     { return 0;}
     uint32_t eraseEvents(uint64_t start_time, uint64_t end_time)
     { return 0;}

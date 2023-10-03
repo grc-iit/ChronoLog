@@ -33,16 +33,17 @@ class RpcVisorClient
 
 public:
     static RpcVisorClient * CreateRpcVisorClient( tl::engine & tl_engine,
-		    std::string const & service_addr, uint16_t provider_id )
+                                                  std::string const & service_addr, uint16_t provider_id )
     {
         try
         {
-	        return new RpcVisorClient( tl_engine,service_addr, provider_id);
-	    } 
+            return new RpcVisorClient( tl_engine,service_addr, provider_id);
+        }
         catch( tl::exception const&)
-	    {
-	    }
-		return nullptr;
+        {
+
+        }
+        return nullptr;
     }
 
 
@@ -52,7 +53,7 @@ public:
              __FUNCTION__, client_euid, client_host_ip, client_pid);
         try
         {
-	        return visor_connect.on(service_ph)( client_euid, client_host_ip, client_pid);
+            return visor_connect.on(service_ph)( client_euid, client_host_ip, client_pid);
         }
         catch (tl::exception const&)
         {
@@ -66,7 +67,7 @@ public:
         LOGD("%s with client_id=%lu", __FUNCTION__, client_id);
         try
         {
-	        return visor_disconnect.on(service_ph)( client_id);
+            return visor_disconnect.on(service_ph)( client_id);
         }
         catch (tl::exception const&)
         {
@@ -123,7 +124,7 @@ public:
         return(AcquireStoryResponseMsg(CL_ERR_UNKNOWN,0,std::vector<KeeperIdCard> {}));
     }
 
-    int ReleaseStory(ClientId const &client_id, std::string const& chronicle_name, std::string const& story_name) 
+    int ReleaseStory(ClientId const &client_id, std::string const& chronicle_name, std::string const& story_name)
     {
         LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s",
              __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str());
@@ -144,7 +145,7 @@ public:
              __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
         try
         {
-            return  destroy_story.on(service_ph)( client_id, chronicle_name, story_name);
+            return destroy_story.on(service_ph)( client_id, chronicle_name, story_name);
         }
         catch (tl::exception const&)
         {
@@ -154,7 +155,7 @@ public:
     }
 
 
-    int GetChronicleAttr(ClientId const& client_id, std::string const& name, const std::string &key, std::string &value) 
+    int GetChronicleAttr(ClientId const& client_id, std::string const& name, const std::string &key, std::string &value)
     {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s", __FUNCTION__, getpid(), name.c_str(), key.c_str());
         try
@@ -168,7 +169,7 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    int EditChronicleAttr(ClientId const& client_id,std::string const& name, const std::string &key, const std::string &value) 
+    int EditChronicleAttr(ClientId const& client_id,std::string const& name, const std::string &key, const std::string &value)
     {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s",
              __FUNCTION__, getpid(), name.c_str(), key.c_str(), value.c_str());
@@ -183,12 +184,12 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    std::vector<std::string>  ShowChronicles(ClientId const& client_id) //, std::vector<std::string> & chronicles) 
+    std::vector<std::string>  ShowChronicles(ClientId const& client_id) //, std::vector<std::string> & chronicles)
     {
         LOGD("%s is called in PID=%d, with args: client_id=%lu", __FUNCTION__, getpid(), client_id);
         try
         {
-            return  show_chronicles.on(service_ph)(client_id); 
+            return show_chronicles.on(service_ph)(client_id);
         }
         catch (tl::exception const&)
         {
@@ -197,13 +198,13 @@ public:
         return(std::vector<std::string>{});
     }
 
-    std::vector<std::string>  ShowStories(ClientId const& client_id, std::string const&chronicle_name) //, std::vector<std::string> & stories ) 
+    std::vector<std::string>  ShowStories(ClientId const& client_id, std::string const&chronicle_name) //, std::vector<std::string> & stories )
     {
         LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s",
              __FUNCTION__, getpid(), client_id, chronicle_name.c_str());
         try
         {
-            return show_stories.on(service_ph)( client_id, chronicle_name); 
+            return show_stories.on(service_ph)( client_id, chronicle_name);
         }
         catch (tl::exception const&)
         {
@@ -217,15 +218,15 @@ public:
 
     ~RpcVisorClient()
     {
-        visor_connect.deregister(); 
-        visor_disconnect.deregister(); 
-	    create_chronicle.deregister();
-	    destroy_chronicle.deregister();
-	    get_chronicle_attr.deregister();
-	    edit_chronicle_attr.deregister();
-	    acquire_story.deregister();
-	    release_story.deregister();
-	    destroy_story.deregister();
+        visor_connect.deregister();
+        visor_disconnect.deregister();
+        create_chronicle.deregister();
+        destroy_chronicle.deregister();
+        get_chronicle_attr.deregister();
+        edit_chronicle_attr.deregister();
+        acquire_story.deregister();
+        release_story.deregister();
+        destroy_story.deregister();
         show_chronicles.deregister();
         show_stories.deregister();
     }
@@ -234,7 +235,7 @@ public:
 
 
     std::string service_addr;     // na address of ChronoVisor ClientService  
-    uint16_t 	service_provider_id;          // ChronoVisor ClientService provider_id id
+    uint16_t    service_provider_id;          // ChronoVisor ClientService provider_id id
     tl::provider_handle  service_ph;  //provider_handle for client registry service
     tl::remote_procedure visor_connect;
     tl::remote_procedure visor_disconnect;
@@ -253,14 +254,15 @@ public:
 
 
     // constructor is private to make sure thalium rpc objects are created on the heap, not stack
-    RpcVisorClient( tl::engine & tl_engine, std::string const& service_addr, uint16_t provider_id)
-	    : service_addr(service_addr), service_provider_id(provider_id)
-	    , service_ph(tl_engine.lookup( service_addr),provider_id)
-	{
-	    std::cout<<" RpcVisorClient created for Visor Service at {"<<service_addr<<"} provider_id {"<<service_provider_id<<"}"<<std::endl;
-   	    visor_connect =tl_engine.define("Connect");
-   	    visor_disconnect =tl_engine.define("Disconnect");
-        create_chronicle = tl_engine.define("CreateChronicle"); 
+    RpcVisorClient(tl::engine &tl_engine, std::string const &service_addr, uint16_t provider_id)
+            : service_addr(service_addr), service_provider_id(provider_id),
+              service_ph(tl_engine.lookup(service_addr), provider_id)
+    {
+        std::cout << " RpcVisorClient created for Visor Service at {" << service_addr << "} provider_id {"
+                  << service_provider_id << "}" << std::endl;
+        visor_connect = tl_engine.define("Connect");
+        visor_disconnect = tl_engine.define("Disconnect");
+        create_chronicle = tl_engine.define("CreateChronicle");
         destroy_chronicle = tl_engine.define("DestroyChronicle");
         get_chronicle_attr = tl_engine.define("GetChronicleAttr");
         edit_chronicle_attr = tl_engine.define("EditChronicleAttr");
@@ -269,7 +271,7 @@ public:
         destroy_story = tl_engine.define("DestroyStory");
         show_chronicles = tl_engine.define("ShowChronicles");
         show_stories = tl_engine.define("ShowStories");
-	}	
+    }
 };
 
 }

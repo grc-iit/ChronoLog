@@ -25,9 +25,9 @@ class ClientPortalService : public thallium::provider<ClientPortalService>
     public:
 
     static ClientPortalService * CreateClientPortalService(thallium::engine& tl_engine, uint16_t service_provider_id
-		        , VisorClientPortal & visor_portal)
+                , VisorClientPortal & visor_portal)
     {
-	    return new ClientPortalService(tl_engine, service_provider_id, visor_portal);
+        return new ClientPortalService(tl_engine, service_provider_id, visor_portal);
     }
 
     ~ClientPortalService() 

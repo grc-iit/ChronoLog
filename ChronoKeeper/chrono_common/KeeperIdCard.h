@@ -36,12 +36,12 @@ public:
 
 
   KeeperIdCard( uint64_t group_id = 0, uint32_t addr = 0, uint16_t a_port=0, uint16_t provider_id=0)
-	: keeper_group_id(group_id), ip_addr(addr), port(a_port),tl_provider_id(provider_id) 
-	{} 
+    : keeper_group_id(group_id), ip_addr(addr), port(a_port),tl_provider_id(provider_id)
+    {}
 
   KeeperIdCard( KeeperIdCard const& other)
-  	: keeper_group_id(other.getGroupId()), ip_addr(other.getIPaddr()), port(other.getPort()),tl_provider_id(other.getProviderId())
-  	{}
+    : keeper_group_id(other.getGroupId()), ip_addr(other.getIPaddr()), port(other.getPort()),tl_provider_id(other.getProviderId())
+    {}
 
   ~KeeperIdCard()=default;
 
@@ -58,7 +58,7 @@ public:
   {
       serT & keeper_group_id;
       serT & ip_addr;
-      serT & port;	
+      serT & port;
       serT & tl_provider_id;
   }
 
@@ -82,8 +82,8 @@ inline std::ostream & operator<< (std::ostream & out , chronolog::KeeperIdCard c
 {
    std::string a_string;
    out << "KeeperIdCard{"<<keeper_id_card.getGroupId()
-	   <<":"<<keeper_id_card.getIPasDottedString(a_string)<<":"<<keeper_id_card.getPort()
-	   <<":"<<keeper_id_card.getProviderId()<<"}";
+       <<":"<<keeper_id_card.getIPasDottedString(a_string)<<":"<<keeper_id_card.getPort()
+       <<":"<<keeper_id_card.getProviderId()<<"}";
    return out;
 }
 

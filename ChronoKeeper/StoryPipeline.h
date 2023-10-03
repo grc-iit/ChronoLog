@@ -24,11 +24,11 @@ class StoryPipeline
 
 public:
     StoryPipeline( StoryChunkExtractionQueue &, std::string const& chronicle_name, std::string const& story_name
-			, StoryId const& story_id
-			, uint64_t start_time
-		    , uint16_t chunk_granularity = 30 // seconds 
-			, uint16_t acceptance_window = 300 // seconds 
-		     );
+            , StoryId const& story_id
+            , uint64_t start_time
+            , uint16_t chunk_granularity = 30 // seconds
+            , uint16_t acceptance_window = 300 // seconds
+             );
 
     StoryPipeline(StoryPipeline const&) = delete;
     StoryPipeline& operator=(StoryPipeline const&) = delete;
@@ -53,14 +53,14 @@ public:
 private:
 
     StoryChunkExtractionQueue & theExtractionQueue;
-    StoryId 	storyId;
-    ChronicleName	chronicleName;
-    StoryName	storyName;
-    uint64_t	timelineStart;
-    uint64_t	timelineEnd;
-    uint64_t	chunkGranularity;
-    uint64_t 	acceptanceWindow;
-    uint64_t	revisionTime; //time of the most recent merge 
+    StoryId     storyId;
+    ChronicleName   chronicleName;
+    StoryName   storyName;
+    uint64_t    timelineStart;
+    uint64_t    timelineEnd;
+    uint64_t    chunkGranularity;
+    uint64_t    acceptanceWindow;
+    uint64_t    revisionTime; //time of the most recent merge
 
     // mutex used to protect the IngestionQueue from concurrent access
     // by RecordingService threads

@@ -30,9 +30,10 @@ target_include_directories(chronolog_client PUBLIC include
 
 target_link_libraries(chronolog_client thallium)
 
-add_subdirectory(storyteller_test)
-
 # install library
 install(
         TARGETS chronolog_client DESTINATION lib
 )
+
+add_subdirectory(storyteller_test)
+add_subdirectory(ChronoAdmin)

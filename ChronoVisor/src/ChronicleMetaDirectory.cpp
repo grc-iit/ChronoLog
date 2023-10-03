@@ -249,14 +249,15 @@ int ChronicleMetaDirectory::destroy_story(std::string const& chronicle_name,
  * @param story_id to populate with the story_id assigned to the story
  * @param notify_keepers , bool value that would be set to true if this is the first client to acquire the story
  * @return CL_SUCCESS if succeed to destroy the Story \n
- *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
+ *         CL_ERR_ACQUIRED if the Story is acquired already \n
+ *         CL_ERR_NOT_EXIST if the Chronicle/Story does not exist \n
  *         CL_ERR_UNKNOWN otherwise
  */
 int ChronicleMetaDirectory::acquire_story(const std::string &client_id,
                                           const std::string &chronicle_name,
                                           const std::string &story_name,
-                                          int &flags
-					  , StoryId & story_id, bool& notify_keepers) 
+                                          int &flags,
+                                          StoryId & story_id, bool& notify_keepers)
 {
     LOGD("client_id=%s acquiring Story name=%s in Chronicle name=%s, flags=%d",
          client_id.c_str(), story_name.c_str(), chronicle_name.c_str(), flags);
@@ -279,7 +280,7 @@ int ChronicleMetaDirectory::acquire_story(const std::string &client_id,
         uint64_t sid = pChronicle->getStoryId(story_name);
         if (sid == 0) {
             LOGD("StoryID=%lu name=%s does not exist", sid, story_name.c_str());
-	    return CL_ERR_NOT_EXIST;
+            return CL_ERR_NOT_EXIST;
         }
 
         /* Last check if this client has acquired this Story already, do nothing and return success if true */
@@ -293,8 +294,8 @@ int ChronicleMetaDirectory::acquire_story(const std::string &client_id,
 
             /* All checks passed, manipulate metadata */
             Story *pStory = pChronicle->getStoryMap().find(sid)->second;
-	    story_id = pStory->getSid();
-	    notify_keepers = (pStory->getAcquisitionCount() == 0? true :false);
+            story_id = pStory->getSid();
+            notify_keepers = (pStory->getAcquisitionCount() == 0? true :false);
 
             /* Increment AcquisitionCount */
             pStory->incrementAcquisitionCount();
@@ -321,8 +322,8 @@ int ChronicleMetaDirectory::acquire_story(const std::string &client_id,
 //TO_DO return acquisition_count after the story has been released
 int ChronicleMetaDirectory::release_story(const std::string &client_id,
                                           const std::string &chronicle_name,
-                                          const std::string &story_name
-					  , StoryId & story_id, bool & notify_keepers ) {
+                                          const std::string &story_name,
+                                          StoryId & story_id, bool & notify_keepers ) {
     LOGD("client_id=%s releasing Story name=%s in Chronicle name=%s",
          client_id.c_str(), story_name.c_str(), chronicle_name.c_str());
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);
@@ -349,8 +350,8 @@ int ChronicleMetaDirectory::release_story(const std::string &client_id,
             /* All checks passed and entry found, manipulate metadata */
             /* Decrement AcquisitionCount */
             pStory->decrementAcquisitionCount();
-	    story_id = pStory->getSid();
-	    notify_keepers = (pStory->getAcquisitionCount() == 0? true :false);
+            story_id = pStory->getSid();
+            notify_keepers = (pStory->getAcquisitionCount() == 0? true :false);
             /* Remove this client from acquirerClientList of the Story */
             pStory->removeAcquirerClient(client_id);
             /* Remove this Story from acquiredStoryMap for this client */

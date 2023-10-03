@@ -98,8 +98,8 @@ int main(int argc, char **argv)
 
     if (-1 == service_endpoint_from_dotted_string(datastore_service_ip, datastore_service_port, datastore_endpoint))
     {
-    	std::cout<<"invalid DataStoreAdmin service address"<<std::endl;
-	    return (-1);
+        std::cout << "invalid DataStoreAdmin service address" << std::endl;
+        return (-1);
     }
 
     // Instantiate KeeperRecordingService
@@ -119,8 +119,8 @@ int main(int argc, char **argv)
     if (-1 == service_endpoint_from_dotted_string(KEEPER_RECORDING_SERVICE_IP, KEEPER_RECORDING_SERVICE_PORT,
                                                   recording_endpoint))
     {
-    	std::cout<<"invalid KeeperRecordingService  address"<<std::endl;
-	    return (-1);
+        std::cout << "invalid KeeperRecordingService  address" << std::endl;
+        return (-1);
     }
 
     // create KeeperIdCard to identify this Keeper process in ChronoVisor's KeeperRegistry

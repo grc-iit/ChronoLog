@@ -244,7 +244,7 @@ chronolog::StoryHandle *chronolog::StorytellerClient::initializeStoryWritingHand
     // or the handle's keeper vector is being updated , etc ....
     if (state == PENDING_RESPONSE || state== UPDATING_KEEPERS) )
     {
-	// get the handle lock and wait for the thread that sent the request to Vizor to get the response
+    // get the handle lock and wait for the thread that sent the request to Vizor to get the response
         std::lock_guard<std::mutex> story_lock(storyHandleMutex);
 
     }

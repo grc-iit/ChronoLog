@@ -19,11 +19,11 @@ namespace chronolog
 
 enum ChronologClientState
 {
-    UNKNOWN	 = 0,
-    CONNECTED = 1,
-    READING	  = 2,
-    WRITING	  = 3,
-    SHUTTING_DOWN = 4
+    UNKNOWN         = 0,
+    CONNECTED       = 1,
+    READING         = 2,
+    WRITING         = 3,
+    SHUTTING_DOWN   = 4
 };
 
 class ChronologClientImpl 
@@ -69,7 +69,7 @@ private:
 
     ChronologClientState    clientState;
     std::string clientAccount;
-    ClientId	clientId;
+    ClientId    clientId;
     ChronologTimer clockProxy;
     thallium::engine * tlEngine;
     RpcVisorClient * rpcVisorClient;

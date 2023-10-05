@@ -6,7 +6,6 @@
 #include <boost/container_hash/hash.hpp>
 #include <mpi.h>
 #include <hdf5.h>
-#include "h5_async_lib.h"
 #include <vector>
 #include "event.h"
 

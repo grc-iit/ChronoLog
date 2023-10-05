@@ -100,22 +100,22 @@ class KeyValueStoreAccessor
 		  if(type.compare("int")==0)
 		  {
 		   int maxint = INT32_MAX;
-		   ret = add_new_inverted_list<integer_invlist,int>(name,attr_name,maxsize,numtables,maxint,d,kio,c,md.value_size());
+		   ret = add_new_inverted_list<integer_invlist,int>(name,attr_name,maxsize,numtables,maxint,d,kio,if_q,c,md.value_size());
 		  }
 		  else if(type.compare("unsignedlong")==0)
 		  {
 		   uint64_t maxuint = UINT64_MAX;
-		   ret = add_new_inverted_list<unsigned_long_invlist,uint64_t>(name,attr_name,maxsize,numtables,maxuint,d,kio,c,md.value_size());
+		   ret = add_new_inverted_list<unsigned_long_invlist,uint64_t>(name,attr_name,maxsize,numtables,maxuint,d,kio,if_q,c,md.value_size());
 		  }
 		  else if(type.compare("float")==0)
 		  {
 		   float maxfl = DBL_MAX;
-		   ret = add_new_inverted_list<float_invlist,float>(name,attr_name,maxsize,numtables,maxfl,d,kio,c,md.value_size());
+		   ret = add_new_inverted_list<float_invlist,float>(name,attr_name,maxsize,numtables,maxfl,d,kio,if_q,c,md.value_size());
 		  }
 		  else if(type.compare("double")==0)
 		  {
 		   double maxd = DBL_MAX;
-		   ret = add_new_inverted_list<double_invlist,double>(name,attr_name,maxsize,numtables,maxd,d,kio,c,md.value_size());
+		   ret = add_new_inverted_list<double_invlist,double>(name,attr_name,maxsize,numtables,maxd,d,kio,if_q,c,md.value_size());
 		  }
 		}
 		else ret = r->second;
@@ -132,7 +132,7 @@ class KeyValueStoreAccessor
 	  }
 
 	  template<typename T,typename N>
-	  int add_new_inverted_list(std::string &,std::string &,int,int,N&,data_server_client*,KeyValueStoreIO*,int,int);
+	  int add_new_inverted_list(std::string &,std::string &,int,int,N&,data_server_client*,KeyValueStoreIO*,Interface_Queues*,int,int);
 	  template<typename T>
 	  bool delete_inverted_list(int);
 	  template<typename T,typename N>

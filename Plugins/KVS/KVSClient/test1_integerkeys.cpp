@@ -39,7 +39,7 @@ int main(int argc,char **argv)
     
    int s1 = k->start_session(sname,names[0],m,32768);
 
-   k->create_keyvalues<integer_invlist,int>(s1,td,200000);
+   //k->create_keyvalues<integer_invlist,int>(s1,td,20000);
 
    k->close_sessions();
 

@@ -401,6 +401,7 @@ class KeyValueStore
 		int op = 0;
 		N prevkey=0;
 		int ids = 0;
+		std::vector<N> keys;
 		for(int i=0;i<nops;i++)
 		{	
 		    N key = random()%RAND_MAX; 
@@ -421,6 +422,7 @@ class KeyValueStore
 
 		    usleep(rate); 
 		}
+
 	   }
 
            void get_testworkload(std::string &,std::vector<int>&,std::vector<uint64_t>&,int);

@@ -331,14 +331,14 @@ class Interface_Queues
 	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
    	   {
 		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
-		tl::remote_procedure rp = thallium_shm_client->define("EmulatorFindEvent");
+		tl::remote_procedure rp = thallium_shm_client->define("EmulatorFindEventFile");
 		std::chrono::duration<double,std::ratio<100>> second;
 		return rp.on(ep).timed(second,s,ts);
 	   }		   
 	   else
 	   {
 		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
-		tl::remote_procedure rp = thallium_client->define("EmulatorFindEvent");
+		tl::remote_procedure rp = thallium_client->define("EmulatorFindEventFile");
 		std::chrono::duration<double,std::ratio<100>> second;
 		return rp.on(ep).timed(second,s,ts);
 	   }

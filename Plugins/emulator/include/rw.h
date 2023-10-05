@@ -187,6 +187,9 @@ public:
 	   std::function<void(const tl::request &,std::string &,uint64_t&)> FindEvent(
            std::bind(&read_write_process::ThalliumFindEvent,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
 
+	   std::function<void(const tl::request &,std::string &,uint64_t&)> FindEventFile(
+	   std::bind(&read_write_process::ThalliumFindEventFile,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+
 	   std::function<void(const tl::request &,std::string &)> CheckFile(
 	   std::bind(&read_write_process::ThalliumCheckFile,this,std::placeholders::_1,std::placeholders::_2));
 
@@ -199,6 +202,8 @@ public:
 	   thallium_shm_server->define("EmulatorCheckFile",CheckFile);	   
 	   thallium_server->define("EmulatorFindEvent",FindEvent);
 	   thallium_shm_server->define("EmulatorFindEvent",FindEvent);
+	   thallium_server->define("EmulatorFindEventFile",FindEventFile);
+	   thallium_shm_server->define("EmulatorFindEventFile",FindEventFile);
 	   thallium_server->define("EmulatorGetNVMEEvent",GetNVMEEvent);
 	   thallium_shm_server->define("EmulatorGetNVMEEvent",GetNVMEEvent);
 	   thallium_server->define("EmulatorGetNVMEProc",GetNVMEProc);
@@ -567,8 +572,13 @@ public:
         {
            req.respond(FindEvent(s,ts));
         }
+	void ThalliumFindEventFile(const tl::request &req,std::string &s,uint64_t &ts)
+	{
+	    req.respond(FindEventFile(s,ts));
+	}
 
 
+	std::string FindEventFile(std::string&,uint64_t &);
 	std::string FindEvent(std::string&,uint64_t&);
 	std::string GetEvent(std::string &,uint64_t&,int);
 	std::string GetNVMEEvent(std::string &,uint64_t&,int);

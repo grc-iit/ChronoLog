@@ -60,7 +60,7 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
        int nprocs_sync = 0;
        for(int i=0;i<nservers;i++)
 	       nprocs_sync += consensus[3*i+1];
-      
+    
        for(int i=0;i<numqueries;i++)
        {
 	 if(service_queries[i].first==0)
@@ -115,7 +115,8 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 		      if(common_reqs[i]->flush==true) 
 		      {
 			  integer_invlist* invlist = reinterpret_cast<integer_invlist*>(common_reqs[i]->funcptr);
-			  invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+			  //invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+			  invlist->flush_timestamps(common_reqs[i]->offset,common_reqs[i]->persist);
 			  std::string name = common_reqs[i]->name+common_reqs[i]->attr_name;
 			  completed_reqs.push_back(name);
 		      }
@@ -125,7 +126,8 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 		   if(common_reqs[i]->flush==true) 
 		   {
 			unsigned_long_invlist* invlist = reinterpret_cast<unsigned_long_invlist*>(common_reqs[i]->funcptr);
-			invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+			//invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+			invlist->flush_timestamps(common_reqs[i]->offset,common_reqs[i]->persist);
 			std::string name = common_reqs[i]->name+common_reqs[i]->attr_name;
 			completed_reqs.push_back(name);
 		   }
@@ -135,7 +137,8 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 		if(common_reqs[i]->flush==true) 
 		{
 		   float_invlist* invlist = reinterpret_cast<float_invlist*>(common_reqs[i]->funcptr);
-		   invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+		   //invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+		   invlist->flush_timestamps(common_reqs[i]->offset,common_reqs[i]->persist);
 		   std::string name = common_reqs[i]->name+common_reqs[i]->attr_name;
 		   completed_reqs.push_back(name);
 		}
@@ -145,7 +148,8 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 		if(common_reqs[i]->flush==true) 
 		{
 		   double_invlist* invlist = reinterpret_cast<double_invlist*>(common_reqs[i]->funcptr);
-		   invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+		   //invlist->flush_table_file(common_reqs[i]->offset,common_reqs[i]->persist);
+		   invlist->flush_timestamps(common_reqs[i]->offset,common_reqs[i]->persist);
 		   std::string name = common_reqs[i]->name+common_reqs[i]->attr_name;
 		   completed_reqs.push_back(name);
 		}

@@ -4,9 +4,9 @@
 #include "blockmap.h"
 #include <mpi.h>
 #include <hdf5.h>
-#include "h5_async_lib.h"
 #include "event.h"
 #include "data_server_client.h"
+#include "Interface_Queues.h"
 #include "KeyValueStoreIO.h"
 #include "util_t.h"
 #include <boost/lockfree/queue.hpp>
@@ -101,6 +101,7 @@ class hdf5_invlist
 	   std::vector<struct KeyIndex<KeyT>> cached_keyindex;
 	   boost::lockfree::queue<struct event_req<KeyT,ValueT>*> *pending_gets;
 	   boost::lockfree::queue<struct event_resp<KeyT,ValueT>*> *completed_gets;
+	   Interface_Queues *if_q;
 	   int tables_per_proc;
 	   int numtables;
 	   std::vector<int> table_ids;
@@ -117,7 +118,7 @@ class hdf5_invlist
 	   int flush_count;
 	   int index_writes;
    public:
-	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,int c,int data_size) : numprocs(n), myrank(p), io_count(c)
+	   hdf5_invlist(int n,int p,int tsize,int np,KeyT emptykey,std::string &table,std::string &attr,data_server_client *ds,KeyValueStoreIO *io,Interface_Queues *q,int c,int data_size) : numprocs(n), myrank(p), io_count(c)
 	   {
 	     tag = 2000;
 	     tag += io_count;
@@ -137,7 +138,7 @@ class hdf5_invlist
 
 	     dir = "/home/asasidharan/FrontEnd/build/emu/"; 
 	     maxsize = numtables*pow(2,nbits_r);
-
+	     if_q = q;
 	     int prefix = 0;
 	     for(int i=0;i<myrank;i++)
 	     {	
@@ -421,7 +422,7 @@ class hdf5_invlist
 		return index_writes;
 	   }
 
-	   std::vector<struct keydata> get_events();
+	   void get_events();
 	   void create_async_io_request(KeyT &,std::vector<ValueT>&);
 	   void create_sync_io_request();
 	   bool put_entry(KeyT&,ValueT&);
@@ -433,7 +434,7 @@ class hdf5_invlist
 	   void add_entries_to_tables(std::string&,std::vector<struct keydata>*,uint64_t,int); 
 	   void get_entries_from_tables(std::vector<struct KeyIndex<KeyT>> &,int&,int&,uint64_t);
 	   std::vector<struct KeyIndex<KeyT>> merge_keyoffsets(std::vector<struct KeyIndex<KeyT>>&,std::vector<struct KeyIndex<KeyT>>&,std::vector<int>&);
-
+	   void flush_timestamps(int,bool);
 	   void create_index_file();
 	   void update_index_file();
 };

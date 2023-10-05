@@ -16,7 +16,7 @@ int main(int argc,char **argv)
 
    KeyValueStore *k = new KeyValueStore(size,rank);
 
-   std::string sname = "loadb";
+   std::string sname = "loada";
    int n = 2;
    std::vector<std::string> types;
    std::vector<std::string> names;
@@ -26,8 +26,8 @@ int main(int argc,char **argv)
    lens.push_back(sizeof(uint64_t));
    types.push_back("char");
    names.push_back("value2");
-   lens.push_back(sizeof(char)*1000);
-   int len = sizeof(uint64_t)+1000*sizeof(char);
+   lens.push_back(sizeof(char)*200);
+   int len = sizeof(uint64_t)+200*sizeof(char);
    KeyValueStoreMetadata m(sname,n,types,names,lens,len);
    
    std::vector<uint64_t> keys;
@@ -38,7 +38,11 @@ int main(int argc,char **argv)
 
    int s = k->start_session(sname,names[0],m,32768);
 
-   k->create_keyvalues<unsigned_long_invlist,uint64_t>(s,keys,values,op,20000);
+   std::vector<uint64_t> keys_n(keys.begin(),keys.begin()+80000);
+   std::vector<std::string> values_n(values.begin(),values.begin()+80000);
+   std::vector<int> op_n(op.begin(),op.begin()+80000);
+
+   k->create_keyvalues<unsigned_long_invlist,uint64_t>(s,keys_n,values_n,op_n,20000);
 
    MPI_Request *reqs = new MPI_Request[2*size];
    int nreq = 0;
@@ -56,7 +60,7 @@ int main(int argc,char **argv)
    }
    MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
 
-   sname = "loadbrun";
+   /*sname = "loadbrun";
 
    filename = sname + ".log";
    keys.clear();
@@ -68,7 +72,7 @@ int main(int argc,char **argv)
    k->create_keyvalues_ordered<unsigned_long_invlist,uint64_t>(s,keys,values,op,20000);
 
    std::cout <<" rank = "<<rank<<" keyvalues = "<<keys.size()<<std::endl;
-
+*/
    delete reqs;
 
    k->close_sessions();

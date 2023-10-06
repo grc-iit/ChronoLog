@@ -113,7 +113,7 @@ bool KeyValueStoreAccessor::Get(int pos,std::string &s,N &key,int id)
 	invlist->AddPending(key,values,bp,id,pid);	
 
    }
-   return false;
+   return true;
 
 }
 
@@ -166,7 +166,7 @@ bool KeyValueStoreAccessor::Get_resp(int pos,std::string &s,N &key,int id)
         invlist->AddPending(key,values,bp,id,pid);
    }
 
-   return false;
+   return true;
 }
 
 template<typename T,typename N>
@@ -181,29 +181,6 @@ std::vector<std::pair<int,std::string>> KeyValueStoreAccessor::Completed_Gets(in
 }
 
 template<typename T,typename N>
-bool KeyValueStoreAccessor::Emulator_Request(int pos, std::string &s, N&key)
-{
-   if(pos >= lists.size()) return false;
-   std::vector<uint64_t> values;
-
-   T *invlist = reinterpret_cast<T*>(lists[pos].second);
-   int ret = invlist->get_entry(key,values);
-
-   bool b = false;
-
-   if(values.size() > 0)
-   {
-	struct query_req r;
-        r.name = s;
-	r.minkey = values[0];
-	r.maxkey = values[0];
-	r.sender = myrank;
-	b = if_q->PutEmulatorRequest(r,myrank);	
-   }
-   return b;
-}
-
-template<typename T,typename N>
 std::vector<uint64_t> KeyValueStoreAccessor::get_entry(int pos,N &key)
 {
    std::vector<uint64_t> values;
@@ -212,30 +189,6 @@ std::vector<uint64_t> KeyValueStoreAccessor::get_entry(int pos,N &key)
    T *invlist = reinterpret_cast<T*>(lists[pos].second);
    int ret = invlist->get_entry(key,values);
    return values;
-}
-
-template<typename T>
-void KeyValueStoreAccessor::cache_invertedtable(std::string &attr_name)
-{
-   int pos = get_inverted_list_index(attr_name);
-   if(pos==-1) return;
-
-   std::string tname = md.db_name();
-
-   T *invlist = reinterpret_cast<T*>(lists[pos].second);
-
-   if(!invlist->CheckLocalFileExists())
-   {
-	std::string filename = "file";
-	filename += tname+".h5";
-
-	if(if_q->CheckFileExistence(filename,myrank))
-	{
-	   invlist->LocalFileExists();
-	}
-   }
-
-   invlist->cache_latest_table();
 }
 
 template<typename T>

@@ -32,14 +32,14 @@ int main(int argc,char **argv)
    int len = sizeof(int)*2+200;
    KeyValueStoreMetadata m(sname,n,types,names,lens,len);
 
-   int tdw = 4096*8;
+   int tdw = 65536*8;
    int td = tdw/size;
 
    auto t1 = std::chrono::high_resolution_clock::now();
     
    int s1 = k->start_session(sname,names[0],m,32768);
 
-   //k->create_keyvalues<integer_invlist,int>(s1,td,20000);
+   k->create_keyvalues<integer_invlist,int>(s1,td,20000);
 
    k->close_sessions();
 

@@ -54,41 +54,6 @@ int hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_entry(KeyT& k,std::vector<Va
 }
 
 template<typename KeyT,typename ValueT,typename hashfcn,typename equalfcn>
-void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::create_async_io_request(KeyT &k,std::vector<ValueT> &values)
-{
-      struct request r;
-      r.name = filename;
-      r.attr_name = attributename;
-      r.id = 0;
-
-      if(typeid(k)==typeid(r.intkey))
-      {
-           r.keytype = 0;
-   	   r.intkey = (int)k;	   
-      }
-      else if(typeid(k)==typeid(r.unsignedlongkey))
-      {
-	   r.keytype = 1;
-	   r.unsignedlongkey = (uint64_t)k;
-      }
-      else if(typeid(k)==typeid(r.floatkey))
-      {
-	   r.keytype = 2;
-	   r.floatkey = (float)k;
-      }
-      else if(typeid(k)==typeid(r.doublekey))
-      {
-	   r.keytype = 2;
-	   r.doublekey = (double)k;
-      }
-      r.sender = myrank;
-      r.flush = false;
-
-      io_t->LocalPutRequest(r);
-
-}
-
-template<typename KeyT,typename ValueT,typename hashfcn,typename equalfcn>
 void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_events()
 {
 
@@ -163,8 +128,8 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_events()
 
   for(int n=0;n<worklist1.size();n++)
   {
-       KeyT k = worklist1[n]->key;
-       uint64_t hashvalue = hashfcn()(k);
+       KeyT key = worklist1[n]->key;
+       uint64_t hashvalue = hashfcn()(key);
        int pos = hashvalue%maxsize;
        hsize_t offset = cached_keyindex_mt[2*pos+1]-cached_keyindex_mt[1];
        hsize_t numkeys = cached_keyindex_mt[2*pos];
@@ -179,7 +144,7 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_events()
        uint64_t ts = UINT64_MAX;
 
        for(int k=0;k<keyindex.size();k++)
-	      if(keyindex[k].key==k)
+	      if(keyindex[k].key==key)
 	      {
 		ts = keyindex[k].index;
 		break;
@@ -187,7 +152,10 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_events()
        if(ts != UINT64_MAX) 
        {
 	std::string eventstring = if_q->GetEmulatorEvent(filename,ts,myrank);
-
+	if(eventstring.length() != 0)
+	{
+	   ost << eventstring << std::endl;
+	}
        }
        delete worklist1[n];
      }

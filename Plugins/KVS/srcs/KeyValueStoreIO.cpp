@@ -23,32 +23,18 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
     consensus.resize(nservers*3);
 
     bool end_io = false;
+
     while(true)
     {
 
        std::fill(op_type.begin(),op_type.end(),0);
        std::fill(consensus.begin(),consensus.end(),0);
 
-       op_type[0] = (req_queue->empty()==true) ? 0 : 1;
+       op_type[0] = 0;
 
        op_type[1] = (sync_queue->empty()==true) ? 0 : 1;
       
        op_type[2] = service_queries.size();
-
-       if(op_type[0])
-       {
-
-         while(!req_queue->empty())
-        { 	
-	   struct request *r = nullptr;
-
-	   if(!req_queue->pop(r)) break;
-
-	   delete r;
-
-        }
-       }
-
 
        MPI_Allgather(op_type.data(),3,MPI_INT,consensus.data(),3,MPI_INT,MPI_COMM_WORLD);
 
@@ -163,7 +149,6 @@ void KeyValueStoreIO::io_function(struct thread_arg *t)
 	   for(int i=0;i<common_reqs.size();i++) delete common_reqs[i];
 	   for(int i=0;i<sync_reqs.size();i++) sync_queue->push(sync_reqs[i]);
 
-	   //if(end_io) break;
        }
 	
     }

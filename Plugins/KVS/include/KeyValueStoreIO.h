@@ -112,8 +112,6 @@ class KeyValueStoreIO
    private: 
 	   int nservers;
 	   int serverid;
-	   boost::lockfree::queue<struct request*> *req_queue;
-	   boost::lockfree::queue<struct response*> *resp_queue;
 	   boost::lockfree::queue<struct sync_request*> *sync_queue;
 	   tl::engine *thallium_server;
            tl::engine *thallium_shm_server;
@@ -142,8 +140,6 @@ class KeyValueStoreIO
 		semaphore = 0;
 		request_count.store(0);
 		synchronization_word.store(0);
-		req_queue = new boost::lockfree::queue<struct request*> (128);
-		resp_queue = new boost::lockfree::queue<struct response*> (128);
 		sync_queue = new boost::lockfree::queue<struct sync_request*> (128);
 
 		 t_args.resize(num_io_threads);
@@ -251,79 +247,10 @@ class KeyValueStoreIO
 		return b;
 	    }
 
-	     void bind_functions()
-	     {
-	       std::function<void(const tl::request &,struct request &)> putRequestFunc(
-               std::bind(&KeyValueStoreIO::ThalliumLocalPutRequest,this,std::placeholders::_1,std::placeholders::_2));
-
-	       std::function<void(const tl::request &,struct response &)> putResponseFunc(
-               std::bind(&KeyValueStoreIO::ThalliumLocalPutResponse,this,std::placeholders::_1,std::placeholders::_2));
-               
-	       thallium_server->define("RemotePutIORequest",putRequestFunc);
-               thallium_shm_server->define("RemotePutIORequest",putRequestFunc);
-
-               thallium_server->define("RemotePutIOResponse",putResponseFunc);
-               thallium_shm_server->define("RemotePutIOResponse",putResponseFunc);
-
-	     }
-
 	     bool LocalPutSyncRequest(struct sync_request *r)
 	     {
                 sync_queue->push(r);
                 return true;
-	     }
-	     bool LocalPutRequest(struct request &r)
-	     {
-		struct request *s = new struct request();
-		s->name = r.name;
-		s->id = request_count.fetch_add(1);
-		s->keytype = r.keytype;
-  		s->intkey = r.intkey;
-  		s->floatkey = r.floatkey;
-  		s->doublekey = r.doublekey;
-  		s->sender = r.sender;
-  		s->flush = r.flush;
-		
-		req_queue->push(s);
-		return true;
-	     }
-
-	     bool LocalPutResponse(struct response &r)
-	     {
-		struct response *s = new struct response();
-		s->name = r.name;
-  		s->id = r.id;
-  		s->response_id = r.response_id;
-  		s->event = r.event;
-  		s->sender = r.sender;
-  		s->complete = r.complete;
-		
-		resp_queue->push(s);
-		return true;
-	     }
-
-	     void ThalliumLocalPutRequest(const tl::request &req,struct request &r)
-	     {
-		req.respond(LocalPutRequest(r));
-	     }
-
-	     void ThalliumLocalPutResponse(const tl::request &req,struct response &r)
-	     {
-		req.respond(LocalPutResponse(r));
-	     }
-
-	     struct request *GetRequest()
-	     {
-		
-		struct request *r=nullptr;
-		bool b = req_queue->pop(r);
-		return r;
-	     }
-	     struct response *GetResponse()
-	     {
-		struct response *r=nullptr;
-		bool b = resp_queue->pop(r);
-		return r;
 	     }
 
 	     struct sync_request *GetSyncRequest()
@@ -333,49 +260,9 @@ class KeyValueStoreIO
 		return r;
 	     }
 
-	     bool RequestQueueEmpty()
-	     {
-		return req_queue->empty();
-	     }
-		
-	     bool ResponseQueueEmpty()
-	     {
-		return resp_queue->empty();
-	     }
-
 	     bool SyncRequestQueueEmpty()
 	     {
 		return sync_queue->empty();
-	     }
-
-	     bool PutRequest(struct request &r,int destid)
-	     {
-		if(ipaddrs[destid].compare(myipaddr)==0)
-                {
-                    tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[destid]);
-                    tl::remote_procedure rp = thallium_shm_client->define("RemotePutIORequest");
-                    return rp.on(ep)(r);
-                }
-                else
-                {
-                    tl::remote_procedure rp = thallium_client->define("RemotePutIORequest");
-                    return rp.on(serveraddrs[destid])(r);
-                }
-	     }
-	     bool PutResponse(struct response &r,int destid)
-	     {
-
-		if(ipaddrs[destid].compare(myipaddr)==0)
-                {
-                    tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[destid]);
-                    tl::remote_procedure rp = thallium_shm_client->define("RemotePutIOResponse");
-                    return rp.on(ep)(r);
-                }
-                else
-                {
-                    tl::remote_procedure rp = thallium_client->define("RemotePutIOResponse");
-                    return rp.on(serveraddrs[destid])(r);
-                }
 	     }
 
 	     void get_common_requests(std::vector<struct sync_request*>&,std::vector<struct sync_request*>&);
@@ -383,8 +270,6 @@ class KeyValueStoreIO
 
 	    ~KeyValueStoreIO()
 	    {
-		delete req_queue;
-		delete resp_queue;
 		delete sync_queue;
 	    }
 

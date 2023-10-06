@@ -64,7 +64,7 @@ int main(int argc,char **argv)
    int s3 = k->start_session(sname2,names[0],m2,32768);
    int s4 = k->start_session(sname3,names[0],m3,32768);
 
-   int tdw = 4096*8;
+   int tdw = 8192*8;
    int td = tdw/size;
    int numthreads = 4;
 
@@ -76,7 +76,7 @@ int main(int argc,char **argv)
 	args[i].k = k;
 	args[i].index = i;
 	args[i].nreq = td;
-	args[i].rate = 200000;
+	args[i].rate = 20000;
 
 	std::thread t{wthread,&args[i]};
 	workers[i] = std::move(t);

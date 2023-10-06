@@ -42,7 +42,6 @@ class KeyValueStore
 	    KeyValueStore(int np,int r) : numprocs(np), myrank(r)
 	   {
 		H5open();
-   	        //H5VLis_connector_registered_by_name("async");
 		io_count=0;
 		int base_port = 2000;
 		tag = 20000;
@@ -60,18 +59,33 @@ class KeyValueStore
 		mds->bind_functions();
 		io_layer = new KeyValueStoreIO(numprocs,myrank);
 		io_layer->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
-		io_layer->bind_functions();
 		if_q = new Interface_Queues(numprocs,myrank);
 		if_q->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
 		std::string remfilename = "emulatoraddrs";
 		if_q->get_remote_addrs(remfilename);
 		if_q->bind_functions();
-		MPI_Barrier(MPI_COMM_WORLD);
 		bool b = if_q->PutKVSAddresses(myrank);
 		tables = new KeyValueStoreAccessorRepository(numprocs,myrank,io_layer,if_q,ds);
 		k_args.resize(MAXSTREAMS);
 	        kstreams.resize(MAXSTREAMS);
 		stream_flags = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+		MPI_Request *reqs = new MPI_Request[2*numprocs];
+
+		int send_v = 1;
+		std::vector<int> recvv(numprocs);
+		std::fill(recvv.begin(),recvv.end(),0);
+
+		int nreq = 0;
+		for(int i=0;i<numprocs;i++)
+		{
+		   MPI_Isend(&send_v,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+		   nreq++;
+		   MPI_Irecv(&recvv[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+		   nreq++;
+		}
+		MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+		delete reqs;
 	   }
 	   void createKeyValueStoreEntry(std::string &,KeyValueStoreMetadata &);
 	   bool findKeyValueStoreEntry(std::string &,KeyValueStoreMetadata &);

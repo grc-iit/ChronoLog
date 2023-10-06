@@ -163,42 +163,6 @@ class Interface_Queues
         }
 
 
-	bool PutKVSRequest(struct query_req &r,int s_id)
-	{
-           bool b = false;
-           if(ipaddrs[s_id].compare(myipaddr)==0)
-           {
-              tl::endpoint ep = thallium_shm_client->lookup(shmaddrs[s_id]);
-              tl::remote_procedure rp = thallium_shm_client->define("KVSRemotePutRequest");
-              b = rp.on(ep)(r);
-           }
-           else
-           {
-              tl::remote_procedure rp = thallium_client->define("KVSRemotePutRequest");
-              b = rp.on(serveraddrs[s_id])(r);
-           }
-           return b;
-
-	}
-
-	bool PutEmulatorRequest(struct query_req &r, int s_id)
-	{
-	   bool b = false;
-	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
-	   {
-		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
-	        tl::remote_procedure rp = thallium_shm_client->define("EmulatorRemotePutRequest");
-		b = rp.on(ep)(r);
-	   }
-	   else
-	   {
-	        tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
-		tl::remote_procedure rp = thallium_client->define("EmulatorRemotePutRequest");
-		b = rp.on(ep)(r);
-	   }
-	   return b;
-	}
-
 	std::vector<uint64_t> PutEmulatorEvent(std::string &s,std::string &data,int s_id)
 	{
 	    if(remoteipaddrs[s_id].compare(myipaddr)==0)

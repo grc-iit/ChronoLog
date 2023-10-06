@@ -423,14 +423,12 @@ class hdf5_invlist
 	   }
 
 	   void get_events();
-	   void create_async_io_request(KeyT &,std::vector<ValueT>&);
 	   void create_sync_io_request();
 	   bool put_entry(KeyT&,ValueT&);
 	   int get_entry(KeyT&,std::vector<ValueT>&);
 	   void fill_invlist_from_file(std::string&,int);
 	   void flush_table_file(int,bool);
 	   int partition_no(KeyT &k);	
-           void cache_latest_table();	   
 	   void add_entries_to_tables(std::string&,std::vector<struct keydata>*,uint64_t,int); 
 	   void get_entries_from_tables(std::vector<struct KeyIndex<KeyT>> &,int&,int&,uint64_t);
 	   std::vector<struct KeyIndex<KeyT>> merge_keyoffsets(std::vector<struct KeyIndex<KeyT>>&,std::vector<struct KeyIndex<KeyT>>&,std::vector<int>&);

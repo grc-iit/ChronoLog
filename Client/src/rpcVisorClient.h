@@ -18,6 +18,7 @@
 #include "log.h"
 #include "error.h"
 #include "chronolog_types.h"
+#include "ConnectResponseMsg.h"
 #include "AcquireStoryResponseMsg.h"
 
 namespace tl = thallium;
@@ -46,14 +47,27 @@ public:
     }
 
 
-    int Connect(std::string const& client_account, uint32_t client_host_ip, ClientId & , uint64_t &clock_offset)
+    ConnectResponseMsg Connect(uint32_t client_euid, uint32_t client_host_ip, uint32_t client_pid)
     {
-//        LOGD("%s in ChronoLogAdminRPCProxy at addresss %p called in PID=%d, with args: uri=%s, client_id=%s",
-//             __FUNCTION__, this, getpid(), uri.c_str(), client_id.c_str());
-//        return CHRONOLOG_RPC_CALL_WRAPPER("Connect", 0, int, uri, client_id, flags, clock_offset);
+        LOGD("%s  with args: accout=%u, host_id=%u pid=%u",
+             __FUNCTION__, client_euid, client_host_ip, client_pid);
         try
         {
-            return visor_connect.on(service_ph)( client_account, client_host_ip);
+	        return visor_connect.on(service_ph)( client_euid, client_host_ip, client_pid);
+        }
+        catch (tl::exception const&)
+        {
+
+        }
+        return(ConnectResponseMsg(CL_ERR_UNKNOWN, ClientId{0}));
+    }
+
+    int Disconnect(ClientId const& client_id)
+    {
+        LOGD("%s with client_id=%lu", __FUNCTION__, client_id);
+        try
+        {
+	        return visor_disconnect.on(service_ph)( client_id);
         }
         catch (tl::exception const&)
         {
@@ -62,22 +76,7 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    int Disconnect(std::string const& client_id)
-    {
-//        LOGD("%s is called in PID=%d, with args: client_id=%s, flags=%d",
-//             __FUNCTION__, getpid(), client_id.c_str(), flags);
-        try
-        {
-            return visor_disconnect.on(service_ph)( client_id);
-        }
-        catch (tl::exception const&)
-        {
-
-        }
-        return(CL_ERR_UNKNOWN);
-    }
-
-    int CreateChronicle(std::string const& name,
+    int CreateChronicle(ClientId const& client_id, std::string const& name,
                         const std::unordered_map<std::string, std::string> &attrs,
                         int &flags) 
     {
@@ -85,7 +84,7 @@ public:
              __FUNCTION__, getpid(), name.c_str(), flags);
         try
         {
-            return  create_chronicle.on(service_ph)(name, attrs, flags);
+            return  create_chronicle.on(service_ph)(client_id, name, attrs, flags);
         }
         catch (tl::exception const&)
         {
@@ -95,12 +94,12 @@ public:
         
     }
 
-    int DestroyChronicle(std::string const& name)
+    int DestroyChronicle(ClientId const& client_id, std::string const& name)
     {
         LOGD("%s is called in PID=%d, with args: name=%s", __FUNCTION__, getpid(), name.c_str());
         try
         {
-            return destroy_chronicle.on(service_ph)(name);
+            return destroy_chronicle.on(service_ph)(client_id,name);
         }
         catch (tl::exception const&)
         {
@@ -109,11 +108,11 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    chronolog::AcquireStoryResponseMsg AcquireStory(std::string const& client_id, std::string const& chronicle_name, std::string const& story_name,
+    chronolog::AcquireStoryResponseMsg AcquireStory(ClientId const& client_id, std::string const& chronicle_name, std::string const& story_name,
                      const std::unordered_map<std::string, std::string> &attrs,  const int &flags) 
     {
-        LOGD("%s is called in PID=%d, with args: client_id=%s, chronicle_name=%s, story_name=%s, flags=%d",
-             __FUNCTION__, getpid(), client_id.c_str(), chronicle_name.c_str(), story_name.c_str(), flags);
+        LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s, flags=%d",
+             __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str(), flags);
         try
         {
             return  acquire_story.on(service_ph)(client_id, chronicle_name, story_name, attrs, flags);
@@ -125,10 +124,10 @@ public:
         return(AcquireStoryResponseMsg(CL_ERR_UNKNOWN,0,std::vector<KeeperIdCard> {}));
     }
 
-    int ReleaseStory(std::string &client_id, std::string const& chronicle_name, std::string const& story_name) 
+    int ReleaseStory(ClientId const &client_id, std::string const& chronicle_name, std::string const& story_name)
     {
-        LOGD("%s is called in PID=%d, with args: client_id=%s, chronicle_name=%s, story_name=%s",
-             __FUNCTION__, getpid(), client_id.c_str(), chronicle_name.c_str(), story_name.c_str());
+        LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s",
+             __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str());
         try
         {
             return release_story.on(service_ph)(client_id, chronicle_name, story_name);
@@ -140,13 +139,13 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    int DestroyStory(std::string const& chronicle_name, std::string const& story_name)
+    int DestroyStory(ClientId const& client_id,std::string const& chronicle_name, std::string const& story_name)
     {
         LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s",
              __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
         try
         {
-            return  destroy_story.on(service_ph)( chronicle_name, story_name);
+            return  destroy_story.on(service_ph)( client_id, chronicle_name, story_name);
         }
         catch (tl::exception const&)
         {
@@ -156,12 +155,12 @@ public:
     }
 
 
-    int GetChronicleAttr(std::string const& name, const std::string &key, std::string &value) 
+    int GetChronicleAttr(ClientId const& client_id, std::string const& name, const std::string &key, std::string &value)
     {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s", __FUNCTION__, getpid(), name.c_str(), key.c_str());
         try
         {
-            return get_chronicle_attr.on(service_ph)(name, key, value);
+            return get_chronicle_attr.on(service_ph)(client_id, name, key, value);
         }
         catch (tl::exception const&)
         {
@@ -170,13 +169,13 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    int EditChronicleAttr(std::string const& name, const std::string &key, const std::string &value) 
+    int EditChronicleAttr(ClientId const& client_id,std::string const& name, const std::string &key, const std::string &value)
     {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s",
              __FUNCTION__, getpid(), name.c_str(), key.c_str(), value.c_str());
         try
         {
-            return  edit_chronicle_attr.on(service_ph)(name, key, value);
+            return  edit_chronicle_attr.on(service_ph)(client_id,name, key, value);
         }
         catch (tl::exception const&)
         {
@@ -185,18 +184,33 @@ public:
         return(CL_ERR_UNKNOWN);
     }
 
-    std::vector<std::string>  ShowChronicles(std::string const& client_id) //, std::vector<std::string> & chronicles) 
+    std::vector<std::string>  ShowChronicles(ClientId const& client_id) //, std::vector<std::string> & chronicles)
     {
-        LOGD("%s is called in PID=%d, with args: client_id=%s", __FUNCTION__, getpid(), client_id.c_str());
-            
-        return  show_chronicles.on(service_ph)(client_id); //INNA: change the function definitions , then add try-catch block
+        LOGD("%s is called in PID=%d, with args: client_id=%lu", __FUNCTION__, getpid(), client_id);
+        try
+        {
+            return  show_chronicles.on(service_ph)(client_id);
+        }
+        catch (tl::exception const&)
+        {
+
+        }
+        return(std::vector<std::string>{});
     }
 
-    std::vector<std::string>  ShowStories(std::string const& client_id, std::string const&chronicle_name) //, std::vector<std::string> & stories ) 
+    std::vector<std::string>  ShowStories(ClientId const& client_id, std::string const&chronicle_name) //, std::vector<std::string> & stories )
     {
-        LOGD("%s is called in PID=%d, with args: client_id=%s, chronicle_name=%s",
-             __FUNCTION__, getpid(), client_id.c_str(), chronicle_name.c_str());
-        return show_stories.on(service_ph)( client_id, chronicle_name); //INNA: change the function definitions , then add try-catch block
+        LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s",
+             __FUNCTION__, getpid(), client_id, chronicle_name.c_str());
+        try
+        {
+            return show_stories.on(service_ph)( client_id, chronicle_name);
+        }
+        catch (tl::exception const&)
+        {
+
+        }
+        return(std::vector<std::string>{});
     }
 
 

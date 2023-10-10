@@ -38,9 +38,9 @@ public:
     {
         try
         { 
-	        std::cout<< "KeeperRecordingClient::send_event_msg:"<<eventMsg<<std::endl;
-	        int return_code = record_event.on(service_ph)(eventMsg);
-	        std::cout<< "KeeperRecordingClient::send_event_msg:"<<eventMsg<<" return_code:"<<return_code<<std::endl;
+            std::cout<< "KeeperRecordingClient::send_event_msg:"<<eventMsg<<std::endl;
+            int return_code = record_event.on(service_ph)(eventMsg);
+            std::cout<< "KeeperRecordingClient::send_event_msg:"<<eventMsg<<" return_code:"<<return_code<<std::endl;
             return return_code;
         }
         catch(thallium::exception const&)

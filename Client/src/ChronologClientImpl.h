@@ -70,7 +70,7 @@ private:
     uint32_t    euid;
     uint32_t    hostId;
     uint32_t    pid;
-    ClientId	clientId;
+    ClientId    clientId;
     ChronologTimer clockProxy;
     thallium::engine * tlEngine;
     RpcVisorClient * rpcVisorClient;

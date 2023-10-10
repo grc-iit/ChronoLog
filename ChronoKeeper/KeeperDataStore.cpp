@@ -48,17 +48,17 @@ int chronolog::KeeperDataStore::startStoryRecording(std::string const &chronicle
     auto result = theMapOfStoryPipelines.emplace(std::pair<chl::StoryId, chl::StoryPipeline*> (story_id,
             new chl::StoryPipeline(theExtractionQueue, chronicle, story, story_id, start_time, time_chunk_duration)));
 
-	if( result.second)
-	{
+    if (result.second)
+    {
         pipeline_iter = result.first;
 
         //engage StoryPipeline with the IngestionQueue
-        StoryIngestionHandle * ingestionHandle = (*pipeline_iter).second->getActiveIngestionHandle();
-        theIngestionQueue.addStoryIngestionHandle( story_id, ingestionHandle);
+        StoryIngestionHandle *ingestionHandle = (*pipeline_iter).second->getActiveIngestionHandle();
+        theIngestionQueue.addStoryIngestionHandle(story_id, ingestionHandle);
 
         return CL_SUCCESS;
     }
-	else
+    else
     {
         return CL_ERR_UNKNOWN;
     }

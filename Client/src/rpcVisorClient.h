@@ -53,7 +53,7 @@ public:
              __FUNCTION__, client_euid, client_host_ip, client_pid);
         try
         {
-	        return visor_connect.on(service_ph)( client_euid, client_host_ip, client_pid);
+            return visor_connect.on(service_ph)( client_euid, client_host_ip, client_pid);
         }
         catch (tl::exception const&)
         {
@@ -67,7 +67,7 @@ public:
         LOGD("%s with client_id=%lu", __FUNCTION__, client_id);
         try
         {
-	        return visor_disconnect.on(service_ph)( client_id);
+            return visor_disconnect.on(service_ph)( client_id);
         }
         catch (tl::exception const&)
         {

@@ -324,8 +324,8 @@ int ChronicleMetaDirectory::acquire_story( chl::ClientId const &client_id,
 //TO_DO return acquisition_count after the story has been released
 int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id,
                                           const std::string &chronicle_name,
-                                          const std::string &story_name
-					  , StoryId & story_id, bool & notify_keepers ) {
+                                          const std::string &story_name,
+                                          StoryId & story_id, bool & notify_keepers ) {
     LOGD("client_id=%lu releasing Story name=%s in Chronicle name=%s",
          client_id, story_name.c_str(), chronicle_name.c_str());
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);

@@ -96,8 +96,8 @@ public:
       }
       void synchronize()
       {
-	CM->SynchronizeClocks();
-	CM->ComputeErrorInterval();
+	std::pair<uint64_t,uint64_t> p = CM->SynchronizeClocks();
+	CM->ComputeErrorInterval(p.first,p.second);
 
       }
       std::string & get_serveraddr()
@@ -192,25 +192,33 @@ public:
 
       bool end_sessions(std::string &s)
       {
+	QE->end_session_flag();
 	rwp->end_session_flag();
-	for(int i=0;i<dw.size();i++) dw[i].join();
-	for(int i=0;i<qp.size();i++) qp[i].join();
-	QE->end_sessions();
-	rwp->end_sessions();
 	return true;
       }
+	/*for(int i=0;i<dw.size();i++) dw[i].join();
+	for(int i=0;i<qp.size();i++) qp[i].join();
+	//QE->end_sessions();
+	rwp->end_sessions();
+	std::cout <<" process end session rank = "<<myrank<<std::endl;
+	return true;
+      }*/
 
       bool end_emu_process(std::string &s)
       {
-	end_process.store(1);
-	return true;
+	if(rwp->is_session_ended())
+	{
+	  end_process.store(1);
+	  return true;
+	}
+	else return false;
       }
       void end_sessions_t()
       {
-	for(int i=0;i<dw.size();i++) dw[i].join();
-	for(int i=0;i<qp.size();i++) qp[i].join();
+	/*for(int i=0;i<dw.size();i++) dw[i].join();
+	for(int i=0;i<qp.size();i++) qp[i].join();*/
 	QE->end_sessions();
-	rwp->end_sessions();
+	//rwp->end_sessions();
       }
 
       void ThalliumEndSessions(const tl::request &req,std::string &s)

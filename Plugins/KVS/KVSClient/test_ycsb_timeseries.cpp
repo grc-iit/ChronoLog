@@ -38,7 +38,10 @@ int main(int argc,char **argv)
 
    MPI_Barrier(MPI_COMM_WORLD);
 
-   int s = k->start_session(sname,names[0],m,32768);
+   int nloops = 2;
+   int nticks = 50;
+   int ifreq = 200;
+   int s = k->start_session(sname,names[0],m,32768,nloops,nticks,ifreq);
 
    k->create_keyvalues<unsigned_long_invlist,uint64_t,float>(s,keys,values,op,20000);
 

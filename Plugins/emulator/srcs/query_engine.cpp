@@ -260,12 +260,16 @@ void query_engine::service_query(struct thread_arg_q* t)
 		int nend = count_end_of_session();
 		if(nend==numprocs) 
 		{
-		   end_request.store(1);
+		   //end_request.store(1);
 		   break;
 		}
 
 	   }
-	   if(endsessions==numprocs && end_session.load()==0)
+	}
+
+	rwp->end_qe();
+
+	   /*if(endsessions==numprocs && end_session.load()==0)
 	   {
 		end_session.store(1);
 	   } 
@@ -313,7 +317,7 @@ void query_engine::service_query(struct thread_arg_q* t)
 			    }
 		          }
 		       }
-		    }
+		    }*/
 
 	             /* else
 		  {
@@ -333,7 +337,7 @@ void query_engine::service_query(struct thread_arg_q* t)
 		     int dest = r->sender;
 		     Q->PutResponse(s,dest);
 		  }*/
-		  if(e->data != nullptr) delete e->data;
+		  /*if(e->data != nullptr) delete e->data;
 		  delete e;
 	         }
 	         else if(pid != -1 && index != -1)
@@ -342,7 +346,7 @@ void query_engine::service_query(struct thread_arg_q* t)
 
 		 }
 		  delete r;
-		}
+		}*/
 	          
 		/*pid = r->sender;
 	     
@@ -450,8 +454,8 @@ void query_engine::service_query(struct thread_arg_q* t)
 	      //delete buf2;
 	      //delete buf3;
 	      //delete resp_vec;
-           }
-	}
+           //}
+	//}
 
 }
 

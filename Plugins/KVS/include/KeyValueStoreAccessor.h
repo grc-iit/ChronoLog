@@ -147,6 +147,8 @@ class KeyValueStoreAccessor
 	  void fill_invertedlist(int);
 	  template <typename T,typename N,typename M>
 	  bool Put(int,std::string &,N &key, M &value);
+	  template<typename T,typename N,typename M>
+	  uint64_t Put_ts(int,std::string&,N &key,M &value);
 	  template <typename T,typename N>
           bool Get(int,std::string&,N&,int);
 	  template<typename T,typename N>

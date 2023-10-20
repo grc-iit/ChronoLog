@@ -36,7 +36,10 @@ int main(int argc,char **argv)
    std::string filename = sname+".log"; 
    k->get_ycsb_test(filename,keys,values,op);
 
-   int s = k->start_session(sname,names[0],m,32768);
+   int nloops = 2;
+   int nticks = 50;
+   int ifreq = 200;
+   int s = k->start_session(sname,names[0],m,32768,nloops,nticks,ifreq);
 
    std::vector<uint64_t> keys_n(keys.begin(),keys.begin()+80000);
    std::vector<std::string> values_n(values.begin(),values.begin()+80000);

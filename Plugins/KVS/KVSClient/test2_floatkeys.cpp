@@ -29,10 +29,13 @@ int main(int argc,char **argv)
    lens.push_back(200);
    int len = sizeof(float)+200;
    KeyValueStoreMetadata m(sname,n,types,names,lens,len);
- 
-   int s = k->start_session(sname,names[0],m,32768);
 
-   k->create_keyvalues<float_invlist,float>(s,8192,200000);
+   int nloops = 2;
+   int nticks = 100;
+   int ifreq = 200; 
+   int s = k->start_session(sname,names[0],m,32768,nloops,nticks,ifreq);
+
+   k->create_keyvalues<float_invlist,float>(s,1024,200000);
 
    k->close_sessions();
 

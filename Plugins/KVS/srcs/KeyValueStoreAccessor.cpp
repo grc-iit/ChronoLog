@@ -47,6 +47,29 @@ bool KeyValueStoreAccessor::insert_entry(int pos, N&key,uint64_t &ts)
 }
 
 template<typename T,typename N,typename M>
+uint64_t KeyValueStoreAccessor::Put_ts(int pos,std::string &s,N &key,M &value)
+{
+  if(pos >= lists.size()) return UINT64_MAX;
+  int ksize = sizeof(N);
+  std::string data = value;
+  assert (data.length()==value.length());
+
+  std::vector<uint64_t> ts;
+  
+  do
+  {
+     ts = if_q->PutEmulatorEvent(s,data,myrank);
+  }while(ts[0]==UINT64_MAX && ts[1]==0);
+
+  bool b = false;
+  if(ts[0] != UINT64_MAX)
+  {
+	T *invlist = reinterpret_cast<T*>(lists[pos].second);
+	b = invlist->put_entry(key,ts[0]);
+  }
+  return ts[0];
+}
+template<typename T,typename N,typename M>
 bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
 {
    if(pos >= lists.size()) return false;
@@ -58,7 +81,11 @@ bool KeyValueStoreAccessor::Put(int pos,std::string &s,N &key, M &value)
    assert(data.length()==value.length());
 
    std::vector<uint64_t> ts;
-   ts = if_q->PutEmulatorEvent(s,data,myrank);
+   do
+   {
+      ts = if_q->PutEmulatorEvent(s,data,myrank);
+   }while(ts[0]==UINT64_MAX && ts[1]==0);
+
    bool b = false;
    if(ts[0] != UINT64_MAX)
    {

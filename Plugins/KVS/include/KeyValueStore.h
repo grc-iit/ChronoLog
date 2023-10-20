@@ -16,6 +16,9 @@ struct kstream_args
 {
   std::string tname;
   std::string attr_name;
+  int ffreq;
+  int wdelay;
+  int ifreq;
   int maxsize;
   int tid;
 };
@@ -59,6 +62,7 @@ class KeyValueStore
 		mds->bind_functions();
 		io_layer = new KeyValueStoreIO(numprocs,myrank);
 		io_layer->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
+		io_layer->io_service();
 		if_q = new Interface_Queues(numprocs,myrank);
 		if_q->server_client_addrs(t_server,t_client,t_server_shm,t_client_shm,ipaddrs,shmaddrs,server_addrs);
 		std::string remfilename = "emulatoraddrs";
@@ -94,6 +98,11 @@ class KeyValueStore
 	   bool findKeyValueStoreInvList(std::string &s,std::string &attr_name);
 	   void removeKeyValueStoreInvList(std::string &s,std::string &attr_name);
 
+	   data_server_client * get_rpc_client()
+	   {
+		return ds;
+	
+	   }
 	   template<typename T,typename N>
 	   void cacheflushInvList(struct kstream_args*k)
 	   {
@@ -115,7 +124,8 @@ class KeyValueStore
    	 	MPI_Request *reqs = new MPI_Request[2*numprocs];
 
 		bool end_loop = false;
-		int rate = 200;
+		int rate = (k->ifreq < 50) ? 50 : k->ifreq;
+		rate = (rate > 500) ? 500 : rate;
 		int request_count=0;
 
 		while(true)
@@ -139,7 +149,7 @@ class KeyValueStore
       		  if(sum==numprocs) 
 		  {
 		     end_loop = true;
-		     rate = 100;
+		     rate = rate/2;
 		  }
 
       		  auto t1 = std::chrono::high_resolution_clock::now();
@@ -148,7 +158,7 @@ class KeyValueStore
         		auto t2 = std::chrono::high_resolution_clock::now();
 
         		double t = std::chrono::duration<double>(t2-t1).count();
-        		if(t > rate) break;
+        		if(t > (double)rate) break;
       		  }
 		
 		  if(end_loop) 
@@ -196,8 +206,10 @@ class KeyValueStore
 	       KeyValueStoreMetadata m = ka->get_metadata();
 	       std::vector<std::string> metastring;
 	       m.packmetadata(metastring);
-		
-	       bool b = if_q->CreateEmulatorStream(s,metastring,myrank);
+	       int nloops = std::max(1,k->ffreq);
+               int nde = (k->wdelay < 50) ? 50 : k->wdelay; 	
+	       nde = (nde > 500) ? 500 : nde; 
+	       bool b = if_q->CreateEmulatorStream(s,metastring,myrank,nloops,nde);
 	   }
 
 	   template<typename T,typename N>
@@ -433,7 +445,7 @@ class KeyValueStore
 		      b = ka->Get<T,N> (pos,st,key,ids);
 		      ids++;
 		    }
-
+		    
 		    usleep(rate); 
 		}
 
@@ -443,9 +455,10 @@ class KeyValueStore
            void get_ycsb_timeseries_workload(std::string&,std::vector<uint64_t>&,std::vector<float>&,std::vector<int>&);
            void get_dataworld_workload(std::string&,std::vector<uint64_t>&,std::vector<uint64_t>&,std::vector<int>&);
            void get_ycsb_test(std::string&,std::vector<uint64_t>&,std::vector<std::string>&,std::vector<int>&);
+	   void get_keyvaluestorestructs(std::string &,std::string&,KeyValueStoreAccessor*&,int &);
 
 	   template<typename T,typename N>
-	   int spawn_kvstream(std::string &s,std::string &a,int maxsize)
+	   int spawn_kvstream(std::string &s,std::string &a,int maxsize,int n1,int n2,int n3)
 	   {
 
 		int prev = nstreams.fetch_add(1);
@@ -453,6 +466,9 @@ class KeyValueStore
 		k_args[prev].attr_name = a;
 		k_args[prev].tid = prev;
 		k_args[prev].maxsize = maxsize;
+		k_args[prev].ffreq = n1;
+		k_args[prev].wdelay = n2;
+		k_args[prev].ifreq = n3;
 		std::string streamname = s+a;
 		std::pair<std::string,int> p(streamname,prev);
 		kvindex.insert(p);
@@ -469,7 +485,7 @@ class KeyValueStore
 		return prev;
 	   }
 
-	   int start_session(std::string &name,std::string &attrname,KeyValueStoreMetadata &m,int maxsize)
+	   int start_session(std::string &name,std::string &attrname,KeyValueStoreMetadata &m,int maxsize,int n1,int n2,int n3)
 	   {
 		
 		 createKeyValueStoreEntry(name,m);
@@ -478,19 +494,19 @@ class KeyValueStore
 		 int session_index = -1;
 		 if(type.compare("int")==0)
 		 {
-		   session_index = spawn_kvstream<integer_invlist,int>(name,attrname,maxsize);
+		   session_index = spawn_kvstream<integer_invlist,int>(name,attrname,maxsize,n1,n2,n3);
 		 }
 		 else if(type.compare("unsignedlong")==0)
 		 {
-		   session_index = spawn_kvstream<unsigned_long_invlist,unsigned long>(name,attrname,maxsize);
+		   session_index = spawn_kvstream<unsigned_long_invlist,unsigned long>(name,attrname,maxsize,n1,n2,n3);
 		 }
 		 else if(type.compare("float")==0)
 		 {
-		   session_index = spawn_kvstream<float_invlist,float>(name,attrname,maxsize);
+		   session_index = spawn_kvstream<float_invlist,float>(name,attrname,maxsize,n1,n2,n3);
 		 }
 		 else if(type.compare("double")==0)
 		 {
-		    session_index = spawn_kvstream<double_invlist,double>(name,attrname,maxsize);
+		    session_index = spawn_kvstream<double_invlist,double>(name,attrname,maxsize,n1,n2,n3);
 		 }
 		 return session_index;
 
@@ -500,14 +516,19 @@ class KeyValueStore
 	   {
 		std::string s = "endsession";
 		bool b = if_q->EndEmulatorSession(s,myrank);
-
-		for(int i=0;i<nstreams.load();i++) stream_flags[i].store(1);
-		for(int i=0;i<nstreams.load();i++) kstreams[i].join();
-
+		
+	        for(int i=0;i<nstreams.load();i++) stream_flags[i].store(1);
+                for(int i=0;i<nstreams.load();i++) kstreams[i].join();
+	
 		io_layer->end_io();
 
 		s = "shutdown";
-		b = if_q->ShutDownEmulator(s,myrank);
+		b = false;
+		do
+		{
+		  b = false;
+		  b = if_q->ShutDownEmulator(s,myrank);
+		}while(!b);
 
 	   }
 	   ~KeyValueStore()

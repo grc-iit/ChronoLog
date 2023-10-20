@@ -33,7 +33,8 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-
+#include <boost/type_traits.hpp>
+#include <boost/atomic.hpp>
 
 namespace tl=thallium;
 
@@ -73,14 +74,14 @@ class ClockSynchronization
  
    private:
      Clocksource *clock;
-     uint64_t maxError;
+     std::atomic<uint64_t> maxError;
      int myrank;
      int numprocs;
-     uint64_t myoffset;
-     uint64_t unit;
-     uint64_t epsilon;
-     uint64_t delay;
-     bool is_less;
+     std::atomic<uint64_t> myoffset;
+     std::atomic<uint64_t> unit;
+     std::atomic<uint64_t> epsilon;
+     std::atomic<uint64_t> delay;
+     std::atomic<bool> is_less;
      tl::engine *thallium_server;
      tl::engine *thallium_shm_server;
      tl::engine *thallium_client;
@@ -92,21 +93,23 @@ class ClockSynchronization
      std::string myhostname;
      uint32_t nservers;
      uint32_t serverid;
-
+     boost::atomic<boost::uint128_type> offset_error;
    public:
      ClockSynchronization(int n1,int n2,std::string &q) : myrank(n1), numprocs(n2)
      {
-	 if(q.compare("second")==0) unit = 1000000000;
-	 else if(q.compare("microsecond")==0) unit = 1000;
-         else if(q.compare("millisecond")==0) unit = 1000000;
-	 else unit = 1;
-	 myoffset = 0;
-	 maxError = 0;
-	 epsilon = 200000000;  //400 microseconds (scheduling, measurement errors)
-	 delay = 500000; // 200 microseconds network delay for reasonably large messages
-	 delay = delay/unit;
-	 epsilon = epsilon/unit;
-	 is_less = false;
+	 if(q.compare("second")==0) unit.store(1000000000);
+	 else if(q.compare("microsecond")==0) unit.store(1000);
+         else if(q.compare("millisecond")==0) unit.store(1000000);
+	 else unit.store(1);
+	 myoffset.store(0);
+	 maxError.store(0);
+	 epsilon.store(200000000);  //400 microseconds (scheduling, measurement errors)
+	 delay.store(500000); // 200 microseconds network delay for reasonably large messages
+	 uint64_t dd = delay.load()/unit.load();
+	 delay.store(dd);
+	 uint64_t en = epsilon.load()/unit.load();
+	 epsilon.store(en);
+	 is_less.store(false);
 	 nservers = numprocs;
 	 serverid = myrank;
      }
@@ -136,19 +139,33 @@ class ClockSynchronization
 
      uint64_t Timestamp()
      {
-	 if(!is_less)
-	 return clock->getTimestamp()/unit+myoffset;
+	 boost::uint128_type eoffset = offset_error.load();
+	 eoffset = eoffset >> 64;
+	 uint64_t mb = (uint64_t)eoffset;
+	 uint64_t mbit = mb >> 63;
+	 uint64_t den = mb << 1;
+	 den = den >> 1;
+	 if(!mbit)
+	 return clock->getTimestamp()/unit.load()+den;
 	 else
-	  return clock->getTimestamp()/unit-myoffset;
+	  return clock->getTimestamp()/unit.load()-den;
      }
 
      bool NearTime(uint64_t ts)
      {
-	uint64_t myts = Timestamp();
+	boost::uint128_type eoffset = offset_error.load();
+	uint64_t errorm = (uint64_t)eoffset;
+	eoffset = eoffset >> 64;
+	uint64_t mb = (uint64_t)eoffset;
+	uint64_t mbit = mb >> 63;
+	uint64_t den = mb << 1;
+	den = den >> 1;
+	uint64_t myts = clock->getTimestamp()/unit.load();
+	if(!mbit) myts += den; else myts -= den;
 	uint64_t diff = UINT64_MAX;
 	if(myts < ts) diff = ts-myts;
 	else diff = myts-ts;
-	if(diff <= 2*maxError+delay+epsilon) return true;
+	if(diff <= 2*errorm+delay.load()+epsilon.load()) return true;
 	else 
 	{
 		//throw std::runtime_error("Timestamp out of range");
@@ -177,10 +194,8 @@ class ClockSynchronization
            return b;
      }
 
-     void SynchronizeClocks();
-     void ComputeErrorInterval();
-     void UpdateOffsetMaxError();
-     void localsync();
+     std::pair<uint64_t,uint64_t> SynchronizeClocks();
+     void ComputeErrorInterval(uint64_t,uint64_t);
 
 };
 

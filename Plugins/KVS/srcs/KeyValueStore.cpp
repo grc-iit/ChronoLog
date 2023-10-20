@@ -13,6 +13,14 @@ void KeyValueStore::createKeyValueStoreEntry(std::string &s, KeyValueStoreMetada
      tables->add_accessor(s,m);
 }
 
+void KeyValueStore::get_keyvaluestorestructs(std::string &s,std::string &attr_name,KeyValueStoreAccessor *&ka,int &pos)
+{
+
+   ka = nullptr;
+   ka = tables->get_accessor(s);
+   pos = ka->get_inverted_list_index(attr_name);
+}	
+
 bool KeyValueStore::findKeyValueStoreEntry(std::string &s,KeyValueStoreMetadata &m)
 {
    bool ret = false;

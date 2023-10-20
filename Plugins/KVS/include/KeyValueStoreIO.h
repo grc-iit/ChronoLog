@@ -147,12 +147,6 @@ class KeyValueStoreIO
 	
 		 io_threads.resize(num_io_threads);
 
-		 std::function<void(struct thread_arg *)> IOFunc(
-                 std::bind(&KeyValueStoreIO::io_function,this, std::placeholders::_1));
-			
-		 std::thread t{IOFunc,&t_args[0]};
-		 io_threads[0] = std::move(t);
-
 	    }
 
 	     void end_io()
@@ -181,70 +175,12 @@ class KeyValueStoreIO
                 serveraddrs.assign(saddrs.begin(),saddrs.end());
             }
 
-	    uint32_t read_sync_word()
-	    {
-		return synchronization_word.load();
-	    }
-
 	    void add_query_service(int type,void *fptr)
 	    {
 		std::pair<int,void*> p;
 		p.first = type;
 		p.second = fptr;
 		service_queries.push_back(p);
-	    }
-
-	    void write_sync_word(uint32_t n)
-	    {
-		synchronization_word.store(n);
-	    }
-
-	    bool announce_sync(int p)
-	    {
-		uint32_t mask = 1;
-		mask = mask << p;
-		bool b = false;
-		uint32_t mask_s = 1;
-		mask_s = mask_s << 31;
-
-		uint32_t prev = synchronization_word.load();
-	        uint32_t next;
-
-		do
-		{
-		    b = false;
-		    prev = synchronization_word.load();
-		    uint32_t m_p = prev & mask_s;
-		    uint32_t m_q = prev & mask;
-		    m_q = m_q >> p;
-		    m_p = m_p >> 31;
-		    if(m_p == 1 || m_q == 1) break;
-		    next = prev | mask;
-		}while(!(b = synchronization_word.compare_exchange_strong(prev,next)));
-
-		return b;
-	    }
-
-	    bool reset_sync(int p)
-	    {
-		uint32_t mask = UINT32_MAX;
-		uint32_t mask1 = 1;
-		mask1 = mask1 << p;
-		mask = mask1 ^ mask;
-
-		bool b = false;
-
-		uint32_t prev = synchronization_word.load();
-		uint32_t next;
-
-		do
-		{
-		   b = false;
-		   prev = synchronization_word.load();
-		   next = prev & mask;
-		}while(!(b = synchronization_word.compare_exchange_strong(prev,next)));
-		
-		return b;
 	    }
 
 	     bool LocalPutSyncRequest(struct sync_request *r)
@@ -267,6 +203,7 @@ class KeyValueStoreIO
 
 	     void get_common_requests(std::vector<struct sync_request*>&,std::vector<struct sync_request*>&);
 	     void io_function(struct thread_arg *);
+	     void io_service();
 
 	    ~KeyValueStoreIO()
 	    {

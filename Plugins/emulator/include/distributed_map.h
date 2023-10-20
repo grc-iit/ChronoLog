@@ -169,6 +169,7 @@ class distributed_hashmap
       if(!CM->NearTime(k) || !(k>=range[index].first && k <= range[index].second))
       {
 	 dropped_events.fetch_add(1);
+	 std::cout <<" dropped event"<<std::endl;
 	 return 2;
       }
         

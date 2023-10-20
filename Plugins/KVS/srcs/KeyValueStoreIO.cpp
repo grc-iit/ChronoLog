@@ -268,3 +268,12 @@ void KeyValueStoreIO::get_common_requests(std::vector<struct sync_request*> &syn
 		 for(int i=0;i<common_reqs.size();i++) std::cout <<" i = "<<i<<" req name = "<<common_reqs[i]->name<<" req attr name = "<<common_reqs[i]->attr_name<<std::endl;
 
 }
+
+void KeyValueStoreIO::io_service()
+{
+     std::function<void(struct thread_arg *)> IOFunc(
+     std::bind(&KeyValueStoreIO::io_function,this, std::placeholders::_1));
+                        
+     std::thread t{IOFunc,&t_args[0]};
+     io_threads[0] = std::move(t);
+}

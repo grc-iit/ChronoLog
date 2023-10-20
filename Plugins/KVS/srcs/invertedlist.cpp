@@ -10,7 +10,7 @@ int hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::partition_no(KeyT &k)
       mask = mask >> (64-nbits);
       key = key & mask;
       key = key >> (nbits-nbits_p);   
-      int id = (int)key;
+      int id = (int)key%numprocs;
       int rem = ntables%numprocs;
       int offset = rem*(tables_per_proc+1);
       int pid = -1;
@@ -31,6 +31,8 @@ bool hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::put_entry(KeyT &k,ValueT &v)
 {
 	int pid = partition_no(k);
 
+	assert (pid >= 0 && pid < numprocs);
+
 	bool b = false;
 	
 	if(pid == serverid)
@@ -44,6 +46,7 @@ template<typename KeyT,typename ValueT,typename hashfcn,typename equalfcn>
 int hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_entry(KeyT& k,std::vector<ValueT>&values)
 {
 	int pid = partition_no(k);
+	assert (pid >= 0 && pid < numprocs);
         int ret = -1;
 	if(pid==serverid)
 	   values = LocalGetEntry(k);

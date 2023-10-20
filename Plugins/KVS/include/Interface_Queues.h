@@ -181,7 +181,7 @@ class Interface_Queues
 	    }
 	}
 
-	bool CreateEmulatorStream(std::string &s,std::vector<std::string> &metadata,int s_id)
+	bool CreateEmulatorStream(std::string &s,std::vector<std::string> &metadata,int s_id,int &n1,int &n2)
 	{
 	   bool b = false;
 	   if(remoteipaddrs[s_id].compare(myipaddr)==0)
@@ -189,14 +189,14 @@ class Interface_Queues
 		tl::endpoint ep = thallium_shm_client->lookup(remoteshmaddrs[s_id]);
 		tl::remote_procedure rp = thallium_shm_client->define("EmulatorPrepareStream");
 		std::chrono::duration<double,std::ratio<20>> second;
-		b = rp.on(ep).timed(second,s,metadata);
+		b = rp.on(ep).timed(second,s,metadata,n1,n2);
 	   }
            else
 	   {
 		tl::endpoint ep = thallium_client->lookup(remoteserveraddrs[s_id]);
 		tl::remote_procedure rp = thallium_client->define("EmulatorPrepareStream");
 		std::chrono::duration<double,std::ratio<20>> second;
-		b = rp.on(ep).timed(second,s,metadata);
+		b = rp.on(ep).timed(second,s,metadata,n1,n2);
 	   }	
 	   return b;
 

@@ -29,8 +29,11 @@ int main(int argc,char **argv)
    lens.push_back(200);
    int len = sizeof(uint64_t)+200;
    KeyValueStoreMetadata m(sname,n,types,names,lens,len);
- 
-   int s = k->start_session(sname,names[0],m,32768);
+
+   int nloops = 2;
+   int nticks = 100;
+   int ifreq = 200; 
+   int s = k->start_session(sname,names[0],m,32768,nloops,nticks,ifreq);
 
    k->create_keyvalues<unsigned_long_invlist,uint64_t>(s,4096,200000);
 

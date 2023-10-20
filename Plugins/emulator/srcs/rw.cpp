@@ -4,34 +4,6 @@
 
 typedef int DATATYPE;
 
-void read_write_process::sync_clocks()
-{
-   int nstreams = num_dropped.size();
-
-   int total_dropped = 0;
-   for(int i=0;i<nstreams;i++) total_dropped += num_dropped[i];
-
-   int max_recorded = 0;
-   for(int i=0;i<iters_per_batch;i++)
-   {
-	for(int j=0;j<nstreams;j++)
-		max_recorded += batch_size[j]; 
-   } 
-
-   if(myrank==0)
-   {
-	std::cout <<" rank = "<<myrank<<" total_dropped = "<<total_dropped<<" max_recorded = "<<max_recorded<<std::endl;
-	std::cout <<" threshold = "<<max_recorded/4<<std::endl;
-   }
-   //if(myrank==0)//if((double)total_dropped > (double)(max_recorded/4)) 
-   {
-	CM->UpdateOffsetMaxError();
-   }
-
-   for(int i=0;i<nstreams;i++) num_dropped[i] = 0;
-
-}
-
 bool read_write_process::create_buffer(int &num_events,std::string &s)
 {
     int datasize = 0;
@@ -973,13 +945,12 @@ void read_write_process::pwrite(std::vector<std::string>& sts,std::vector<hsize_
 
 }
 
-int read_write_process::endsessioncount()
+int read_write_process::endsessioncount(int tag_p)
 {
      int send_v = end_of_session.load();
      std::vector<int> recv_v(numprocs);
      std::fill(recv_v.begin(),recv_v.end(),0);
      MPI_Request *reqs = new MPI_Request[2*numprocs];
-     int tag_p = 1500; 
 
      int nreq = 0;
      for(int i=0;i<numprocs;i++)
@@ -1010,7 +981,7 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 
    while(true)
    {
-      int nprocs = endsessioncount();
+      int nprocs = endsessioncount(1500);
       t1 = std::chrono::high_resolution_clock::now();
       if(nprocs==numprocs) 
       {
@@ -1018,9 +989,8 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 	  break;
       }
 
-      if(numrounds == 1) 
+      if(numrounds == numloops[t->tid]) 
       {
-
 	struct io_request *r = new struct io_request();
         r->name = t->name;
         r->from_nvme = true;
@@ -1030,14 +1000,13 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 
         w_reqs_pending[t->tid].store(1);
         while(w_reqs_pending[t->tid].load()!=0);
-
 	numrounds = 0;
       }
 
       for(;;)
       {
         auto t2 = std::chrono::high_resolution_clock::now();
-        if(std::chrono::duration<double>(t2-t1).count() > 50 && b) 
+        if(std::chrono::duration<double>(t2-t1).count() > loopticks[t->tid] && b) 
         {
 	   b = false;
 	   break;
@@ -1080,12 +1049,10 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 
      w_reqs_pending[t->tid].store(1);
      while(w_reqs_pending[t->tid].load()!=0);
-
      numrounds = 0;
 
    }
-
-
+   end_of_stream_session[t->tid].store(1);
 }
 
 void read_write_process::io_polling(struct thread_arg_w *t)
@@ -1105,17 +1072,25 @@ void read_write_process::io_polling(struct thread_arg_w *t)
 
      std::atomic_thread_fence(std::memory_order_seq_cst);
 
-     while(cstream.load()==0 && end_of_io_session.load()==0);
+     while(cstream.load()==0 && end_of_session.load()==0);
 
-     int end_io=0;
-     int end_sessions = end_of_io_session.load()==0 ? 0 : 1;
-     end_io = io_queue_async->empty() ? end_sessions : 0;
+     int end_io = end_of_session.load();
 
-     int empty_all;
+     for(int i=0;i<cstream.load();i++)
+     {
+	if(end_of_stream_session[i].load()==0) end_io = 0;
+     }
 
-     MPI_Allreduce(&end_io,&empty_all,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+     int end_sessions = 0;
+     if(end_io == 1 && qe_ended.load()==1) end_sessions = 1; 
 
-     if(empty_all==numprocs) 
+     if(!io_queue_async->empty()) end_sessions = 0;
+
+     int empty_all = 0;
+
+     MPI_Allreduce(&end_sessions,&empty_all,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+
+     if(empty_all == numprocs) 
      {
 	     break;
      }
@@ -1158,8 +1133,8 @@ void read_write_process::io_polling(struct thread_arg_w *t)
 
      if(num_req > 0)
      {
-	  CM->SynchronizeClocks();
-	  CM->ComputeErrorInterval();
+	  std::pair<uint64_t,uint64_t> p = CM->SynchronizeClocks();
+	  CM->ComputeErrorInterval(p.first,p.second);
      }
 
      while(!io_queue_async->empty())
@@ -1239,6 +1214,8 @@ void read_write_process::io_polling(struct thread_arg_w *t)
      }
 
   }
+
+  session_ended.store(1); 
 
 }
 

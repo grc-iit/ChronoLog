@@ -70,7 +70,6 @@ private:
       boost::lockfree::queue<struct io_request*> *io_queue_async;
       boost::lockfree::queue<struct io_request*> *io_queue_sync;
       std::atomic<int> end_of_session;
-      std::atomic<int> end_of_io_session;
       std::atomic<int> num_streams;
       int num_io_threads;
       std::vector<struct thread_arg_w> t_args_io;
@@ -91,6 +90,11 @@ private:
       std::atomic<int> cstream;
       std::atomic<int> *w_reqs_pending;
       std::atomic<int> *r_reqs_pending;
+      std::vector<int> loopticks;
+      std::vector<int> numloops;
+      std::atomic<int> session_ended;
+      std::atomic<int> qe_ended;
+      std::atomic<int> *end_of_stream_session;
 public:
 	read_write_process(int r,int np,ClockSynchronization<ClocksourceCPPStyle> *C,int n,data_server_client *rc) : myrank(r), numprocs(np), numcores(n), dsc(rc)
 	{
@@ -117,8 +121,9 @@ public:
 	   io_queue_async = new boost::lockfree::queue<struct io_request*> (128);
 	   io_queue_sync = new boost::lockfree::queue<struct io_request*> (128);
 	   end_of_session.store(0);
-	   end_of_io_session.store(0);
 	   num_streams.store(0);
+	   qe_ended.store(0);
+	   session_ended.store(0);
 	   cstream.store(0);
 	   num_io_threads = 1;
 	   file_interval = new std::vector<std::pair<std::atomic<uint64_t>,std::atomic<uint64_t>>> (MAXSTREAMS);
@@ -126,8 +131,11 @@ public:
 	   enable_stream = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
 	   w_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
 	   r_reqs_pending = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+	   end_of_stream_session = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
 	   t_args.resize(MAXSTREAMS);
 	   workers.resize(MAXSTREAMS);
+	   numloops.resize(MAXSTREAMS);
+	   loopticks.resize(MAXSTREAMS);
 
 	   for(int i=0;i<MAXSTREAMS;i++)
 	   {
@@ -138,7 +146,7 @@ public:
 		enable_stream[i].store(0);
 		w_reqs_pending[i].store(0);
 		r_reqs_pending[i].store(0);
-
+		end_of_stream_session[i].store(0);
 	   }
 	   std::function<void(struct thread_arg_w *)> IOFunc(
            std::bind(&read_write_process::io_polling,this, std::placeholders::_1));
@@ -152,6 +160,8 @@ public:
 	}
 	~read_write_process()
 	{
+	   for(int i=0;i<cstream.load();i++) workers[i].join();
+	   for(int i=0;i<num_io_threads;i++) io_threads[i].join();
 	   delete dm;
 	   delete ds;
 	   delete nm;
@@ -162,6 +172,7 @@ public:
 	   std::free(enable_stream);
 	   std::free(w_reqs_pending);
 	   std::free(r_reqs_pending);
+	   std::free(end_of_stream_session);
 	   H5close();
 
 	}
@@ -193,8 +204,8 @@ public:
 	   std::function<void(const tl::request &,std::string &)> CheckFile(
 	   std::bind(&read_write_process::ThalliumCheckFile,this,std::placeholders::_1,std::placeholders::_2));
 
-	   std::function<void(const tl::request &,std::string &,std::vector<std::string> &)> AddService(
-	   std::bind(&read_write_process::ThalliumPrepareStream,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+	   std::function<void(const tl::request &,std::string &,std::vector<std::string> &,int &,int &)> AddService(
+	   std::bind(&read_write_process::ThalliumPrepareStream,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4,std::placeholders::_5));
 
 	   thallium_server->define("EmulatorPrepareStream",AddService);
 	   thallium_shm_server->define("EmulatorPrepareStream",AddService);
@@ -222,13 +233,15 @@ public:
 	  end_of_session.store(1);
 
 	}
-	void end_sessions()
+	bool is_session_ended()
 	{
-		for(int i=0;i<cstream.load();i++)
-			workers[i].join();
-		end_of_io_session.store(1);
-		for(int i=0;i<num_io_threads;i++) io_threads[i].join();
 
+	   if(session_ended.load()==1) return true;
+	   else return false;
+	}
+	void end_qe()
+	{
+	    qe_ended.store(1);
 	}
 	void sync_queue_push(struct io_request *r)
 	{
@@ -409,8 +422,10 @@ public:
 		m1.unlock();
 		return em;
 	}
-	bool add_metadata_buffers(std::string &s,std::vector<std::string> &m)
+	bool add_metadata_buffers(std::string &s,std::vector<std::string> &m,int &nloops,int &nticks)
 	{
+		if(cstream.load()==MAXSTREAMS) return false;
+
 		event_metadata em;
 		int i = 0;
 		std::string tname = m[0];
@@ -450,6 +465,9 @@ public:
 		}
 		create_write_buffer(s,em,8192);
 		int streamid = cstream.fetch_add(1);
+		numloops[streamid] = nloops;
+		loopticks[streamid] = (nticks < 50) ? 50 : nticks;
+		loopticks[streamid] = (loopticks[streamid] > 500) ? 500 : loopticks[streamid];
 		enable_stream[streamid].store(1);
 		spawn_write_stream(streamid,s);
 		return true;
@@ -542,9 +560,9 @@ public:
         {
                 req.respond(create_buffer(num_events,s));
         }
-	void ThalliumPrepareStream(const tl::request &req,std::string &s,std::vector<std::string> &m)
+	void ThalliumPrepareStream(const tl::request &req,std::string &s,std::vector<std::string> &m,int &n1,int &n2)
 	{
-		req.respond(add_metadata_buffers(s,m));
+		req.respond(add_metadata_buffers(s,m,n1,n2));
 	
 	}
         void ThalliumAddEvent(const tl::request &req, std::string &s,std::string &data)
@@ -594,10 +612,9 @@ public:
 	create_data_spaces(std::string &,hsize_t&,hsize_t&,uint64_t&,uint64_t&,bool,int&,std::vector<std::vector<int>>&);
 	void io_polling(struct thread_arg_w*);
 	void data_stream(struct thread_arg_w*);
-	void sync_clocks();
 	bool create_buffer(int &,std::string &);
 	std::vector<uint64_t> add_event(std::string&,std::string&);
-        int endsessioncount();	
+        int endsessioncount(int);	
 };
 
 #endif

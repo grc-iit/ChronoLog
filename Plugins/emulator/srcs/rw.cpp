@@ -270,14 +270,11 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     for(int i=0;i<sts.size();i++)
     {
    
-    //hid_t es_id = H5EScreate();
-
     hid_t async_fapl = H5Pcreate(H5P_FILE_ACCESS);
     hid_t async_dxpl = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_fapl_mpio(async_fapl, MPI_COMM_WORLD, MPI_INFO_NULL);
     H5Pset_dxpl_mpio(async_dxpl, H5FD_MPIO_COLLECTIVE);
     std::string filename = "file"+sts[i]+".h5";
-    //fid = H5Fopen_async(filename.c_str(), H5F_ACC_RDWR, async_fapl,es_id);
     fid = H5Fopen(filename.c_str(), H5F_ACC_RDWR, async_fapl);
 
     event_metadata em;
@@ -308,15 +305,8 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     hid_t s2 = H5Tcreate(H5T_COMPOUND,keyvaluesize);
     H5Tinsert(s2,"key",HOFFSET(struct event,ts),H5T_NATIVE_UINT64);
     H5Tinsert(s2,"data",HOFFSET(struct event,data),s1);
-    //type_ids.push_back(s2);
-    //type_ids.push_back(s1);
-
-    //hid_t grp_id = H5Gopen_async(fid, grp_name.c_str(),gapl, es_id); 
-    
-    //dataset1 = H5Dopen_async(fid, DATASETNAME1, H5P_DEFAULT,es_id);
     dataset1 = H5Dopen(fid, DATASETNAME1, H5P_DEFAULT);
 
-    //hid_t attr_id = H5Aopen_async(dataset1,attr_name[0],H5P_DEFAULT,es_id);
     hid_t attr_id = H5Aopen(dataset1,attr_name[0],H5P_DEFAULT);
     std::vector<uint64_t> attrs;
     attrs.resize(attr_size[0]);
@@ -352,14 +342,15 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
         hsize_t one = 1;
         ret = H5Sselect_hyperslab(file_dataspace,H5S_SELECT_SET,&offset_t,NULL,&one,&block_size);
     
-        //ret = H5Dwrite_async(dataset1,s2, memdataspace, file_dataspace,async_dxpl,data_p,es_id);
         ret = H5Dwrite(dataset1,s2, memdataspace, file_dataspace,async_dxpl,data_p);
 
 	offset_p += block_size;
 	offset_w += blocktotal;
 	H5Sclose(memdataspace);
-	//memspaces.push_back(memdataspace);
     }
+
+    if(em.get_invlist())
+    merge_inverted_list(sts[i],blockcounts[i],data_arrays[i],fid,async_dxpl);
 
     attrs[0] += total_records[i];
     int pos = attrs[3];
@@ -373,37 +364,23 @@ void read_write_process::pwrite_extend_files(std::vector<std::string>&sts,std::v
     pos++;
     attrs[pos] = total_records[i];
 
-    //ret = H5Awrite_async(attr_id,H5T_NATIVE_UINT64,attrs.data(),es_id);
     ret = H5Awrite(attr_id,H5T_NATIVE_UINT64,attrs.data());
 
-    //ret = H5Aclose_async(attr_id,es_id);
     ret = H5Aclose(attr_id);
-    //event_ids.push_back(es_id);
-    //H5Dclose_async(dataset1,es_id);
     H5Sclose(file_dataspace);
     H5Dclose(dataset1);
-    //H5Gclose_async(grp_id,es_id);
-    //H5Fclose_async(fid,es_id);
     H5Tclose(s2);
     H5Tclose(s1);
     H5Pclose(async_fapl);
     H5Pclose(async_dxpl);
     H5Fclose(fid);
-    //filespaces.push_back(file_dataspace);
     valid_id.push_back(i);
     }
 
     int prefix = 0;
     for(int i=0;i<valid_id.size();i++)
     {
-        //H5ESwait(event_ids[i],H5ES_WAIT_FOREVER,&num,&op_failed);
-	//H5ESclose(event_ids[i]);
 	int d = valid_id[i];
-        //H5Sclose(filespaces[d]);
-	//H5Tclose(type_ids[2*d]);
-	//H5Tclose(type_ids[2*d+1]);
-	//for(int j=0;j<bcounts[d];j++)
-        //H5Sclose(memspaces[prefix+j]);
 	std::string filename = "file"+sts[d]+".h5";
 	int ps = -1;
 	m1.lock();
@@ -513,6 +490,186 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
         H5Tinsert(s2,"value",HOFFSET(struct event,data),s1);
     
         file_dataspace = H5Dget_space(dataset1);
+
+	if(em.get_invlist())
+	{
+	  std::vector<struct io_request *> inv_requests;
+	  std::vector<struct io_request*> temp;
+	  for(int n=0;n<my_requests[i].size();n++)
+	  {
+	     uint64_t mints = my_requests[i][n]->mints;
+	     uint64_t maxts = my_requests[i][n]->maxts;
+	     if(mints == maxts)
+		 inv_requests.push_back(my_requests[i][n]);
+	     else temp.push_back(my_requests[i][n]);
+	  }
+
+	  my_requests[i].assign(temp.begin(),temp.end());
+          std::string d_string = "data_inv";
+	  std::string da_string = "data_table";
+	 
+	  hid_t s11 = H5Tcreate(H5T_COMPOUND,sizeof(struct ts_offset));
+   	  H5Tinsert(s11,"ts",HOFFSET(struct ts_offset,ts),H5T_NATIVE_UINT64);
+   	  H5Tinsert(s11,"offset",HOFFSET(struct ts_offset,offset),H5T_NATIVE_UINT64);
+
+	  int total_size = 32768;
+	  int nbits = log2(total_size);
+	  int nprocs = nearest_power_two(numprocs);
+	  int nbits_p = log2(nprocs);
+	  uint64_t mask = UINT64_MAX;
+	  mask = mask << (64-nbits);
+	  mask = mask >> (64-nbits);
+	  int nbits_r = nbits-nbits_p;
+	  int maxsize = pow(2,nbits_r);
+	  hid_t dataset_t = H5Dopen(fid,da_string.c_str(),H5P_DEFAULT);
+	  hid_t filedataspace_t = H5Dget_space(dataset_t);
+          hsize_t toffset = myrank*2*maxsize;
+	  hsize_t blocksize = 2*maxsize;
+	  std::vector<int> table_offset;
+	  table_offset.resize(2*maxsize);
+
+	  ret = H5Sselect_hyperslab(filedataspace_t, H5S_SELECT_SET,&toffset,NULL,&blocksize,NULL);
+          hid_t mem_dataspace = H5Screate_simple(1,&blocksize, NULL);
+          ret = H5Dread(dataset_t,H5T_NATIVE_INT, mem_dataspace, filedataspace_t, xfer_plist,table_offset.data());
+          H5Sclose(mem_dataspace);
+
+	  std::vector<struct ts_offset> *table_index = new std::vector<struct ts_offset> ();
+	  toffset = table_offset[1];
+	  blocksize = 0;
+	  for(int i=0;i<maxsize;i++) blocksize += table_offset[2*i];
+	  table_index->resize(blocksize);
+
+	  hid_t dataset_inv = H5Dopen(fid,d_string.c_str(),H5P_DEFAULT);
+	  hid_t filedataspace_inv = H5Dget_space(dataset_inv);
+	  ret = H5Sselect_hyperslab(filedataspace_inv,H5S_SELECT_SET,&toffset,NULL,&blocksize,NULL);
+	  hid_t memspace = H5Screate_simple(1,&blocksize,NULL);
+	  ret = H5Dread(dataset_inv,s11,memspace,filedataspace_inv,xfer_plist,table_index->data());
+	  H5Sclose(memspace);
+	 
+	  std::vector<int> send_counts,recv_counts,send_displ,recv_displ;
+	  std::vector<uint64_t> send_buffer,recv_buffer;
+	  send_counts.resize(numprocs); recv_counts.resize(numprocs);
+	  send_displ.resize(numprocs); recv_displ.resize(numprocs);
+	  std::fill(send_counts.begin(),send_counts.end(),0);
+	  std::fill(recv_counts.begin(),recv_counts.end(),0);
+	  std::fill(send_displ.begin(),send_displ.end(),0);
+	  std::fill(recv_displ.begin(),recv_displ.end(),0);
+
+	  for(int n=0;n<inv_requests.size();n++)
+	  {	
+		uint64_t ts = inv_requests[n]->mints;
+		uint64_t hashvalue = ts;
+		uint64_t pid = hashvalue & mask;
+		pid = pid >> (nbits-nbits_p);
+		send_counts[pid]++;
+	  }
+
+	  MPI_Alltoall(send_counts.data(),1,MPI_INT,recv_counts.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+	  send_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+	  int total_size_s = 0;
+	  for(int i=0;i<numprocs;i++) total_size_s += send_counts[i];
+
+	  send_buffer.resize(total_size_s);
+
+	  total_size_s = 0;
+	  for(int i=0;i<numprocs;i++) total_size_s += recv_counts[i];
+
+	  recv_buffer.resize(total_size_s);
+
+	  for(int n=0;n<inv_requests.size();n++)
+	  {
+		uint64_t ts = inv_requests[n]->mints;
+		uint64_t hashvalue = ts;
+		uint64_t pid = hashvalue & mask;
+		pid = pid >> (nbits-nbits_p);
+		send_buffer[send_displ[pid]] = ts;
+		send_displ[pid]++;
+	  }
+
+	  send_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+	  recv_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) recv_displ[i] = recv_displ[i-1]+recv_counts[i-1];
+
+	  MPI_Alltoallv(send_buffer.data(),send_counts.data(),send_displ.data(),MPI_UINT64_T,recv_buffer.data(),recv_counts.data(),recv_displ.data(),MPI_UINT64_T,MPI_COMM_WORLD);
+
+	  int rbuf_size = send_buffer.size();
+	  send_buffer.clear();
+	  int sbuf_size = recv_buffer.size();
+	  send_buffer.resize(sbuf_size);
+
+	  std::vector<int> recv_counts_t;
+	  recv_counts_t.assign(send_counts.begin(),send_counts.end());
+
+	  for(int i=0;i<numprocs;i++) send_counts[i] = recv_counts[i];
+
+	  send_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+	  for(int i=0;i<numprocs;i++)
+	  {
+		for(int j=0;j<recv_counts[i];j++)
+		{
+		  uint64_t ts = recv_buffer[recv_displ[i]+j];
+		  uint64_t hashvalue = ts;
+		  uint64_t pos = hashvalue%maxsize;
+		  int offset = table_offset[2*pos+1]-table_offset[1];
+		  int numkeys = table_offset[2*pos];
+		  uint64_t offset_ts = UINT64_MAX;
+		  for(int k=0;k<numkeys;k++)
+		  {
+			if((*table_index)[offset+k].ts == ts) 
+			{
+		          offset_ts = (*table_index)[offset+k].offset;
+			  break;
+			}
+		  }
+		  send_buffer[send_displ[i]] = offset_ts;
+		  send_displ[i]++;
+		}
+	  }
+
+	  recv_counts.assign(recv_counts_t.begin(),recv_counts_t.end());
+	  recv_buffer.resize(rbuf_size);
+	  send_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+	  recv_displ[0] = 0;
+	  for(int i=1;i<numprocs;i++) recv_displ[i] = recv_displ[i-1]+recv_counts[i-1];
+
+	  MPI_Alltoallv(send_buffer.data(),send_counts.data(),send_displ.data(),MPI_UINT64_T,recv_buffer.data(),recv_counts.data(),recv_displ.data(),MPI_UINT64_T,MPI_COMM_WORLD);
+
+	  blocksize = 1;
+	  std::vector<char> datab;
+	  datab.resize(keydatasize);
+
+	  for(int i=0;i<recv_buffer.size();i++)
+	  {
+		toffset = (hsize_t)recv_buffer[i];
+		if(toffset != UINT64_MAX)
+		{
+		  ret = H5Sselect_hyperslab(file_dataspace,H5S_SELECT_SET,&toffset,NULL,&blocksize,NULL);
+                  hid_t memspace = H5Screate_simple(1,&blocksize,NULL);
+                  ret = H5Dread(dataset1,s2,memspace,file_dataspace,xfer_plist,datab.data());
+                  H5Sclose(memspace);
+		}
+	  }
+
+	  delete table_index;
+
+	  for(int n=0;n<inv_requests.size();n++)
+		 delete inv_requests[n];
+	  H5Dclose(dataset_t);
+	  H5Sclose(filedataspace_t);
+	  H5Dclose(dataset_inv);
+	  H5Sclose(filedataspace_inv);
+	  H5Tclose(s11);
+
+	}
+
         int total_k = attrs[0];
         int k_size = attrs[1];
         int data_size = attrs[2];
@@ -520,70 +677,88 @@ bool read_write_process::pread(std::vector<std::vector<struct io_request*>>&my_r
 
         int pos = 4;
 
-	std::vector<char> *data_buffer = new std::vector<char> ();
+	std::vector<std::vector<int>> block_requests;
+	block_requests.resize(numblocks);
 
 	for(int n=0;n<my_requests[i].size();n++)
 	{
-             uint64_t mints = my_requests[i][n]->mints;
-	     uint64_t maxts = my_requests[i][n]->maxts;
-   
-	     std::vector<int> blockids;
+	  uint64_t mints = my_requests[i][n]->mints;
+	  uint64_t maxts = my_requests[i][n]->maxts;
+          std::vector<int> blockids;
 
-	     for(int j=0;j<numblocks;j++)
-             {
-	       uint64_t bmin = attrs[pos+j*4+0];
-	       uint64_t bmax = attrs[pos+j*4+1];
-	      if(mints >= bmin && mints <= bmax ||
-	      maxts >= bmin && maxts <= bmax ||
-	      mints < bmin && bmax < maxts)
-	      {
-	         blockids.push_back(j);
-	      }
-            }
+	  for(int j=0;j<numblocks;j++)
+	  {
+		uint64_t bmin = attrs[pos+j*4+0];
+		uint64_t bmax = attrs[pos+j*4+1];
+		if(mints >= bmin && mints <= bmax ||
+	          maxts >= bmin && maxts <= bmax ||			
+		  mints < bmin && bmax < maxts)
+		    blockids.push_back(j);
+	  }
 
-	    int total_records = 0;
-	    hsize_t offset = 0;
-            for(int j=0;j<blockids.size();j++)
-            {
-	         hsize_t block_size = attrs[pos+blockids[j]*4+3];
-	         total_records += block_size;
-            }
+	  for(int j=0;j<blockids.size();j++)
+	  {
+		block_requests[blockids[j]].push_back(n);
+
+	  }
+
+	}
+
+	std::vector<char> *data_buffer = new std::vector<char> ();
+
+	for(int n=0;n<block_requests.size();n++)
+	{
+	   if(block_requests[n].size()>0)
+	   {
+		data_buffer->clear();
+
+		int total_records = 0;
+		hsize_t offset = 0;
+
+            	for(int j=0;j<n;j++)
+                {
+	             hsize_t block_size = attrs[pos+j*4+3];
+	             offset += block_size;
+                }
+
+		total_records = attrs[pos+n*4+3];
             
-	    if(total_records>0)
-	    {
-              data_buffer->resize(total_records*keydatasize);
-	      int data_buffp = 0;
-	      char *databuff = data_buffer->data();
-	      for(int j=0;j<blockids.size();j++)
-	      {
-		int bid = blockids[j];
-		hsize_t block_size = attrs[pos+bid*4+3];
-		offset = 0;
-		for(int k=0;k<bid;k++)
-		  offset += attrs[pos+k*4+3];
+                data_buffer->resize(total_records*keydatasize);
+		hsize_t block_size = (hsize_t)total_records;
                 ret = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET,&offset,NULL,&block_size,NULL);
                 mem_dataspace = H5Screate_simple(1,&block_size, NULL);
-                ret = H5Dread(dataset1,s2, mem_dataspace, file_dataspace, xfer_plist,databuff);
+                ret = H5Dread(dataset1,s2, mem_dataspace, file_dataspace, xfer_plist,data_buffer->data());
                 H5Sclose(mem_dataspace); 
-		databuff += block_size*keydatasize;
-	      }
-            }
-	    for(int j=0;j<total_records*keydatasize;j+=keydatasize)
-	    {
-		uint64_t ts = *(uint64_t*)(&((*data_buffer)[j]));
-		if(ts >= my_requests[i][n]->mints && ts <= my_requests[i][n]->maxts)
-		{
-		   std::string eventstring;
-		   eventstring.resize(keydatasize);
-		   for(int k=0;k<keydatasize;k++)
-			eventstring[k] = (*data_buffer)[j+k];
-		  ost << eventstring << std::endl; 
-		}
-	    }
-	    delete my_requests[i][n];
-	    my_requests[i][n] = nullptr;
+	        for(int j=0;j<block_requests[n].size();j++)
+	        {
+		  int id = block_requests[n][j];
+		  uint64_t mints = my_requests[i][id]->mints;
+		  uint64_t maxts = my_requests[i][id]->maxts;
+
+		  for(int k=0;k<total_records*keydatasize;k+=keydatasize)
+		  {
+		    uint64_t ts = *(uint64_t*)(&((*data_buffer)[k]));
+		    if(ts >= mints && ts <= maxts)
+		    {
+			std::string eventstring;
+			eventstring.resize(keydatasize);
+			for(int m=0;m<keydatasize;m++)
+			  eventstring[m] = (*data_buffer)[k+m];
+			ost << eventstring << std::endl;
+		     }
+		     else if(ts > maxts) break;
+		   }
+	         }
+	   }
+
 	}
-	     
+
+	for(int n=0;n<my_requests[i].size();n++)
+	{
+	  delete my_requests[i][n];
+	  my_requests[i][n] = nullptr;
+	}	
+
        delete data_buffer;	       
        H5Aclose(attr_id);
        H5Sclose(file_dataspace);
@@ -763,22 +938,11 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
   	hid_t s2 = H5Tcreate(H5T_COMPOUND,keyvaluesize);
   	H5Tinsert(s2,"key",HOFFSET(struct event,ts),H5T_NATIVE_UINT64);
   	H5Tinsert(s2,"data",HOFFSET(struct event,data),s1);
-	//type_ids.push_back(s1);
-	//type_ids.push_back(s2);
 	
-        std::string grp_name = "async_g"+sts[i];
         int ret = H5Pset_chunk(dataset_pl,1,chunkdims);
-
         hid_t file_dataspace = H5Screate_simple(1,&total_records[i],maxdims);
-
-	filespaces.push_back(file_dataspace);
-
 	hsize_t boffset = 0;
-        //hid_t es_id = H5EScreate();
-        //hid_t fid = H5Fcreate_async(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, async_fapl, es_id);
         hid_t fid = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, async_fapl);
-        //hid_t grp_id = H5Gcreate_async(fid, grp_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT, es_id);
-        //hid_t dataset1 = H5Dcreate_async(fid, DATASETNAME1,s2,file_dataspace, H5P_DEFAULT,dataset_pl, H5P_DEFAULT,es_id);
         hid_t dataset1 = H5Dcreate(fid, DATASETNAME1,s2,file_dataspace, H5P_DEFAULT,dataset_pl, H5P_DEFAULT);
 
 	hsize_t dims[1];
@@ -792,8 +956,6 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 
            hsize_t block_count = blockcounts[i][j][myrank];
            hid_t mem_dataspace = H5Screate_simple(1,&block_count, NULL);
-           //memspaces.push_back(mem_dataspace);
-
   	   char *data_c = data_arrays[i].second->data()+block_w*keyvaluesize;	   
 
            hsize_t boffset_p = boffset;
@@ -803,12 +965,14 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 	   for(int k=0;k<numprocs;k++) blocktotal += blockcounts[i][j][k];
 
            ret = H5Sselect_hyperslab(file_dataspace,H5S_SELECT_SET,&boffset_p,NULL,&block_count,NULL);
-           //ret = H5Dwrite_async(dataset1,s2, mem_dataspace,file_dataspace,async_dxpl,data_c,es_id);
            ret = H5Dwrite(dataset1,s2, mem_dataspace,file_dataspace,async_dxpl,data_c);
 	   boffset += blocktotal;
 	   block_w += block_count;
 	   H5Sclose(mem_dataspace);
 	}
+	if(em.get_invlist())
+	create_inverted_list(sts[i],blockcounts[i],data_arrays[i],fid,dataset_pl,async_dxpl);
+
         std::vector<uint64_t> attr_data;
 	attr_data.resize(attr_size[0]);
         attr_data[0] = total_records[i];
@@ -826,28 +990,20 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
 	attr_data[pos] = total_records[i];
 
 	hid_t attr_id[1];
-        //attr_id[0] = H5Acreate_async(dataset1, attr_name[0], H5T_NATIVE_UINT64, attr_space[0], H5P_DEFAULT, H5P_DEFAULT,es_id);
         attr_id[0] = H5Acreate(dataset1, attr_name[0], H5T_NATIVE_UINT64, attr_space[0], H5P_DEFAULT, H5P_DEFAULT);
-
-        //ret = H5Awrite_async(attr_id[0], H5T_NATIVE_UINT64, attr_data.data(),es_id);
         ret = H5Awrite(attr_id[0], H5T_NATIVE_UINT64, attr_data.data());
 
-        //ret = H5Aclose_async(attr_id[0],es_id);
 
-	//H5Dclose_async(dataset1,es_id);
 	H5Sclose(attr_space[0]);
         H5Aclose(attr_id[0]);
 	H5Sclose(file_dataspace);
 	H5Dclose(dataset1);
 	H5Pclose(dataset_pl);
-        //H5Gclose_async(grp_id,es_id);
-        //H5Fclose_async(fid,es_id);
 	H5Tclose(s2);
 	H5Tclose(s1);
 	H5Pclose(async_fapl);
 	H5Pclose(async_dxpl);
         H5Fclose(fid);
-        //event_ids.push_back(es_id);
 	valid_id.push_back(i);
     }
 
@@ -855,15 +1011,6 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
     for(int i=0;i<valid_id.size();i++)
     {
 	int d = valid_id[i];
-        //H5ESwait(event_ids[i],H5ES_WAIT_FOREVER,&num,&op_failed);
-        //H5ESclose(event_ids[i]);
-	///H5Sclose(filespaces[d]);
-	for(int j=0;j<bcounts[d];j++)
-	{
-           //H5Sclose(memspaces[prefix+j]);
-	}
-	//H5Tclose(type_ids[2*d]);
-	//H5Tclose(type_ids[2*d+1]);
 	std::string filename = "file"+sts[d]+".h5";
 	int ps = -1;
 	m1.lock();
@@ -897,6 +1044,479 @@ void read_write_process::pwrite_files(std::vector<std::string> &sts,std::vector<
    
 }
 
+void read_write_process::create_inverted_list(std::string &s,std::vector<std::vector<int>>& bcounts,std::pair<std::vector<struct event>*,std::vector<char>*> &data_array, hid_t &fid, hid_t &dataset_pl,hid_t &tx_pl)
+{
+
+   std::string d_string = "data_inv"; 
+   int total_size = 32768;
+   int size_per_proc = total_size/numprocs;
+   int rem = total_size%numprocs;
+  
+   int total_size_ = nearest_power_two(total_size);
+   int total_bits = log2(total_size_);
+
+   int total_procs = nearest_power_two(numprocs);
+   int numbits_p = log2(total_procs);
+
+   uint64_t mask = UINT64_MAX;
+   mask = mask << (64-total_bits);
+   mask = mask >> (64-total_bits);
+
+   int maxsize = pow(2,total_bits-numbits_p);
+
+   std::string da_string = "data_table";
+
+   int index = -1;
+   event_metadata em;
+   m1.lock();
+   auto r = write_names.find(s);
+   if(r != write_names.end())
+   {
+      index = (r->second).first;
+      em = (r->second).second;
+   }
+   m1.unlock();
+
+   int datasize = em.get_datasize();
+   int keydatasize = sizeof(uint64_t)+datasize;
+
+   std::vector<std::vector<std::pair<uint64_t,uint64_t>>> ts_f;
+   
+   std::vector<std::pair<uint64_t,uint64_t>> timestamp_offsets;
+
+   ts_f.resize(maxsize);
+
+   std::vector<char> *databuffer = data_array.second;
+
+   uint64_t offset = 0;
+   int offset_w = 0;
+   for(int i=0;i<bcounts.size();i++)
+   {
+	hsize_t boffset = (hsize_t)offset;
+	for(int j=0;j<myrank;j++)
+	   boffset += bcounts[i][j];
+	
+	int numrecords = bcounts[i][myrank];
+	int pos = offset_w*keydatasize;
+	for(int j=0;j<numrecords*keydatasize;j+=keydatasize)
+	{
+	   uint64_t ts = *(uint64_t*)(&((*databuffer)[pos+j]));  
+	   std::pair<uint64_t,uint64_t> p;
+	   p.first = ts; p.second = boffset;
+	   timestamp_offsets.push_back(p);
+	   boffset++;
+	}
+
+	for(int j=0;j<numprocs;j++)
+	    offset += bcounts[i][j];
+	offset_w += numrecords;
+   }
+   
+   hid_t s11 = H5Tcreate(H5T_COMPOUND,sizeof(struct ts_offset));
+   H5Tinsert(s11,"ts",HOFFSET(struct ts_offset,ts),H5T_NATIVE_UINT64);
+   H5Tinsert(s11,"offset",HOFFSET(struct ts_offset,offset),H5T_NATIVE_UINT64);
+
+
+   std::vector<int> send_counts,recv_counts;
+   std::vector<int> send_displ,recv_displ;
+   send_counts.resize(numprocs); recv_counts.resize(numprocs);
+   send_displ.resize(numprocs); recv_displ.resize(numprocs);
+   std::fill(send_counts.begin(),send_counts.end(),0);
+   std::fill(recv_counts.begin(),recv_counts.end(),0);
+   std::fill(send_displ.begin(),send_displ.end(),0);
+   std::fill(recv_displ.begin(),recv_displ.end(),0);
+
+   std::vector<int> dests;
+
+   for(int i=0;i<timestamp_offsets.size();i++)
+   {
+	uint64_t ts = timestamp_offsets[i].first;
+	uint64_t hashvalue = ts;
+	uint64_t key = hashvalue & mask;
+	int id = key >> (total_bits-numbits_p);
+	int pid = id%numprocs;
+        dests.push_back(pid);
+        send_counts[pid]+=2;	
+   }
+
+   MPI_Alltoall(send_counts.data(),1,MPI_INT,recv_counts.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+   send_displ[0] = 0;
+   for(int i=1;i<numprocs;i++)
+	   send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+   std::vector<uint64_t> send_buffer,recv_buffer;
+
+   int total_size_s = 0;
+   for(int i=0;i<numprocs;i++) total_size_s += send_counts[i];
+
+   send_buffer.resize(total_size_s);
+
+   for(int i=0;i<timestamp_offsets.size();i++)
+   {
+	int displ = send_displ[dests[i]];
+	send_buffer[displ] = timestamp_offsets[i].first;
+	displ++;
+	send_buffer[displ] = timestamp_offsets[i].second;
+	displ++;
+	send_displ[dests[i]] = displ;
+   }
+
+   send_displ[0] = 0;
+   for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+   total_size_s = 0;
+   for(int i=0;i<numprocs;i++) total_size_s += recv_counts[i];
+
+   recv_buffer.resize(total_size_s);
+
+   recv_displ[0] = 0;
+   for(int i=1;i<numprocs;i++) recv_displ[i] = recv_displ[i-1]+recv_counts[i-1];
+
+   MPI_Alltoallv(send_buffer.data(),send_counts.data(),send_displ.data(),MPI_UINT64_T,recv_buffer.data(),recv_counts.data(),recv_displ.data(),MPI_UINT64_T,MPI_COMM_WORLD);
+
+   for(int i=0;i<recv_buffer.size();i+=2)
+   {
+	uint64_t ts = recv_buffer[i];
+	uint64_t pos = recv_buffer[i+1];
+	uint64_t hashvalue = ts;
+	int index = hashvalue%maxsize;
+	std::pair<uint64_t,uint64_t> p;
+	p.first = ts; p.second = pos;
+	ts_f[index].push_back(p);
+   }
+
+   std::vector<int> table_offsets(2*maxsize);
+   std::fill(table_offsets.begin(),table_offsets.end(),0);
+
+   for(int i=0;i<ts_f.size();i++)
+   {
+	table_offsets[2*i] = ts_f[i].size();
+   }
+
+   for(int i=1;i<maxsize;i++)
+     table_offsets[2*i+1] = table_offsets[2*(i-1)+1]+table_offsets[2*(i-1)];
+
+   std::vector<struct ts_offset> *data_buffer = new std::vector<struct ts_offset> ();
+
+   for(int i=0;i<ts_f.size();i++)
+   {
+	for(int j=0;j<ts_f[i].size();j++)
+	{
+	   struct ts_offset t;
+	   t.ts = ts_f[i][j].first;
+	   t.offset = ts_f[i][j].second;
+	   data_buffer->push_back(t);
+	}
+   }
+
+   int total_records_l = data_buffer->size();
+   std::vector<int> recv_values(numprocs);
+   std::fill(recv_values.begin(),recv_values.end(),0);
+
+   MPI_Allgather(&total_records_l,1,MPI_INT,recv_values.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+   hsize_t totalrecords = 0;
+   for(int i=0;i<numprocs;i++) totalrecords += recv_values[i];
+
+   hsize_t offset_inv = 0;
+   for(int i=0;i<myrank;i++) offset_inv += recv_values[i];
+
+   for(int i=0;i<maxsize;i++)
+   {
+	table_offsets[2*i+1]+=offset_inv;
+   }
+
+   hsize_t maxdims[1];
+   maxdims[0] = (hsize_t)H5S_UNLIMITED;
+
+   hsize_t blocksize = data_buffer->size();
+
+   hid_t filedataspace = H5Screate_simple(1,&totalrecords,maxdims);
+   hid_t dataset_inv = H5Dcreate(fid,d_string.c_str(),s11,filedataspace, H5P_DEFAULT,dataset_pl, H5P_DEFAULT);
+
+   hsize_t dims[1];
+   dims[0] = totalrecords;
+   H5Dset_extent(dataset_inv, dims);
+
+   hid_t memspace = H5Screate_simple(1,&blocksize,NULL);
+   int ret = H5Sselect_hyperslab(filedataspace,H5S_SELECT_SET,&offset_inv,NULL,&blocksize,NULL);
+   ret = H5Dwrite(dataset_inv,s11, memspace,filedataspace,tx_pl,data_buffer->data());
+
+   hsize_t total_table_size = numprocs*2*maxsize;
+   hsize_t table_size_l = 2*maxsize;
+   hsize_t table_pre = myrank*2*maxsize;
+   hid_t filedataspace_t = H5Screate_simple(1,&total_table_size,maxdims);
+   hid_t dataset_t = H5Dcreate(fid,da_string.c_str(),H5T_NATIVE_INT,filedataspace_t,H5P_DEFAULT,dataset_pl,H5P_DEFAULT);
+   hid_t memspace_t = H5Screate_simple(1,&table_size_l,NULL);
+   ret = H5Sselect_hyperslab(filedataspace_t,H5S_SELECT_SET,&table_pre,NULL,&table_size_l,NULL); 
+   ret = H5Dwrite(dataset_t,H5T_NATIVE_INT,memspace_t,filedataspace_t,tx_pl,table_offsets.data());
+  
+   delete data_buffer; 
+  H5Dclose(dataset_inv);
+  H5Dclose(dataset_t);
+  H5Sclose(filedataspace_t);
+  H5Sclose(filedataspace);
+  H5Sclose(memspace);
+  H5Sclose(memspace_t);
+  H5Tclose(s11);
+
+}
+
+
+void read_write_process::merge_inverted_list(std::string &s,std::vector<std::vector<int>>& bcounts,std::pair<std::vector<struct event>*,std::vector<char>*> &data_array, hid_t &fid,hid_t &tx_pl)
+{
+   std::string d_string = "data_inv";
+   int total_size = 32768;
+   int size_per_proc = total_size/numprocs;
+   int rem = total_size%numprocs;
+
+   int total_size_ = nearest_power_two(total_size);
+   int total_bits = log2(total_size_);
+
+   int total_procs = nearest_power_two(numprocs);
+   int numbits_p = log2(total_procs);
+
+   uint64_t mask = UINT64_MAX;
+   mask = mask << (64-total_bits);
+   mask = mask >> (64-total_bits);
+
+   uint64_t maxsize = (uint64_t)pow(2,total_bits-numbits_p);
+
+   std::string da_string = "data_table";
+   
+   int index = -1;
+   event_metadata em;
+   m1.lock();
+   auto r = write_names.find(s);
+   if(r != write_names.end())
+   {
+      index = (r->second).first;
+      em = (r->second).second;
+   }
+   m1.unlock();
+
+   int datasize = em.get_datasize();
+   int keydatasize = sizeof(uint64_t)+datasize;
+
+   std::vector<std::vector<std::pair<uint64_t,uint64_t>>> ts_f;
+
+   std::vector<std::pair<uint64_t,uint64_t>> timestamp_offsets;
+
+   ts_f.resize(maxsize);
+   
+   std::vector<char> *databuffer = data_array.second;
+
+   uint64_t offset = 0;
+   int offset_w = 0;
+   for(int i=0;i<bcounts.size();i++)
+   {
+        hsize_t boffset = (hsize_t)offset;
+        for(int j=0;j<myrank;j++)
+           boffset += bcounts[i][j];
+
+        int numrecords = bcounts[i][myrank];
+        int pos = offset_w*keydatasize;
+        for(int j=0;j<numrecords*keydatasize;j+=keydatasize)
+        {
+           uint64_t ts = *(uint64_t*)(&((*databuffer)[pos+j]));
+           std::pair<uint64_t,uint64_t> p;
+           p.first = ts; p.second = boffset;
+           timestamp_offsets.push_back(p);
+           boffset++;
+        }
+
+        for(int j=0;j<numprocs;j++)
+            offset += bcounts[i][j];
+        offset_w += numrecords;
+   }
+
+   hid_t s11 = H5Tcreate(H5T_COMPOUND,sizeof(struct ts_offset));
+   H5Tinsert(s11,"ts",HOFFSET(struct ts_offset,ts),H5T_NATIVE_UINT64);
+   H5Tinsert(s11,"offset",HOFFSET(struct ts_offset,offset),H5T_NATIVE_UINT64);
+
+
+   std::vector<int> send_counts,recv_counts;
+   std::vector<int> send_displ,recv_displ;
+   send_counts.resize(numprocs); recv_counts.resize(numprocs);
+   send_displ.resize(numprocs); recv_displ.resize(numprocs);
+   std::fill(send_counts.begin(),send_counts.end(),0);
+   std::fill(recv_counts.begin(),recv_counts.end(),0);
+   std::fill(send_displ.begin(),send_displ.end(),0);
+   std::fill(recv_displ.begin(),recv_displ.end(),0);
+
+   std::vector<int> dests;
+
+    for(int i=0;i<timestamp_offsets.size();i++)
+   {
+        uint64_t ts = timestamp_offsets[i].first;
+        uint64_t hashvalue = ts;
+        uint64_t key = hashvalue & mask;
+        int id = key >> (total_bits-numbits_p);
+        int pid = id%numprocs;
+        dests.push_back(pid);
+        send_counts[pid]+=2;
+   }
+
+   MPI_Alltoall(send_counts.data(),1,MPI_INT,recv_counts.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+   send_displ[0] = 0;
+   for(int i=1;i<numprocs;i++)
+           send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+   std::vector<uint64_t> send_buffer,recv_buffer;
+
+    int total_size_s = 0;
+   for(int i=0;i<numprocs;i++) total_size_s += send_counts[i];
+
+   send_buffer.resize(total_size_s);
+
+   for(int i=0;i<timestamp_offsets.size();i++)
+   {
+        int displ = send_displ[dests[i]];
+        send_buffer[displ] = timestamp_offsets[i].first;
+        displ++;
+        send_buffer[displ] = timestamp_offsets[i].second;
+        displ++;
+        send_displ[dests[i]] = displ;
+   }
+
+   send_displ[0] = 0;
+   for(int i=1;i<numprocs;i++) send_displ[i] = send_displ[i-1]+send_counts[i-1];
+
+   total_size_s = 0;
+   for(int i=0;i<numprocs;i++) total_size_s += recv_counts[i];
+
+   recv_buffer.resize(total_size_s);
+
+   recv_displ[0] = 0;
+   for(int i=1;i<numprocs;i++) recv_displ[i] = recv_displ[i-1]+recv_counts[i-1];
+
+   MPI_Alltoallv(send_buffer.data(),send_counts.data(),send_displ.data(),MPI_UINT64_T,recv_buffer.data(),recv_counts.data(),recv_displ.data(),MPI_UINT64_T,MPI_COMM_WORLD);
+
+   for(int i=0;i<recv_buffer.size();i+=2)
+   {
+        uint64_t ts = recv_buffer[i];
+        uint64_t pos = recv_buffer[i+1];
+        uint64_t hashvalue = ts;
+        uint64_t index = hashvalue%maxsize;
+        std::pair<uint64_t,uint64_t> p;
+        p.first = ts; p.second = pos;
+        ts_f[index].push_back(p);
+   }
+
+   hid_t dataset_inv = H5Dopen(fid,d_string.c_str(), H5P_DEFAULT);
+   hid_t dataset_t = H5Dopen(fid,da_string.c_str(),H5P_DEFAULT);
+
+   hid_t file_dataspace_t = H5Dget_space(dataset_t);
+
+   hsize_t total_size_l = 2*maxsize;
+   hsize_t offset_t = myrank*2*maxsize;
+
+   std::vector<int> prev_table;
+   prev_table.resize(2*maxsize);
+
+   int ret = H5Sselect_hyperslab(file_dataspace_t, H5S_SELECT_SET,&offset_t,NULL,&total_size_l,NULL);
+   hid_t memspace_t = H5Screate_simple(1,&total_size_l, NULL);
+   ret = H5Dread(dataset_t,H5T_NATIVE_INT, memspace_t, file_dataspace_t, tx_pl,prev_table.data());
+   H5Sclose(memspace_t);
+
+   int prev_total_l = 0;
+   for(int i=0;i<maxsize;i++) prev_total_l += prev_table[2*i];
+
+   int prev_total = 0;
+   MPI_Allreduce(&prev_total_l,&prev_total,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+
+   int total_l = 0;
+   for(int i=0;i<ts_f.size();i++) total_l += ts_f[i].size();
+
+   std::vector<int> recvv(numprocs);
+   std::fill(recvv.begin(),recvv.end(),0);
+
+   MPI_Allgather(&total_l,1,MPI_INT,recvv.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+   int total_keys = 0;
+   for(int i=0;i<numprocs;i++) total_keys += recvv[i];
+
+    hsize_t dims[1];
+    dims[0] = (hsize_t)(prev_total+total_keys);
+    H5Dset_extent(dataset_inv, dims);
+    hid_t filedataspace = H5Dget_space(dataset_inv);
+    
+    std::vector<struct ts_offset> *prev_keys = new std::vector<struct ts_offset> ();
+    prev_keys->resize(prev_total_l);
+
+    hsize_t offset_prev = (hsize_t)prev_table[1];
+    hsize_t blocksize = (hsize_t)prev_total_l;
+
+    ret = H5Sselect_hyperslab(filedataspace, H5S_SELECT_SET,&offset_prev,NULL,&blocksize,NULL); 
+    hid_t memspace = H5Screate_simple(1,&blocksize, NULL);
+    ret = H5Dread(dataset_inv,s11, memspace, filedataspace, tx_pl,prev_keys->data());
+    H5Sclose(memspace);
+   
+    for(int i=0;i<prev_keys->size();i++)
+    {
+	uint64_t ts = (*prev_keys)[i].ts;
+	uint64_t index = (*prev_keys)[i].offset;
+	uint64_t hashvalue = ts;
+	uint64_t pos = hashvalue%maxsize;
+	std::pair<uint64_t,uint64_t> p;
+        p.first = ts; p.second = index;	
+	ts_f[pos].push_back(p);
+    }
+    
+    delete prev_keys;
+
+    std::vector<struct ts_offset> *mkeys = new std::vector<struct ts_offset> ();
+    
+    for(int i=0;i<ts_f.size();i++)
+    {
+	prev_table[2*i] = ts_f[i].size();
+       for(int j=0;j<ts_f[i].size();j++)
+       {
+	  struct ts_offset t;
+	  t.ts = ts_f[i][j].first;
+	  t.offset = ts_f[i][j].second;
+	  mkeys->push_back(t);
+       }
+    }
+    
+    prev_table[1] = 0;
+    for(int i=1;i<maxsize;i++)
+	    prev_table[2*i+1] = prev_table[2*(i-1)+1]+prev_table[2*(i-1)]; 
+
+    std::fill(recvv.begin(),recvv.end(),0);
+    total_l = mkeys->size();
+    
+    MPI_Allgather(&total_l,1,MPI_INT,recvv.data(),1,MPI_INT,MPI_COMM_WORLD);
+
+    int prev_v = 0;
+    for(int i=0;i<myrank;i++)
+	    prev_v += recvv[i];
+
+    blocksize = (hsize_t)total_l;
+    offset_prev = (hsize_t)prev_v;
+    ret = H5Sselect_hyperslab(filedataspace, H5S_SELECT_SET,&offset_prev,NULL,&blocksize,NULL);
+    memspace = H5Screate_simple(1,&blocksize, NULL);
+    ret = H5Dwrite(dataset_inv,s11, memspace, filedataspace, tx_pl,mkeys->data());
+    H5Sclose(memspace);
+
+    for(int i=0;i<maxsize;i++)
+	 prev_table[2*i+1] += prev_v;
+
+   ret = H5Sselect_hyperslab(file_dataspace_t, H5S_SELECT_SET,&offset_t,NULL,&total_size_l,NULL);
+   memspace_t = H5Screate_simple(1,&total_size_l, NULL);
+   ret = H5Dwrite(dataset_t,H5T_NATIVE_INT, memspace_t, file_dataspace_t, tx_pl,prev_table.data());
+   H5Sclose(memspace_t);
+
+   delete mkeys;
+   H5Dclose(dataset_inv);
+   H5Dclose(dataset_t);
+   H5Sclose(filedataspace);
+   H5Sclose(file_dataspace_t);
+   H5Tclose(s11);
+
+}
 void read_write_process::pwrite(std::vector<std::string>& sts,std::vector<hsize_t>& total_records,std::vector<hsize_t>& offsets,std::vector<std::pair<std::vector<struct event>*,std::vector<char>*>>& data_arrays,std::vector<uint64_t>&minkeys,std::vector<uint64_t>&maxkeys,bool clear_nvme,std::vector<int> &bcounts,std::vector<std::vector<std::vector<int>>> &blockcounts)
 {
 
@@ -981,7 +1601,7 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 
    while(true)
    {
-      int nprocs = endsessioncount(1500);
+      int nprocs = endsessioncount(t->tid);
       t1 = std::chrono::high_resolution_clock::now();
       if(nprocs==numprocs) 
       {
@@ -1003,6 +1623,7 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 	numrounds = 0;
       }
 
+      if(myrank==0)
       for(;;)
       {
         auto t2 = std::chrono::high_resolution_clock::now();
@@ -1012,6 +1633,25 @@ void read_write_process::data_stream(struct thread_arg_w *t)
 	   break;
         }
       }
+
+      MPI_Request *reqs = new MPI_Request[2*numprocs];
+      int nreq = 0;
+      int send_v = 1,recv_v = 0;
+      if(myrank==0)
+      {
+	for(int i=0;i<numprocs;i++)
+	{
+	  MPI_Isend(&send_v,1,MPI_INT,i,t->tid,MPI_COMM_WORLD,&reqs[nreq]);
+	  nreq++;
+	}
+      }
+
+      MPI_Irecv(&recv_v,1,MPI_INT,0,t->tid,MPI_COMM_WORLD,&reqs[nreq]);
+      nreq++;
+
+      MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
+      delete reqs;
 
       if(enable_stream[t->tid].load()==1)
       {
@@ -1304,7 +1944,7 @@ std::string read_write_process::FindEventFile(std::string &s,uint64_t &ts)
         r->tid = index;
 	r->mints = ts;
 	r->maxts = ts;
-        io_queue_async->push(r); 
+        io_queue_async->push(r);
    }
    return eventstring;
 }

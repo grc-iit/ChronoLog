@@ -187,7 +187,7 @@ class hdf5_invlist
              serveraddrs.assign(saddrs.begin(),saddrs.end());
 	     invlist = new struct invnode<KeyT,ValueT,hashfcn,equalfcn> ();
 	     invlist->ml = new memory_pool<KeyT,ValueT,hashfcn,equalfcn> (100);
-	     invlist->bm = new BlockMap<KeyT,ValueT,hashfcn,equalfcn>(size,invlist->ml,emptykey);
+	     invlist->bm = new BlockMap<KeyT,ValueT,hashfcn,equalfcn>(maxsize,invlist->ml,emptykey);
 	     pending_gets = new boost::lockfree::queue<struct event_req<KeyT,ValueT>*> (128);
 	     completed_gets = new boost::lockfree::queue<struct event_resp<KeyT,ValueT>*>(128);
 	   }

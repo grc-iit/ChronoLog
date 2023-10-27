@@ -20,21 +20,31 @@ class event_metadata
   std::vector<bool> big_endian;
   int total_v;
   int chunksize;
-
+  bool inverted_list;
   public:
       event_metadata()
       {
 	  key_field = "timestamp";
 	  psize = sizeof(uint64_t);
+	  inverted_list = false;
       }
       ~event_metadata()
       {
+      }
+      bool get_invlist()
+      {
+	return inverted_list;
+      }
+      void set_invlist(bool b)
+      {
+	inverted_list = b;
       }
       event_metadata& operator=(event_metadata &m1)
       {
          numattrs = m1.get_numattrs();	
 	 attr_names = m1.get_attr_names();
 	 value_sizes = m1.get_value_sizes();
+	 inverted_list = m1.get_invlist();
 	 return *this; 
       }
       void set_numattrs(int n)

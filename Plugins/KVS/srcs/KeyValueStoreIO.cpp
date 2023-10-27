@@ -277,3 +277,63 @@ void KeyValueStoreIO::io_service()
      std::thread t{IOFunc,&t_args[0]};
      io_threads[0] = std::move(t);
 }
+
+void KeyValueStoreIO::query_service_end()
+{
+   int reqc=0;
+   int sendv=1;
+   MPI_Request *reqs = new MPI_Request[2*nservers];
+   std::vector<int> recvv;
+   recvv.resize(nservers);
+   std::fill(recvv.begin(),recvv.end(),0);
+
+   for(int i=0;i<nservers;i++)
+   {
+	MPI_Isend(&sendv,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[reqc]);
+	reqc++;
+	MPI_Irecv(&recvv[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[reqc]);
+	reqc++;
+   }
+
+   MPI_Waitall(reqc,reqs,MPI_STATUS_IGNORE);
+
+   for(int i=0;i<service_queries.size();i++)
+   {
+     if(service_queries[i].first==0)
+     {
+        integer_invlist *invlist = reinterpret_cast<integer_invlist*>(service_queries[i].second);
+        while(!invlist->EmptyPendingQueue());
+     }
+     else if(service_queries[i].first==1)
+     {
+        unsigned_long_invlist *invlist = reinterpret_cast<unsigned_long_invlist*>(service_queries[i].second);
+        while(!invlist->EmptyPendingQueue());
+     }
+     else if(service_queries[i].first==2)
+     {
+        float_invlist *invlist  = reinterpret_cast<float_invlist*>(service_queries[i].second);
+        while(!invlist->EmptyPendingQueue());
+     }
+     else if(service_queries[i].first==3)
+     {
+          double_invlist *invlist = reinterpret_cast<double_invlist*>(service_queries[i].second);
+          while(!invlist->EmptyPendingQueue());
+
+     }
+   }
+
+   reqc = 0;
+   std::fill(recvv.begin(),recvv.end(),0);
+
+   for(int i=0;i<nservers;i++)
+   {
+     MPI_Isend(&sendv,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[reqc]);
+     reqc++;
+     MPI_Irecv(&recvv[i],1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[reqc]);
+     reqc++;
+   }
+
+   MPI_Waitall(reqc,reqs,MPI_STATUS_IGNORE);
+
+   delete reqs;
+}

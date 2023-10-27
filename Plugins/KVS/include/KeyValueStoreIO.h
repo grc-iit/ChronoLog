@@ -123,7 +123,9 @@ class KeyValueStoreIO
            std::string myipaddr;
            std::string myhostname;
 	   int num_io_threads;
+	   int tag;
 	   std::vector<std::pair<int,void*>> service_queries;
+	   std::atomic<int> *query_service_alive;
 	   std::vector<std::thread> io_threads;
 	   std::vector<struct thread_arg> t_args;
 	   std::atomic<int> request_count;
@@ -140,8 +142,11 @@ class KeyValueStoreIO
 		semaphore = 0;
 		request_count.store(0);
 		synchronization_word.store(0);
+		query_service_alive = (std::atomic<int>*)std::malloc(MAXSTREAMS*sizeof(std::atomic<int>));
+		for(int i=0;i<MAXSTREAMS;i++) 
+		  query_service_alive[i].store(0);
 		sync_queue = new boost::lockfree::queue<struct sync_request*> (128);
-
+		tag = 3000;
 		 t_args.resize(num_io_threads);
 	 	 for(int i=0;i<num_io_threads;i++) t_args[i].tid = i;	 
 	
@@ -181,8 +186,14 @@ class KeyValueStoreIO
 		p.first = type;
 		p.second = fptr;
 		service_queries.push_back(p);
+		query_service_alive[service_queries.size()-1].store(1);
 	    }
 
+	    void close_query_service(int id)
+	    {
+		query_service_alive[id].store(0);
+
+	    }
 	     bool LocalPutSyncRequest(struct sync_request *r)
 	     {
                 sync_queue->push(r);
@@ -204,9 +215,11 @@ class KeyValueStoreIO
 	     void get_common_requests(std::vector<struct sync_request*>&,std::vector<struct sync_request*>&);
 	     void io_function(struct thread_arg *);
 	     void io_service();
+	     void query_service_end();
 
 	    ~KeyValueStoreIO()
 	    {
+		std::free(query_service_alive);
 		delete sync_queue;
 	    }
 

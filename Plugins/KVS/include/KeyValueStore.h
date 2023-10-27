@@ -153,6 +153,7 @@ class KeyValueStore
 		  }
 
       		  auto t1 = std::chrono::high_resolution_clock::now();
+		  if(myrank==0)
                   while(true)
                   {
         		auto t2 = std::chrono::high_resolution_clock::now();
@@ -161,6 +162,20 @@ class KeyValueStore
         		if(t > (double)rate) break;
       		  }
 		
+		  nreq = 0;
+		  if(myrank==0)
+		  for(int i=0;i<numprocs;i++)
+		  {
+		    MPI_Isend(&send_v,1,MPI_INT,i,tag,MPI_COMM_WORLD,&reqs[nreq]);
+		    nreq++;
+
+		  }
+		  
+		  MPI_Irecv(&recv_v[0],1,MPI_INT,0,tag,MPI_COMM_WORLD,&reqs[nreq]);
+		  nreq++;
+
+		  MPI_Waitall(nreq,reqs,MPI_STATUS_IGNORE);
+
 		  if(end_loop) 
 		  ka->flush_invertedlist<T>(attr_name,true);
 		  else 
@@ -349,15 +364,13 @@ class KeyValueStore
 		   }
 		   else if(ops[i]==1)
 		   {
-			b = ka->Get_resp<T,N>(pos,st,keys[i],ids);
+			b = ka->Get<T,N>(pos,st,keys[i],ids);
 			ids++;
 
 		   }
 		   usleep(rate);
 			
 		}
-
-		std::vector<std::pair<int,std::string>> resp_ids = ka->Completed_Gets<T,N>(pos,st);
 
 	   }
 
@@ -428,6 +441,7 @@ class KeyValueStore
 		N prevkey=0;
 		int ids = 0;
 		std::vector<N> keys;
+		std::vector<N> keys_p;
 		for(int i=0;i<nops;i++)
 		{	
 		    N key = random()%RAND_MAX; 
@@ -438,6 +452,8 @@ class KeyValueStore
 		      {
 		      }
 		      prevkey = key;
+		      ids++;
+		      if(ids < 100) keys_p.push_back(key);
 		    }
 		    else if(prevkey != 0) 
 		    {
@@ -447,6 +463,13 @@ class KeyValueStore
 		    }
 		    
 		    usleep(rate); 
+		}
+
+		for(int i=0;i<keys_p.size();i++)
+		{
+		   b = ka->Get<T,N> (pos,st,keys_p[i],ids);
+		   ids++;
+
 		}
 
 	   }
@@ -514,6 +537,9 @@ class KeyValueStore
 
 	   void close_sessions()
 	   {
+
+		io_layer->query_service_end();
+
 		std::string s = "endsession";
 		bool b = if_q->EndEmulatorSession(s,myrank);
 		

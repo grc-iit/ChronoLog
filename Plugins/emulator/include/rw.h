@@ -43,6 +43,11 @@ struct io_request
    hsize_t total_records;
 };
 
+struct ts_offset
+{
+  uint64_t ts;
+  uint64_t offset;
+};
 
 class read_write_process
 {
@@ -228,6 +233,17 @@ public:
 	   thallium_server->define("EmulatorAddEvent",AddEventBuffer);
 	   thallium_shm_server->define("EmulatorAddEvent",AddEventBuffer);
 	}
+	inline int nearest_power_two(int n)
+       {
+                int c = 1;
+
+                while(c < n)
+                {
+                   c = 2*c;
+                }
+                return c;
+        }
+
 	void end_session_flag()
 	{
 	  end_of_session.store(1);
@@ -463,6 +479,7 @@ public:
 		   bool is_big_endian = true;
 		   em.add_attr(attrnames[j],attrsizes[j],is_signed,is_big_endian);
 		}
+		em.set_invlist(false);
 		create_write_buffer(s,em,8192);
 		int streamid = cstream.fetch_add(1);
 		numloops[streamid] = nloops;
@@ -614,7 +631,9 @@ public:
 	void data_stream(struct thread_arg_w*);
 	bool create_buffer(int &,std::string &);
 	std::vector<uint64_t> add_event(std::string&,std::string&);
-        int endsessioncount(int);	
+        int endsessioncount(int);
+        void create_inverted_list(std::string &,std::vector<std::vector<int>>&,std::pair<std::vector<struct event>*,std::vector<char>*>&,hid_t &,hid_t&,hid_t &);	
+        void merge_inverted_list(std::string &,std::vector<std::vector<int>>&,std::pair<std::vector<struct event>*,std::vector<char>*>&,hid_t &,hid_t &);	
 };
 
 #endif

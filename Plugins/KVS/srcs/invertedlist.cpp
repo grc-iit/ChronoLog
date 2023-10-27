@@ -10,8 +10,9 @@ int hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::partition_no(KeyT &k)
       mask = mask >> (64-nbits);
       key = key & mask;
       key = key >> (nbits-nbits_p);   
-      int id = (int)key%numprocs;
-      int rem = ntables%numprocs;
+      int id = (int)(key);
+      int pid = id%numprocs;
+      /*int rem = ntables%numprocs;
       int offset = rem*(tables_per_proc+1);
       int pid = -1;
       if(id < offset)
@@ -22,7 +23,7 @@ int hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::partition_no(KeyT &k)
       {
 	id = id-offset;
 	pid = rem+(id/tables_per_proc);
-      }
+      }*/
       return pid;
 }
 
@@ -122,45 +123,39 @@ void hdf5_invlist<KeyT,ValueT,hashfcn,equalfcn>::get_events()
         struct event_req<KeyT,ValueT> *r;
         if(pending_gets->pop(r))
         {
-           if(r->values.size()==0)
-           {
-             worklist1.push_back(r);
-           }
-        }
-  }
-
-  for(int n=0;n<worklist1.size();n++)
-  {
-       KeyT key = worklist1[n]->key;
-       uint64_t hashvalue = hashfcn()(key);
-       int pos = hashvalue%maxsize;
-       hsize_t offset = cached_keyindex_mt[2*pos+1]-cached_keyindex_mt[1];
-       hsize_t numkeys = cached_keyindex_mt[2*pos];
+          KeyT key = r->key;
+          uint64_t hashvalue = hashfcn()(key);
+          int pid = partition_no(key);
+          assert (pid == myrank);
+          uint64_t pos = hashvalue%maxsize;
+          hsize_t offset = cached_keyindex_mt[2*pos+1];
+          hsize_t numkeys = cached_keyindex_mt[2*pos];
       
-       std::vector<struct KeyIndex<KeyT>> keyindex;
-       keyindex.resize(numkeys);
-       ret = H5Sselect_hyperslab(file_dataspace,H5S_SELECT_SET,&offset,NULL,&numkeys,NULL);
-       hid_t mem_dataspace = H5Screate_simple(1,&numkeys,NULL);
-       ret = H5Dread(dataset_k,kv1,mem_dataspace,file_dataspace,xfer_plist,keyindex.data());
-       H5Sclose(mem_dataspace);
+          std::vector<struct KeyIndex<KeyT>> keyindex;
+          keyindex.resize(numkeys);
+          ret = H5Sselect_hyperslab(file_dataspace,H5S_SELECT_SET,&offset,NULL,&numkeys,NULL);
+          hid_t mem_dataspace = H5Screate_simple(1,&numkeys,NULL);
+          ret = H5Dread(dataset_k,kv1,mem_dataspace,file_dataspace,xfer_plist,keyindex.data());
+          H5Sclose(mem_dataspace);
 
-       uint64_t ts = UINT64_MAX;
+          uint64_t ts = UINT64_MAX;
 
-       for(int k=0;k<keyindex.size();k++)
-	      if(keyindex[k].key==key)
-	      {
+          for(int k=0;k<keyindex.size();k++)
+	  if(keyindex[k].key==key)
+	  {
 		ts = keyindex[k].index;
 		break;
-	      }
-       if(ts != UINT64_MAX) 
-       {
-	std::string eventstring = if_q->GetEmulatorEvent(filename,ts,myrank);
-	if(eventstring.length() != 0)
-	{
-	   ost << eventstring << std::endl;
+	  }
+          if(ts != UINT64_MAX) 
+          {
+	     std::string eventstring = if_q->GetEmulatorEvent(filename,ts,myrank);
+	     if(eventstring.length() != 0)
+	     {
+	        ost << eventstring << std::endl;
+	     }
+          }
+          delete r;
 	}
-       }
-       delete worklist1[n];
      }
 
      H5Sclose(file_dataspace);

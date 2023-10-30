@@ -28,6 +28,7 @@ public:
 
     ~DataStoreAdminService() 
     {
+        std::cout << "DataStoreAdminService::~DataStoreAdminService"<< std::endl;
 	//remove provider finalization callback from the engine's list	
         get_engine().pop_finalize_callback(this);
     }
@@ -39,24 +40,36 @@ public:
 
     void shutdown_data_collection(tl::request const& request)
     {   
-	    int status =1;
+	    int status = 1;
 	    theDataStore.shutdownDataCollection();
-	    request.respond(1); 
+	    request.respond(status);
     }
 
     void StartStoryRecording(tl::request const& request, 
                       std::string const& chronicle_name, std::string const& story_name,  StoryId const& story_id)
     {
+<<<<<<< HEAD
         std::cout << "DataStoreAdminService: StartStoryRecoding {"<< story_name<<":"<<story_id<<"}"<< std::endl;
         theDataStore.startStoryRecording(chronicle_name, story_name, story_id);
         request.respond( story_id );
+=======
+        std::cout << "DataCollectionService: StartStoryRecoding {"<< story_name<<":"<<story_id<<"}"<< std::endl;
+        int return_code = theDataStore.startStoryRecording(chronicle_name, story_name, story_id, start_time);
+        request.respond( return_code);
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
     }
 
     void StopStoryRecording(tl::request const& request, StoryId const& story_id)
     {
+<<<<<<< HEAD
         std::cout << "DataStoreAdminService: StartStoryRecoding {"<< story_id<<"}"<< std::endl;
 	theDataStore.stopStoryRecording(story_id);
         request.respond( story_id );
+=======
+        std::cout << "DataStoreAdminService: StopStoryRecoding {"<< story_id<<"}"<< std::endl;
+	    int return_code = theDataStore.stopStoryRecording(story_id);
+        request.respond( return_code);
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
     }
 
 private:

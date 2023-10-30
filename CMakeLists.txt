@@ -24,6 +24,9 @@ set(CHRONOLOG_PACKAGE_TARNAME "${CHRONOLOG_PACKAGE}")
 #------------------------------------------------------------------------------
 # Setup install and output Directories
 #------------------------------------------------------------------------------
+#if(NOT CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX /home/$ENV{USER}/chronolog)
+#endif()
 if(NOT CHRONOLOG_INSTALL_BIN_DIR)
     set(CHRONOLOG_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
 endif()
@@ -211,8 +214,14 @@ add_subdirectory(ChronoAPI)
 # ChronoVisor
 add_subdirectory(ChronoVisor)
 
+<<<<<<< HEAD
 # ChronoLog client library
 add_subdirectory(Client)
+=======
+# ChronoKeeper
+add_subdirectory(ChronoKeeper)
+
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 
 # custom
 add_custom_target(make_all cd ${CMAKE_BINARY_DIR} && make)

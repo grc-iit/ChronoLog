@@ -11,6 +11,8 @@
 #include "city.h"
 #include <mutex>
 
+#include "chronolog_types.h"
+
 enum StoryIndexingGranularity {
     story_gran_ns = 0,
     story_gran_us = 1,
@@ -63,6 +65,43 @@ public:
     void setSid(uint64_t sid) { sid_ = sid; }
     void setCid(uint64_t cid) { cid_ = cid; }
     void setStats(const StoryStats &stats) { stats_ = stats; }
+<<<<<<< HEAD
+=======
+
+    std::unordered_map<chronolog::ClientId, ClientInfo *> &getAcquirerMap() {
+        return acquirerClientMap_;
+    }
+
+    void addAcquirerClient( chronolog::ClientId const &client_id, ClientInfo *clientInfo) {
+        if(nullptr == clientInfo)
+        {   return; }
+
+        std::lock_guard<std::mutex> acquirerClientListLock(acquirerClientMapMutex_);
+        acquirerClientMap_.emplace(client_id, clientInfo);
+        LOGD("acquirer client_id=%lu is added to Story name=%s", client_id, name_.c_str());
+    }
+
+    int removeAcquirerClient(chronolog::ClientId const &client_id) {
+        std::lock_guard<std::mutex> acquirerClientListLock(acquirerClientMapMutex_);
+        if (isAcquiredByClient(client_id)) {
+            acquirerClientMap_.erase(client_id);
+            LOGD("acquirer client_id=%lu is removed from Story name=%s", client_id, name_.c_str());
+            return CL_SUCCESS;
+        } else {
+            LOGD("Story name=%lu is not acquired by client_id=%s", client_id, name_.c_str());
+            return CL_ERR_UNKNOWN;
+        }
+    }
+
+    bool isAcquiredByClient(chronolog::ClientId const &client_id) {
+        if (acquirerClientMap_.find(client_id) != acquirerClientMap_.end()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
     void setProperty(const std::unordered_map<std::string, std::string>& attrs) {
         for (auto const& entry : attrs) {
             propertyList_.emplace(entry.first, entry.second);
@@ -88,6 +127,11 @@ private:
     uint64_t cid_{};
     StoryAttrs attrs_{};
     StoryStats stats_{};
+<<<<<<< HEAD
+=======
+    std::unordered_map<chronolog::ClientId, ClientInfo *> acquirerClientMap_;
+    std::mutex acquirerClientMapMutex_;
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
     std::unordered_map<std::string, std::string> propertyList_;
     std::unordered_map<std::string, Event> eventMap_;
 };

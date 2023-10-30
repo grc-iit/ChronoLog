@@ -10,15 +10,19 @@
 #include <ctime>
 #include <typeinfo>
 #include <unistd.h>
+<<<<<<< HEAD
 #include <emmintrin.h>
+=======
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 #include <enum.h>
 #include <log.h>
 
 #define   lfence()  _mm_lfence()
 #define   mfence()  _mm_mfence()
 
-class Clocksource {
+class ClocksourceTSC 
 public:
+<<<<<<< HEAD
     static Clocksource *Create(ClocksourceType type);
     virtual ~Clocksource() = default;;
     /**
@@ -41,12 +45,20 @@ public:
 class ClocksourceTSC : public Clocksource {
 public:
     uint64_t getTimestamp() override {
+=======
+    uint64_t getTimestamp() 
+    {
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
         unsigned int proc_id;
         uint64_t  t = __builtin_ia32_rdtscp(&proc_id);
         lfence();
         return t;
     }
+    ClocksourceType getClocksourceType() {
+        return ClocksourceType::TSC;
+    }
 };
+<<<<<<< HEAD
 class ClocksourceCPPStyle : public Clocksource {
 public:
     uint64_t getTimestamp() override {
@@ -54,26 +66,51 @@ public:
         using clock = steady_clock;
         clock::time_point t = clock::now();
         return (t.time_since_epoch().count());
+=======
+#endif
+
+class ClockSourceCStyle
+{
+   public:
+     ClockSourceCStyle(){}
+     ~ClockSourceCStyle(){}
+    uint64_t getTimeStamp()
+    {
+        struct timespec t{};
+        clock_gettime(CLOCK_TAI,&t);
+        return t.tv_sec*1000000000+t.tv_nsec;
+    }
+    ClocksourceType getClocksourceType() {
+        return ClocksourceType::C_STYLE;
+    }
+
+};
+
+class ClockSourceCPPStyle
+{
+   public:
+    ClockSourceCPPStyle() {}
+    ~ClockSourceCPPStyle(){}
+    uint64_t getTimeStamp()
+    {
+        return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    }
+    ClocksourceType getClocksourceType() {
+        return ClocksourceType::CPP_STYLE;
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
     }
 };
 
+template<class ClockSource>
 class ClocksourceManager {
 private:
-    ClocksourceManager() : clocksource_(nullptr), clocksourceType_(ClocksourceType::C_STYLE) {
-        LOGD("%s constructor is called", typeid(*this).name());
-    }
+    ClocksourceManager() 
+        : offset(0)
+    { }
 
 public:
-    ~ClocksourceManager() {
-        if (clocksource_) {
-            delete clocksource_;
-            clocksource_ = nullptr;
-        }
-        if (clocksourceManager_) {
-            delete clocksourceManager_;
-            clocksourceManager_ = nullptr;
-        }
-    }
+    ~ClocksourceManager() 
+    { }
 
     static ClocksourceManager *getInstance() {
         if (!clocksourceManager_) {
@@ -82,22 +119,19 @@ public:
         return clocksourceManager_;
     }
 
-    void setClocksourceType(ClocksourceType type) {
-        this->clocksourceType_ = type;
-    }
-
     ClocksourceType getClocksourceType() {
-        return clocksourceType_;
+        return clocksource_.getClocksourceType();
     }
 
-    Clocksource *getClocksource() {
-        this->clocksource_ = Clocksource::Create(this->clocksourceType_);
-        return this->clocksource_;
+    uint64_t TimeStamp()
+    {
+        return clocksource_.getTimeStamp() + offset;
     }
+
 private:
     static ClocksourceManager *clocksourceManager_;
-    Clocksource *clocksource_;
-    ClocksourceType clocksourceType_;
+    ClockSource clocksource_;
+    int64_t offset;
 };
 
 #endif //CHRONOLOG_CLOCKSOURCEMANAGER_H

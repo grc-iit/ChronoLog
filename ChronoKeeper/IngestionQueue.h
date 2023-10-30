@@ -8,6 +8,10 @@
 #include <mutex>
 
 #include "chronolog_types.h"
+<<<<<<< HEAD
+=======
+#include "StoryIngestionHandle.h"
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 
 //
 // IngestionQueue is a funnel into the MemoryDataStore
@@ -18,6 +22,7 @@ namespace chronolog
 {
 
 typedef std::deque<LogEvent> EventDeque;
+<<<<<<< HEAD
 
 class StoryIngestionHandle
 {
@@ -57,6 +62,9 @@ private:
 };
 
 
+=======
+
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 class IngestionQueue
 {
 public:
@@ -77,12 +85,22 @@ void removeIngestionHandle(StoryId const & story_id)
 	storyIngestionHandles.erase(story_id);
 }
 
-void ingestLogEvent(LogEvent const& event)
+void ingestLogEvent(LogEvent const & event)
 {
+<<<<<<< HEAD
 	auto ingestionHandle_iter = storyIngestionHandles.find(event.storyId);
 	if( ingestionHandle_iter == storyIngestionHandles.end())
 	{
 		std::cout <<" orphan event"<<std::endl;
+=======
+	std::cout <<"IngestionQueue: ingestLogEvent : storyIngestionHandles {"<< &storyIngestionHandles<<"} .size="<<storyIngestionHandles.size()<<std::endl;
+	std::cout<<"IngestionQueue: received event {"<<event<< "}"<<std::endl;
+
+	auto ingestionHandle_iter = storyIngestionHandles.find(event.storyId);
+	if( ingestionHandle_iter == storyIngestionHandles.end())
+	{
+		std::cout <<" orphan event {"<<event<<"}"<<std::endl;
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 		std::lock_guard<std::mutex> lock(ingestionQueueMutex);
 		orphanEventQueue.push_back(event);
 	}
@@ -98,22 +116,32 @@ void drainOrphanEvents()
 	{	return; }
 
 	std::lock_guard<std::mutex> lock(ingestionQueueMutex);
-	for( EventDeque::iterator iter = orphanEventQueue.begin(); iter != orphanEventQueue.end(); )
+    for( EventDeque::iterator iter = orphanEventQueue.begin(); iter != orphanEventQueue.end(); )
 	{
 	   auto ingestionHandle_iter = storyIngestionHandles.find((*iter).storyId);
 	   if( ingestionHandle_iter != storyIngestionHandles.end())
-           {	//individual StoryIngestionHandle has its own mutex
-		(*ingestionHandle_iter).second->ingestEvent(*iter);
+        {	//individual StoryIngestionHandle has its own mutex
+		    (*ingestionHandle_iter).second->ingestEvent(*iter);
            	//remove the event from the orphan deque and get the iterator to the next element prior to removal
-		iter = orphanEventQueue.erase(iter);	
+		    iter = orphanEventQueue.erase(iter);	
 	   }
 	   else
-	   { ++iter; }
+	   {    ++iter; }
 	}
+}
+
+bool is_empty() const
+{
+    return (orphanEventQueue.empty() && storyIngestionHandles.empty());
 }
 
 void shutDown()
 {
+<<<<<<< HEAD
+=======
+	std::cout <<"IngestionQueue: shutdown : storyIngestionHandles {"<<storyIngestionHandles.size()
+               << "} orphanEventQueue {"<<orphanEventQueue.size()<<"}"<<std::endl;
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 	// last attempt to drain orphanEventQueue into known ingestionHandles
  	drainOrphanEvents();
 	// disengage all handles

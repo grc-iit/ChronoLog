@@ -6,7 +6,15 @@
 #include <map>
 #include <mutex>
 
+#include <thallium.hpp>
+
 #include "IngestionQueue.h"
+<<<<<<< HEAD
+=======
+#include "StoryPipeline.h"
+#include "StoryChunkExtractionQueue.h"
+
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 
 namespace chronolog
 {
@@ -39,6 +47,7 @@ typedef std::string ChronicleName;
 // startTime/endTime are invariant
 class StoryChunk
 {
+<<<<<<< HEAD
 public:
    int mergeEvents(std::deque<LogEvent> const&);
    int mergeEvents(std::vector<LogEvent> const&);
@@ -50,11 +59,17 @@ uint64_t endTime;
 uint64_t lastRevisionTime;
 std::map<uint64_t, std::list<LogEvent>> logEvents;
 
+=======
+	UNKNOWN = 0,
+	RUNNING	=1,	//  active stories
+	SHUTTING_DOWN=2	// Shutting down services
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 };
 
 class StoryPipeline
 {
 public:
+<<<<<<< HEAD
 	StoryPipeline( StoryId const&, std::mutex &, std::mutex &);
 	
 	~StoryPipeline();
@@ -98,9 +113,20 @@ class KeeperDataStore
 public:
       KeeperDataStore()
       {}
+=======
+    KeeperDataStore( IngestionQueue & ingestion_queue, StoryChunkExtractionQueue & extraction_queue)
+	      : state(UNKNOWN)
+	      , theIngestionQueue(ingestion_queue) 
+	      , theExtractionQueue(extraction_queue) 
+    {}
 
-      ~KeeperDataStore();
+    ~KeeperDataStore();
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 
+    bool is_running() const 
+    { return (RUNNING == state); }
+
+<<<<<<< HEAD
 bool is_shutting_down() const
 {
 	return (false); // INNA: implement state_management
@@ -114,6 +140,37 @@ void shutdownDataCollection();
 private:
 std::unordered_map<StoryId, StoryPipeline> StoryPipelines;
 std::mutex theStoryPipelinesMutex;
+=======
+    bool is_shutting_down() const 
+    { return (SHUTTING_DOWN == state); }
+
+    int startStoryRecording(ChronicleName const&, StoryName const&, StoryId const&
+		      , uint64_t start_time, uint32_t time_chunk_ranularity=30, uint32_t access_window = 60 ); 
+    int stopStoryRecording(StoryId const&);
+
+    void collectIngestedEvents();
+    void extractDecayedStoryChunks();
+    void retireDecayedPipelines();
+    
+    void startDataCollection(int stream_count);
+    void shutdownDataCollection();
+    void dataCollectionTask();
+
+private:
+    KeeperDataStore( KeeperDataStore const&) = delete;
+    KeeperDataStore& operator= ( KeeperDataStore const&) = delete;
+
+    DataStoreState	state;
+    std::mutex dataStoreStateMutex;
+    IngestionQueue &   theIngestionQueue;
+    StoryChunkExtractionQueue &   theExtractionQueue;
+    std::vector<thallium::managed<thallium::xstream>> dataStoreStreams;
+    std::vector<thallium::managed<thallium::thread>> dataStoreThreads;
+    
+    std::mutex dataStoreMutex;
+    std::unordered_map<StoryId, StoryPipeline*> theMapOfStoryPipelines;
+    std::unordered_map<StoryId, std::pair<StoryPipeline*, uint64_t>> pipelinesWaitingForExit; 
+>>>>>>> 2398801f427786d5ef9f35c8ae47efa9bad3ea5a
 
 std::unordered_map<StoryId, std::mutex> ingestionMutexes;
 };

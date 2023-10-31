@@ -49,20 +49,21 @@ void removeIngestionHandle(StoryId const & story_id)
 
 void ingestLogEvent(LogEvent const & event)
 {
-	std::cout <<"IngestionQueue: ingestLogEvent : storyIngestionHandles {"<< &storyIngestionHandles<<"} .size="<<storyIngestionHandles.size()<<std::endl;
-	std::cout<<"IngestionQueue: received event {"<<event<< "}"<<std::endl;
+    std::cout << "IngestionQueue: ingestLogEvent : storyIngestionHandles {" << &storyIngestionHandles << "} .size="
+              << storyIngestionHandles.size() << std::endl;
+    std::cout << "IngestionQueue: received event {" << event << "}" << std::endl;
 
-	auto ingestionHandle_iter = storyIngestionHandles.find(event.storyId);
-	if( ingestionHandle_iter == storyIngestionHandles.end())
-	{
-		std::cout <<" orphan event {"<<event<<"}"<<std::endl;
-		std::lock_guard<std::mutex> lock(ingestionQueueMutex);
-		orphanEventQueue.push_back(event);
-	}
-	else
-	{       //individual StoryIngestionHandle has its own mutex
-		(*ingestionHandle_iter).second->ingestEvent(event);
-	}	
+    auto ingestionHandle_iter = storyIngestionHandles.find(event.storyId);
+    if (ingestionHandle_iter == storyIngestionHandles.end())
+    {
+        std::cout << " orphan event {" << event << "}" << std::endl;
+        std::lock_guard<std::mutex> lock(ingestionQueueMutex);
+        orphanEventQueue.push_back(event);
+    }
+    else
+    {       //individual StoryIngestionHandle has its own mutex
+        (*ingestionHandle_iter).second->ingestEvent(event);
+    }
 }
 
 void drainOrphanEvents()
@@ -113,7 +114,7 @@ private:
     // in orphanEventQueue that we'll periodically try to drain into the DataStore
     std::deque<LogEvent> orphanEventQueue;
 
-    //Timer to triger periodic attempt to drain orphanEventQueue and collect/log statistics
+    //Timer to trigger periodic attempt to drain orphanEventQueue and collect/log statistics
 };
 
 }

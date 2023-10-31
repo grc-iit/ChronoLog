@@ -69,12 +69,16 @@ private:
         define("shutdown_data_collection", &DataStoreAdminService::shutdown_data_collection);
         define("start_story_recording", &DataStoreAdminService::StartStoryRecording);
         define("stop_story_recording", &DataStoreAdminService::StopStoryRecording);
-    //set up callback for the case when the engine is being finalized while this provider is still alive
-    get_engine().push_finalize_callback(this, [p=this](){delete p;} );
-    std::cout<<"DataStoreAdminService::constructed at "<< get_engine().self()<<" provider_id {"<<service_provider_id<<"}"<<std::endl;
+        //set up callback for the case when the engine is being finalized while this provider is still alive
+        get_engine().push_finalize_callback(this, [p = this]()
+        { delete p; });
+//        std::cout << "DataStoreAdminService::constructed at " << get_engine().self() << " provider_id {"
+//                  << service_provider_id << "}" << std::endl;
+        std::string engine_str = get_engine().self();
+        LOGD("DataStoreAdminService::constructed at %lu provider_id {%lu}", engine_str.c_str(), service_provider_id);
     }
 
-    DataStoreAdminService( DataStoreAdminService const&) = delete;
+    DataStoreAdminService(DataStoreAdminService const&) = delete;
     DataStoreAdminService & operator= (DataStoreAdminService const&) = delete;
 
     KeeperDataStore& theDataStore;

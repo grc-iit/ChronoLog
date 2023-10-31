@@ -209,7 +209,7 @@ chl::AcquireStoryResponseMsg chronolog::VisorClientPortal::AcquireStory(chl::Cli
 
     if (chronicle_name.empty() || story_name.empty())
     { return chronolog::AcquireStoryResponseMsg(CL_ERR_INVALID_ARG, story_id, recording_keepers); }
-    
+
     if ( !story_action_is_authorized( client_id, chronicle_name, story_name))
     { return chronolog::AcquireStoryResponseMsg(CL_ERR_NOT_AUTHORIZED, story_id, recording_keepers); }
 

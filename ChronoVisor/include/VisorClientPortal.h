@@ -36,9 +36,9 @@ enum ClientPortalState
 
 
 public:
-	VisorClientPortal();
+    VisorClientPortal();
 
-	~VisorClientPortal();
+    ~VisorClientPortal();
 
     int StartServices( ChronoLog::ConfigurationManager const&, KeeperRegistry*);
     void ShutdownServices();
@@ -79,7 +79,7 @@ private:
 
     // role based authentication dummies return true for any client_id for the time being
     // TODO: will be implemented when we add ClientAuthentication module
-	bool is_client_authenticated( uint32_t client_account);
+    bool is_client_authenticated( uint32_t client_account);
     bool chronicle_action_is_authorized( ClientId const&, ChronicleName const&);
     bool story_action_is_authorized( ClientId const&, ChronicleName const&, StoryName const&);
 

@@ -42,7 +42,7 @@ public:
              //  ChronoTick const& chrono_tick, std::string const& record)
     {
         std::cout << "KeeperRecordingService : record_event {"<< log_event<<"}"<< std::endl;
-	    theIngestionQueue.ingestLogEvent(log_event);
+        theIngestionQueue.ingestLogEvent(log_event);
         request.respond(CL_SUCCESS);
 
     }

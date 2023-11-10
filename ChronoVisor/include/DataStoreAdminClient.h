@@ -73,8 +73,8 @@ public:
         int status = CL_ERR_UNKNOWN;
         try
         {
-	        std::cout<< "CollectionClient: start_story_recording:"<<story_id<<std::endl;
-	        status = start_story_recording.on(service_handle)(chronicle_name,story_name,story_id,start_time);
+            std::cout << "CollectionClient: start_story_recording:" << story_id << std::endl;
+            status = start_story_recording.on(service_handle)(chronicle_name, story_name, story_id, start_time);
         }
         catch (tl::exception const &ex)
         {}

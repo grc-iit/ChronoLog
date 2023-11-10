@@ -45,11 +45,11 @@ void thread_body(struct thread_arg *t)
             story_handle->log_event("line " + std::to_string(i));
             std::this_thread::sleep_for(std::chrono::milliseconds(i % 10));
         }
-    
-    ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
-    std::cout << "tid=" << t->tid << " ReleaseStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
-              << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NO_CONNECTION);
+
+        ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
+        std::cout << "tid=" << t->tid << " ReleaseStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
+                  << std::endl;
+        assert(ret == CL_SUCCESS || ret == CL_ERR_NO_CONNECTION);
     }
     ret = client->DestroyStory(chronicle_name, story_name);//, flags);
     std::cout << "tid=" << t->tid << " DestroyStory {" << chronicle_name << ":" << story_name << "} ret: " << ret

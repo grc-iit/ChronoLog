@@ -271,7 +271,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStart( std::vector<KeeperIdCard
 
     uint64_t story_start_time = time_now.time_since_epoch().count();
 
-    std::lock_guard<std::mutex> lock(registryLock);
+//    std::lock_guard<std::mutex> lock(registryLock); // TODO: (Kun) work around for hanging Keeper on notify RPC
     if (!is_running())
     { return CL_ERR_NO_KEEPERS; }
 
@@ -335,7 +335,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStop(std::vector<KeeperIdCard> 
        return CL_ERR_NO_KEEPERS;
     }
 
-    std::lock_guard<std::mutex> lock(registryLock);
+//    std::lock_guard<std::mutex> lock(registryLock); // TODO: (Kun) work around for hanging Keeper on notify RPC
     if(!is_running())
     {  return CL_ERR_NO_KEEPERS; }
 
@@ -352,7 +352,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStop(std::vector<KeeperIdCard> 
         KeeperProcessEntry keeper_process = (*keeper_process_iter).second;
         if (nullptr == keeper_process.keeperAdminClient)
         {
-            std::cout << "WARNING: Registry record for{" << keeper_id_card << "} is missing keeperAdminClient"
+            std::cout << "WARNING: Registry record for{" << keeper_id_card << "} is missiAaresSng keeperAdminClient"
                       << std::endl;
             continue;
         }

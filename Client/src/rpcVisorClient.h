@@ -235,7 +235,7 @@ public:
 
 
     std::string service_addr;     // na address of ChronoVisor ClientService  
-    uint16_t    service_provider_id;          // ChronoVisor ClientService provider_id id
+    uint16_t 	service_provider_id;          // ChronoVisor ClientService provider_id id
     tl::provider_handle  service_ph;  //provider_handle for client registry service
     tl::remote_procedure visor_connect;
     tl::remote_procedure visor_disconnect;

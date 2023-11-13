@@ -56,7 +56,7 @@ public:
     void StopStoryRecording(tl::request const& request, StoryId const& story_id)
     {
         std::cout << "DataStoreAdminService: StopStoryRecoding {"<< story_id<<"}"<< std::endl;
-	    int return_code = theDataStore.stopStoryRecording(story_id);
+        int return_code = theDataStore.stopStoryRecording(story_id);
         request.respond( return_code);
     }
 
@@ -72,10 +72,8 @@ private:
         //set up callback for the case when the engine is being finalized while this provider is still alive
         get_engine().push_finalize_callback(this, [p = this]()
         { delete p; });
-//        std::cout << "DataStoreAdminService::constructed at " << get_engine().self() << " provider_id {"
-//                  << service_provider_id << "}" << std::endl;
-        std::string engine_str = get_engine().self();
-        LOGD("DataStoreAdminService::constructed at %lu provider_id {%lu}", engine_str.c_str(), service_provider_id);
+        std::cout << "DataStoreAdminService::constructed at " << get_engine().self() << " provider_id {"
+                  << service_provider_id << "}" << std::endl;
     }
 
     DataStoreAdminService(DataStoreAdminService const&) = delete;

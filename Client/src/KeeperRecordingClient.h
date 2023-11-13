@@ -74,7 +74,7 @@ private:
     {
         std::cout << "RecordingClient created for KeeperRecordingService at {" << service_addr << "} provider_id {"
                   << keeperIdCard.getProviderId() << "}" << std::endl;
-        record_event = tl_engine.define("record_event").disable_response();
+        record_event = tl_engine.define("record_event");
     }
 };
 

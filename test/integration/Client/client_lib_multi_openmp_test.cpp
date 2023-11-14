@@ -7,14 +7,12 @@
 
 #define STORY_NAME_LEN 32
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty())
-    {
+    if (conf_file_path.empty()) {
         conf_file_path = default_conf_file_path;
     }
 
@@ -35,8 +33,7 @@ int main(int argc, char **argv)
     std::string client_id = gen_random(8);
     int ret = client->Connect();//server_uri, client_id, flags);//, offset);
 #pragma omp for
-    for (int i = 0; i < num_threads; i++)
-    {
+    for (int i = 0; i < num_threads; i++) {
         std::string chronicle_name;
         if (i % 2 == 0) chronicle_name = "gscs5er9TcdJ9mOgUDteDVBcI0oQjozK";
         else chronicle_name = "6RPkwqX2IOpR41dVCqmWauX9RfXIuTAp";
@@ -53,17 +50,17 @@ int main(int argc, char **argv)
         story_attrs.emplace("TieringPolicy", "Hot");
         flags = 2;
         auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
-        assert(acquire_ret.first == CL_SUCCESS);
+        assert(acquire_ret.first == chronolog::CL_SUCCESS);
         ret = client->DestroyStory(chronicle_name, story_name);//, flags);
-        assert(ret == CL_ERR_ACQUIRED);
+        assert(ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->Disconnect();//client_id, flags);
-        assert(ret == CL_ERR_ACQUIRED);
+        assert(ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         ret = client->DestroyStory(chronicle_name, story_name);//, flags);
-        assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED);
+        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->DestroyChronicle(chronicle_name);//, flags);
-        assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED);
+        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
     }
     ret = client->Disconnect();//client_id, flags);
 

@@ -8,16 +8,14 @@
 
 #define STORY_NAME_LEN 5
 
-struct thread_arg
-{
+struct thread_arg {
     int tid;
     std::string client_id;
 };
 
 chronolog::Client *client;
 
-void thread_body(struct thread_arg *t)
-{
+void thread_body(struct thread_arg *t) {
 
     int flags = 0;
     uint64_t offset;
@@ -35,37 +33,36 @@ void thread_body(struct thread_arg *t)
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
     std::cout << "tid=" << t->tid << " AcquireStory {" << chronicle_name << ":" << story_name << "} ret: "
               << acquire_ret.first << std::endl;
-    assert(acquire_ret.first == CL_SUCCESS || acquire_ret.first == CL_ERR_NOT_EXIST || acquire_ret.first==CL_ERR_NO_KEEPERS);
+    assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST ||
+           acquire_ret.first == chronolog::CL_ERR_NO_KEEPERS);
 
-    if (CL_SUCCESS == acquire_ret.first)
-    {
+    if (chronolog::CL_SUCCESS == acquire_ret.first) {
         auto story_handle = acquire_ret.second;
-        for (int i = 0; i < 100; ++i)
-        {
+        for (int i = 0; i < 100; ++i) {
             story_handle->log_event("line " + std::to_string(i));
             std::this_thread::sleep_for(std::chrono::milliseconds(i % 10));
         }
-    
-    ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
-    std::cout << "tid=" << t->tid << " ReleaseStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
-              << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NO_CONNECTION);
+
+        ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
+        std::cout << "tid=" << t->tid << " ReleaseStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
+                  << std::endl;
+        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_CONNECTION);
     }
     ret = client->DestroyStory(chronicle_name, story_name);//, flags);
     std::cout << "tid=" << t->tid << " DestroyStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
               << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED || ret == CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
+           ret == chronolog::CL_ERR_NO_CONNECTION);
     ret = client->DestroyChronicle(chronicle_name);//, flags);
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED || ret == CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
+           ret == chronolog::CL_ERR_NO_CONNECTION);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty())
-    {
+    if (conf_file_path.empty()) {
         conf_file_path = default_conf_file_path;
     }
 
@@ -90,15 +87,13 @@ int main(int argc, char **argv)
     uint64_t offset;
     int ret = client->Connect();
 
-    if (CL_SUCCESS != ret)
-    {
-        std::cout<<"failed to connect to ChronoVisor"<<std::endl;
+    if (chronolog::CL_SUCCESS != ret) {
+        std::cout << "failed to connect to ChronoVisor" << std::endl;
         delete client;
         return -1;
     }
 
-    for (int i = 0; i < num_threads; i++)
-    {
+    for (int i = 0; i < num_threads; i++) {
         t_args[i].tid = i;
         t_args[i].client_id = client_id;
         std::thread t{thread_body, &t_args[i]};

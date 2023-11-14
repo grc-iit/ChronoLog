@@ -14,13 +14,11 @@
 #define CHRONICLE_NAME_LEN 32
 #define STORY_NAME_LEN 32
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty())
-    {
+    if (conf_file_path.empty()) {
         conf_file_path = default_conf_file_path;
     }
 
@@ -43,19 +41,17 @@ int main(int argc, char **argv)
     std::string server_uri = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
                              confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP +
                              std::to_string(confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF
-                             .BASE_PORT);
+                                                    .BASE_PORT);
 
     std::string client_id = gen_random(8);
     client.Connect();
     chronicle_names.reserve(NUM_CHRONICLE);
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         std::string chronicle_name(gen_random(CHRONICLE_NAME_LEN));
         chronicle_names.emplace_back(chronicle_name);
     }
 
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         std::string attr = std::string("Priority=High");
         std::unordered_map<std::string, std::string> chronicle_attrs;
         chronicle_attrs.emplace("Priority", "High");
@@ -65,7 +61,7 @@ int main(int argc, char **argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.CreateChronicle(chronicle_names[i], chronicle_attrs, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         duration_create_chronicle += (t2 - t1);
     }
 
@@ -81,20 +77,18 @@ int main(int argc, char **argv)
     //assert(chronicle_names_retrieved == chronicle_names_sorted);
 
 
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         std::string key("Date");
         t1 = std::chrono::steady_clock::now();
         ret = client.EditChronicleAttr(chronicle_names[i], key, "2023-01-15");
         t2 = std::chrono::steady_clock::now();
         //FIXME:  is not working, the following assert will fail
-        //assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
+        //assert(ret == chronolog::CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
         duration_edit_chronicle_attr += (t2 - t1);
 
         std::vector<std::string> story_names;
         story_names.reserve(NUM_STORY);
-        for (int j = 0; j < NUM_STORY; j++)
-        {
+        for (int j = 0; j < NUM_STORY; j++) {
             flags = 2;
             std::string story_name(gen_random(STORY_NAME_LEN));
             story_names.emplace_back(story_name);
@@ -105,12 +99,12 @@ int main(int argc, char **argv)
             t1 = std::chrono::steady_clock::now();
             ret = client.AcquireStory(chronicle_names[i], story_names[j], story_attrs, flags).first;
             t2 = std::chrono::steady_clock::now();
-            assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
+            assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_KEEPERS);
             duration_acquire_story += (t2 - t1);
         }
 
         ret = client.Disconnect(); //client_id, flags);
-        assert(ret == CL_ERR_NO_KEEPERS || ret == CL_ERR_ACQUIRED);
+        assert(ret == chronolog::CL_ERR_NO_KEEPERS || ret == chronolog::CL_ERR_ACQUIRED);
 
         t1 = std::chrono::steady_clock::now();
         std::vector<std::string> stories_names_retrieved;
@@ -122,23 +116,21 @@ int main(int argc, char **argv)
         //std::sort(story_names_sorted.begin(), story_names_sorted.end());
         //assert(stories_names_retrieved == story_names_sorted);
 
-        for (int j = 0; j < NUM_STORY; j++)
-        {
+        for (int j = 0; j < NUM_STORY; j++) {
             flags = 4;
             t1 = std::chrono::steady_clock::now();
             ret = client.ReleaseStory(chronicle_names[i], story_names[j]); //, flags);
             t2 = std::chrono::steady_clock::now();
-            assert(ret == CL_SUCCESS);
+            assert(ret == chronolog::CL_SUCCESS);
             duration_release_story += (t2 - t1);
         }
 
         flags = 8;
-        for (int j = 0; j < NUM_STORY; j++)
-        {
+        for (int j = 0; j < NUM_STORY; j++) {
             t1 = std::chrono::steady_clock::now();
             ret = client.DestroyStory(chronicle_names[i], story_names[j]); // flags);
             t2 = std::chrono::steady_clock::now();
-            assert(ret == CL_SUCCESS);
+            assert(ret == chronolog::CL_SUCCESS);
             duration_destroy_story += (t2 - t1);
         }
 
@@ -146,28 +138,26 @@ int main(int argc, char **argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.GetChronicleAttr(chronicle_names[i], key, value);
         t2 = std::chrono::steady_clock::now();
-        //FIXME:assert(ret == CL_SUCCESS);
+        //FIXME:assert(ret == chronolog::CL_SUCCESS);
         //FIXME: returning data using parameter is not working, the following assert will fail
         //ASSERT(value, ==, "2023-01-15");
         duration_get_chronicle_attr += (t2 - t1);
     }
 
     flags = 32;
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         t1 = std::chrono::steady_clock::now();
         bool ret = client.DestroyChronicle(chronicle_names[i]); // flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         duration_destroy_chronicle += (t2 - t1);
     };
 
-    for (int i = 0; i < NUM_STORY; i++)
-    {
+    for (int i = 0; i < NUM_STORY; i++) {
         std::unordered_map<std::string, std::string> story_attrs;
         std::string temp_str = gen_random(STORY_NAME_LEN);
         ret = client.AcquireStory(chronicle_names[i].append(temp_str), temp_str, story_attrs, flags).first;
-        assert(ret == CL_ERR_NOT_EXIST);
+        assert(ret == chronolog::CL_ERR_NOT_EXIST);
     }
 
     LOGI("CreateChronicle takes %lf ns", duration_create_chronicle.count() / NUM_CHRONICLE);
@@ -183,8 +173,7 @@ int main(int argc, char **argv)
     duration_create_chronicle = std::chrono::duration<double, std::nano>();
     chronicle_names.clear();
     flags = 1;
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         std::string chronicle_name(gen_random(CHRONICLE_NAME_LEN));
         chronicle_names.emplace_back(chronicle_name);
         std::string attr = std::string("Priority=High");
@@ -196,18 +185,17 @@ int main(int argc, char **argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         duration_create_chronicle += (t2 - t1);
     }
 
     flags = 32;
     duration_destroy_chronicle = std::chrono::duration<double, std::nano>();
-    for (int i = 0; i < NUM_CHRONICLE; i++)
-    {
+    for (int i = 0; i < NUM_CHRONICLE; i++) {
         t1 = std::chrono::steady_clock::now();
         int ret = client.DestroyChronicle(chronicle_names[i]);//, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         duration_destroy_chronicle += (t2 - t1);
     }
     client.Disconnect();

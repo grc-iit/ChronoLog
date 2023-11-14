@@ -59,24 +59,31 @@ public:
     }
 
     const std::string &getName() const { return name_; }
+
     uint64_t getSid() const { return sid_; }
+
     uint64_t getCid() const { return cid_; }
+
     const StoryStats &getStats() const { return stats_; }
+
     const std::unordered_map<std::string, std::string> &getProperty() const { return propertyList_; }
+
     const std::unordered_map<std::string, Event> &getEventMap() const { return eventMap_; }
 
     void setName(const std::string &name) { name_ = name; }
+
     void setSid(uint64_t sid) { sid_ = sid; }
+
     void setCid(uint64_t cid) { cid_ = cid; }
+
     void setStats(const StoryStats &stats) { stats_ = stats; }
 
     std::unordered_map<chronolog::ClientId, ClientInfo *> &getAcquirerMap() {
         return acquirerClientMap_;
     }
 
-    void addAcquirerClient( chronolog::ClientId const &client_id, ClientInfo *clientInfo) {
-        if(nullptr == clientInfo)
-        {   return; }
+    void addAcquirerClient(chronolog::ClientId const &client_id, ClientInfo *clientInfo) {
+        if (nullptr == clientInfo) { return; }
 
         std::lock_guard<std::mutex> acquirerClientListLock(acquirerClientMapMutex_);
         acquirerClientMap_.emplace(client_id, clientInfo);
@@ -88,10 +95,10 @@ public:
         if (isAcquiredByClient(client_id)) {
             acquirerClientMap_.erase(client_id);
             LOGD("acquirer client_id=%lu is removed from Story name=%s", client_id, name_.c_str());
-            return CL_SUCCESS;
+            return chronolog::CL_SUCCESS;
         } else {
             LOGD("Story name=%lu is not acquired by client_id=%s", client_id, name_.c_str());
-            return CL_ERR_UNKNOWN;
+            return chronolog::CL_ERR_UNKNOWN;
         }
     }
 
@@ -103,24 +110,27 @@ public:
         }
     }
 
-    void setProperty(const std::unordered_map<std::string, std::string>& attrs) {
-        for (auto const& entry : attrs) {
+    void setProperty(const std::unordered_map<std::string, std::string> &attrs) {
+        for (auto const &entry: attrs) {
             propertyList_.emplace(entry.first, entry.second);
         }
     }
+
     void setEventMap(const std::unordered_map<std::string, Event> &eventMap) { eventMap_ = eventMap; }
 
     uint64_t incrementAcquisitionCount() {
         stats_.count++;
         return stats_.count;
     }
+
     uint64_t decrementAcquisitionCount() {
         stats_.count--;
         return stats_.count;
     }
+
     uint64_t getAcquisitionCount() const { return stats_.count; }
 
-    friend std::ostream& operator<<(std::ostream& os, const Story& story);
+    friend std::ostream &operator<<(std::ostream &os, const Story &story);
 
 private:
     std::string name_;
@@ -134,7 +144,7 @@ private:
     std::unordered_map<std::string, Event> eventMap_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Story& story) {
+inline std::ostream &operator<<(std::ostream &os, const Story &story) {
     os << "name: " << story.name_ << ", "
        << "sid: " << story.sid_ << ", "
        << "access count: " << story.stats_.count;

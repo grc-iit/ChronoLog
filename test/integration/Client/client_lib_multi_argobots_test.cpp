@@ -13,14 +13,12 @@
 
 chronolog::Client *client;
 
-struct thread_arg
-{
+struct thread_arg {
     int tid;
     std::string client_id;
 };
 
-void thread_function(void *tt)
-{
+void thread_function(void *tt) {
     struct thread_arg *t = (struct thread_arg *) tt;
 
     //std::string server_ip = CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.VISOR_END_CONF.VISOR_IP.string();
@@ -40,7 +38,8 @@ void thread_function(void *tt)
     chronicle_attrs.emplace("TieringPolicy", "Hot");
     ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
     std::cout << "tid=" << t->tid << " Createchronicle {" << chronicle_name << "} ret: " << ret << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_CHRONICLE_EXISTS || ret == CL_ERR_NO_KEEPERS);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS ||
+           ret == chronolog::CL_ERR_NO_KEEPERS);
     flags = 1;
     std::string story_name = gen_random(STORY_NAME_LEN);
     std::unordered_map<std::string, std::string> story_attrs;
@@ -51,29 +50,30 @@ void thread_function(void *tt)
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
     std::cout << "tid=" << t->tid << " AcquireStory {" << chronicle_name << ":" << story_name << "} ret: "
               << acquire_ret.first << std::endl;
-    assert(acquire_ret.first == CL_SUCCESS || acquire_ret.first == CL_ERR_NOT_EXIST ||
-           acquire_ret.first == CL_ERR_NO_KEEPERS);
+    assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST ||
+           acquire_ret.first == chronolog::CL_ERR_NO_KEEPERS);
     ret = client->DestroyStory(chronicle_name, story_name);
     std::cout << "tid=" << t->tid << " DestroyStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
               << std::endl;
-    assert(ret == CL_ERR_ACQUIRED || ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_NO_KEEPERS);
+    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST ||
+           ret == chronolog::CL_ERR_NO_KEEPERS);
     ret = client->Disconnect();
     std::cout << "tid=" << t->tid << " Disconnect{" << "} ret: " << ret << std::endl;
-    assert(ret == CL_ERR_ACQUIRED || ret == CL_SUCCESS);
+    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS);
     ret = client->ReleaseStory(chronicle_name, story_name);
     std::cout << "tid=" << t->tid << " ReleaseStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
               << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS || ret == CL_ERR_NOT_EXIST);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_KEEPERS || ret == chronolog::CL_ERR_NOT_EXIST);
     ret = client->DestroyStory(chronicle_name, story_name);
     std::cout << "tid=" << t->tid << " DestroyStory {" << chronicle_name << ":" << story_name << "} ret: " << ret
               << std::endl;
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED || ret == CL_ERR_NO_KEEPERS);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
+           ret == chronolog::CL_ERR_NO_KEEPERS);
     ret = client->DestroyChronicle(chronicle_name);
-    assert(ret == CL_SUCCESS || ret == CL_ERR_NOT_EXIST || ret == CL_ERR_ACQUIRED);
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     std::atomic<long> duration_connect{}, duration_disconnect{};
     std::vector<std::thread> thread_vec;
     uint64_t offset;
@@ -82,8 +82,7 @@ int main(int argc, char **argv)
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty())
-    {
+    if (conf_file_path.empty()) {
         conf_file_path = default_conf_file_path;
     }
 
@@ -106,10 +105,9 @@ int main(int argc, char **argv)
     int flags = 0;
 
     int ret = client->Connect();//server_uri, client_id, flags);//, offset);
-    assert(ret == CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
-    for (int i = 0; i < num_threads; i++)
-    {
+    for (int i = 0; i < num_threads; i++) {
         t_args[i].tid = i;
         t_args[i].client_id = client_id;
     }
@@ -118,28 +116,24 @@ int main(int argc, char **argv)
 
     ABT_xstream_self(&xstreams[0]);
 
-    for (int i = 1; i < num_xstreams; i++)
-    {
+    for (int i = 1; i < num_xstreams; i++) {
         ABT_xstream_create(ABT_SCHED_NULL, &xstreams[i]);
     }
 
 
-    for (int i = 0; i < num_xstreams; i++)
-    {
+    for (int i = 0; i < num_xstreams; i++) {
         ABT_xstream_get_main_pools(xstreams[i], 1, &pools[i]);
     }
 
 
-    for (int i = 0; i < num_threads; i++)
-    {
+    for (int i = 0; i < num_threads; i++) {
         ABT_thread_create(pools[i], thread_function, &t_args[i], ABT_THREAD_ATTR_NULL, &threads[i]);
     }
 
     for (int i = 0; i < num_threads; i++)
         ABT_thread_free(&threads[i]);
 
-    for (int i = 1; i < num_xstreams; i++)
-    {
+    for (int i = 1; i < num_xstreams; i++) {
         ABT_xstream_join(xstreams[i]);
         ABT_xstream_free(&xstreams[i]);
     }
@@ -152,7 +146,7 @@ int main(int argc, char **argv)
 
     ret = client->Disconnect();//client_id, flags);
     std::cout << "main Disconnect ret: " << ret << std::endl;
-    assert(ret == CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     delete client;
 

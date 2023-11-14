@@ -55,7 +55,7 @@ int main(int argc, char **argv)
         server_uri += "://" + server_ip + ":" + std::to_string(base_port + i);
         t1 = std::chrono::steady_clock::now();
         ret = client.Connect();//server_uri, client_ids[i], flags); //, offset);
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         t2 = std::chrono::steady_clock::now();
         duration_connect += (t2 - t1);
     }
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     {
         t1 = std::chrono::steady_clock::now();
         ret = client.Disconnect(); //client_ids[i], flags);
-        assert(ret == CL_SUCCESS);
+        assert(ret == chronolog::CL_SUCCESS);
         t2 = std::chrono::steady_clock::now();
         duration_disconnect += (t2 - t1);
     };

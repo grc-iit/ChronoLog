@@ -40,7 +40,7 @@ int chronolog::KeeperDataStore::startStoryRecording(std::string const& chronicle
             pipelinesWaitingForExit.erase(waiting_iter);
         }
 
-        return CL_SUCCESS;
+        return chronolog::CL_SUCCESS;
     }
 
     auto result = theMapOfStoryPipelines.emplace(std::pair<chl::StoryId, chl::StoryPipeline*> (story_id, 
@@ -54,7 +54,7 @@ int chronolog::KeeperDataStore::startStoryRecording(std::string const& chronicle
         StoryIngestionHandle * ingestionHandle = (*pipeline_iter).second->getActiveIngestionHandle();
         theIngestionQueue.addStoryIngestionHandle( story_id, ingestionHandle);
 
-        return CL_SUCCESS;
+        return chronolog::CL_SUCCESS;
     } 
 	else
     { 
@@ -82,7 +82,7 @@ int chronolog::KeeperDataStore::stopStoryRecording(chronolog::StoryId const& sto
         pipelinesWaitingForExit[(*pipeline_iter).first] =(std::pair<chl::StoryPipeline*, uint64_t>((*pipeline_iter).second, exit_time) );
     }
 
-return CL_SUCCESS;
+return chronolog::CL_SUCCESS;
 }
 
 ////////////////////////

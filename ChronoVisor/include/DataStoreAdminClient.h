@@ -10,74 +10,92 @@
 
 namespace tl = thallium;
 
-namespace chronolog {
+namespace chronolog
+{
 
 //typedef std::string ChronicleName;
 //typedef std::string StoryName;
 //typedef uint64_t StoryId;
 
-    class DataStoreAdminClient {
+    class DataStoreAdminClient
+    {
 
     public:
         static DataStoreAdminClient *CreateDataStoreAdminClient(tl::engine &tl_engine,
                                                                 std::string const &collection_service_addr,
-                                                                uint16_t collection_provider_id) {
+                                                                uint16_t collection_provider_id)
+        {
             DataStoreAdminClient *adminClient = nullptr;
-            try {
+            try
+            {
                 adminClient = new DataStoreAdminClient(tl_engine, collection_service_addr, collection_provider_id);
             }
-            catch (tl::exception const &ex) {
+            catch (tl::exception const &ex)
+            {
                 std::cout << "ERROR: failed to create DataStoreAdminClient" << std::endl;
             }
             return adminClient;
         }
 
 
-        int collection_is_available() {
+        int collection_is_available()
+        {
             int available = 0;
-            try {
+            try
+            {
                 available = collection_service_available.on(service_handle)();
                 std::cout << "DataStoreAdminClient: service_available:" << (available) << std::endl;
             }
-            catch (tl::exception const &ex) {
+            catch (tl::exception const &ex)
+            {
                 std::cout << "ERROR:DataStoreAdminClient: service unavailable:" << (available) << std::endl;
             }
             return available;
         }
 
-        int shutdown_collection() {
+        int shutdown_collection()
+        {
 
             int status = chronolog::CL_ERR_UNKNOWN;
-            try {
+            try
+            {
                 std::cout << "DataStoreAdminClient: shutdown_collection:" << std::endl;
                 status = shutdown_data_collection.on(service_handle)();
             }
-            catch (tl::exception const &ex) {}
+            catch (tl::exception const &ex)
+            {}
             return status;
         }
 
         int send_start_story_recording(ChronicleName const &chronicle_name, StoryName const &story_name,
-                                       StoryId const &story_id, uint64_t start_time) {
+                                       StoryId const &story_id, uint64_t start_time)
+        {
             int status = chronolog::CL_ERR_UNKNOWN;
-            try {
+            try
+            {
                 std::cout << "CollectionClient: start_story_recording:" << story_id << std::endl;
                 status = start_story_recording.on(service_handle)(chronicle_name, story_name, story_id, start_time);
             }
-            catch (tl::exception const &ex) {}
+            catch (tl::exception const &ex)
+            {}
             return status;
         }
 
-        int send_stop_story_recording(StoryId const &story_id) {
+        int send_stop_story_recording(StoryId const &story_id)
+        {
             int status = chronolog::CL_ERR_UNKNOWN;
-            try {
+            try
+            {
                 std::cout << "DatastoreAdminClient: stop_story_recording" << story_id << std::endl;
                 status = stop_story_recording.on(service_handle)(story_id);
             }
-            catch (tl::exception const &ex) {}
+            catch (tl::exception const &ex)
+            {}
             return status;
         }
 
-        ~DataStoreAdminClient() {
+        ~DataStoreAdminClient()
+        {
             collection_service_available.deregister();
             shutdown_data_collection.deregister();
             start_story_recording.deregister();
@@ -99,7 +117,8 @@ namespace chronolog {
         DataStoreAdminClient(tl::engine &tl_engine, std::string const &collection_service_addr,
                              uint16_t collection_provider_id)
                 : service_addr(collection_service_addr), service_provider_id(collection_provider_id),
-                  service_handle(tl_engine.lookup(collection_service_addr), collection_provider_id) {
+                  service_handle(tl_engine.lookup(collection_service_addr), collection_provider_id)
+        {
             collection_service_available = tl_engine.define("collection_service_available");
             shutdown_data_collection = tl_engine.define("shutdown_data_collection");
             start_story_recording = tl_engine.define("start_story_recording");

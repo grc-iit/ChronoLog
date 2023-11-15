@@ -13,12 +13,14 @@
 
 chronolog::Client *client;
 
-struct thread_arg {
+struct thread_arg
+{
     int tid;
     std::string client_id;
 };
 
-void thread_function(void *tt) {
+void thread_function(void *tt)
+{
     struct thread_arg *t = (struct thread_arg *) tt;
 
     //std::string server_ip = CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.VISOR_END_CONF.VISOR_IP.string();
@@ -73,7 +75,8 @@ void thread_function(void *tt) {
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     std::atomic<long> duration_connect{}, duration_disconnect{};
     std::vector<std::thread> thread_vec;
     uint64_t offset;
@@ -82,7 +85,8 @@ int main(int argc, char **argv) {
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty()) {
+    if (conf_file_path.empty())
+    {
         conf_file_path = default_conf_file_path;
     }
 
@@ -107,7 +111,8 @@ int main(int argc, char **argv) {
     int ret = client->Connect();//server_uri, client_id, flags);//, offset);
     assert(ret == chronolog::CL_SUCCESS);
 
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++)
+    {
         t_args[i].tid = i;
         t_args[i].client_id = client_id;
     }
@@ -116,24 +121,28 @@ int main(int argc, char **argv) {
 
     ABT_xstream_self(&xstreams[0]);
 
-    for (int i = 1; i < num_xstreams; i++) {
+    for (int i = 1; i < num_xstreams; i++)
+    {
         ABT_xstream_create(ABT_SCHED_NULL, &xstreams[i]);
     }
 
 
-    for (int i = 0; i < num_xstreams; i++) {
+    for (int i = 0; i < num_xstreams; i++)
+    {
         ABT_xstream_get_main_pools(xstreams[i], 1, &pools[i]);
     }
 
 
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++)
+    {
         ABT_thread_create(pools[i], thread_function, &t_args[i], ABT_THREAD_ATTR_NULL, &threads[i]);
     }
 
     for (int i = 0; i < num_threads; i++)
         ABT_thread_free(&threads[i]);
 
-    for (int i = 1; i < num_xstreams; i++) {
+    for (int i = 1; i < num_xstreams; i++)
+    {
         ABT_xstream_join(xstreams[i]);
         ABT_xstream_free(&xstreams[i]);
     }

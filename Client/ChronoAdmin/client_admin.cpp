@@ -31,7 +31,8 @@ Created by Aparna on 01/12/2023
 #include <common.h>
 #include <cassert>
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 
     std::string hostname;
     std::string portnum;
@@ -41,12 +42,14 @@ int main(int argc, char **argv) {
     std::string server_uri;
     std::vector<std::string> args;
 
-    if (argc != 7) {
+    if (argc != 7)
+    {
         std::cout << " ChronoAdmin usage : ./ChronoAdmin -protocol p -hostname h -port n" << std::endl;
         exit(-1);
     }
 
-    for (int i = 1; i < 7; i++) {
+    for (int i = 1; i < 7; i++)
+    {
         std::string s(argv[i]);
         args.push_back(s);
     }
@@ -57,15 +60,21 @@ int main(int argc, char **argv) {
     int portno = -1;
     protocol = (ChronoLogRPCImplementation) - 1;
 
-    for (int i = 0; i < args.size(); i++) {
-        if (i % 2 == 0) {
-            if (args[i].compare("-protocol") == 0) {
+    for (int i = 0; i < args.size(); i++)
+    {
+        if (i % 2 == 0)
+        {
+            if (args[i].compare("-protocol") == 0)
+            {
                 protocol = (ChronoLogRPCImplementation) std::stoi(args[i + 1]);
-            } else if (args[i].compare("-hostname") == 0) {
+            } else if (args[i].compare("-hostname") == 0)
+            {
                 hostname = args[i + 1];
-            } else if (args[i].compare("-port") == 0) {
+            } else if (args[i].compare("-port") == 0)
+            {
                 portno = std::stoi(args[i + 1]);
-            } else {
+            } else
+            {
                 end_program = true;
                 break;
             }
@@ -74,7 +83,8 @@ int main(int argc, char **argv) {
 
     if (end_program || protocol == -1 || hostname.empty() || portno == -1) exit(-1);
 
-    if (protocol < 0 || protocol > 2) {
+    if (protocol < 0 || protocol > 2)
+    {
         std::cout << " protocol not supported : valid values are 0 (sockets), 1 (tcp) and 2 (verbs)" << std::endl;
         end_program = true;
     }
@@ -85,7 +95,8 @@ int main(int argc, char **argv) {
     std::string host_ip;
 
     struct hostent *he = gethostbyname(hostname.c_str());
-    if (he == 0) {
+    if (he == 0)
+    {
         std::cout << " hostname not found, Exiting" << std::endl;
         exit(-1);
     }
@@ -95,11 +106,13 @@ int main(int argc, char **argv) {
 
     std::string protocolstring;
 
-    if (protocol == 0) {
+    if (protocol == 0)
+    {
         protocolstring = "ofi+sockets";
         ChronoLogCharStruct prot_struct(protocolstring);
         CHRONOLOG_CONF->SOCKETS_CONF = prot_struct;
-    } else if (protocol == 1) {
+    } else if (protocol == 1)
+    {
         protocolstring = "ofi+tcp";
         ChronoLogCharStruct prot_struct(protocolstring);
         CHRONOLOG_CONF->SOCKETS_CONF = prot_struct;
@@ -118,10 +131,12 @@ int main(int argc, char **argv) {
 
     std::string client_id = gen_random(8);
 
-    try {
+    try
+    {
         ret = client.Connect(server_uri, client_id, flags, offset);
     }
-    catch (const thallium::exception &e) {
+    catch (const thallium::exception &e)
+    {
         std::cerr << " Failed to connect" << e.what() << std::endl;
         exit(-1);
     };
@@ -154,7 +169,8 @@ int main(int argc, char **argv) {
 
     flags = 0;
 
-    while (true) {
+    while (true)
+    {
         str.clear();
         std::getline(std::cin, str);
         if (str.compare("-disconnect") == 0) break;
@@ -164,13 +180,15 @@ int main(int argc, char **argv) {
         char *s = std::strtok((char *) str.c_str(), delim);
         command_subs.push_back(s);
 
-        while (s != NULL) {
+        while (s != NULL)
+        {
             s = std::strtok(NULL, delim);
             if (s != NULL)
                 command_subs.push_back(s);
         }
 
-        if (command_subs[0].compare("-c") == 0) {
+        if (command_subs[0].compare("-c") == 0)
+        {
             assert(command_subs.size() == 2);
             std::string chronicle_name = command_subs[1];
             std::unordered_map<std::string, std::string> chronicle_attrs;
@@ -179,7 +197,8 @@ int main(int argc, char **argv) {
             chronicle_attrs.emplace("TieringPolicy", "Hot");
             ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
             assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS);
-        } else if (command_subs[0].compare("-s") == 0) {
+        } else if (command_subs[0].compare("-s") == 0)
+        {
             assert(command_subs.size() == 3);
             std::string chronicle_name = command_subs[1];
             std::string story_name = command_subs[2];
@@ -190,35 +209,44 @@ int main(int argc, char **argv) {
             ret = client.CreateStory(chronicle_name, story_name, story_attrs, flags);
             assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_STORY_EXISTS);
 
-        } else if (command_subs[0].compare("-a") == 0) {
-            if (command_subs[1].compare("-c") == 0) {
+        } else if (command_subs[0].compare("-a") == 0)
+        {
+            if (command_subs[1].compare("-c") == 0)
+            {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.AcquireChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0) {
+            } else if (command_subs[1].compare("-s") == 0)
+            {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];
                 std::string story_name = command_subs[3];
                 ret = client.AcquireStory(chronicle_name, story_name, flags);
             }
-        } else if (command_subs[0].compare("-r") == 0) {
-            if (command_subs[1].compare("-c") == 0) {
+        } else if (command_subs[0].compare("-r") == 0)
+        {
+            if (command_subs[1].compare("-c") == 0)
+            {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.ReleaseChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0) {
+            } else if (command_subs[1].compare("-s") == 0)
+            {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];
                 std::string story_name = command_subs[3];
                 ret = client.ReleaseStory(chronicle_name, story_name, flags);
             }
 
-        } else if (command_subs[0].compare("-d") == 0) {
-            if (command_subs[1].compare("-c") == 0) {
+        } else if (command_subs[0].compare("-d") == 0)
+        {
+            if (command_subs[1].compare("-c") == 0)
+            {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.DestroyChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0) {
+            } else if (command_subs[1].compare("-s") == 0)
+            {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];
                 std::string story_name = command_subs[3];

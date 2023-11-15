@@ -24,41 +24,52 @@
 namespace tl = thallium;
 
 
-namespace chronolog {
+namespace chronolog
+{
 
 
-    class RpcVisorClient {
+    class RpcVisorClient
+    {
 
     public:
         static RpcVisorClient *CreateRpcVisorClient(tl::engine &tl_engine,
-                                                    std::string const &service_addr, uint16_t provider_id) {
-            try {
+                                                    std::string const &service_addr, uint16_t provider_id)
+        {
+            try
+            {
                 return new RpcVisorClient(tl_engine, service_addr, provider_id);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
             }
             return nullptr;
         }
 
 
-        ConnectResponseMsg Connect(uint32_t client_euid, uint32_t client_host_ip, uint32_t client_pid) {
+        ConnectResponseMsg Connect(uint32_t client_euid, uint32_t client_host_ip, uint32_t client_pid)
+        {
             LOGD("%s  with args: accout=%u, host_id=%u pid=%u",
                  __FUNCTION__, client_euid, client_host_ip, client_pid);
-            try {
+            try
+            {
                 return visor_connect.on(service_ph)(client_euid, client_host_ip, client_pid);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (ConnectResponseMsg(chronolog::CL_ERR_UNKNOWN, ClientId{0}));
         }
 
-        int Disconnect(ClientId const &client_id) {
+        int Disconnect(ClientId const &client_id)
+        {
             LOGD("%s with client_id=%lu", __FUNCTION__, client_id);
-            try {
+            try
+            {
                 return visor_disconnect.on(service_ph)(client_id);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
@@ -66,25 +77,31 @@ namespace chronolog {
 
         int CreateChronicle(ClientId const &client_id, std::string const &name,
                             const std::unordered_map<std::string, std::string> &attrs,
-                            int &flags) {
+                            int &flags)
+        {
             LOGD("%s is called in PID=%d, with args: name=%s, flags=%d, attrs=",
                  __FUNCTION__, getpid(), name.c_str(), flags);
-            try {
+            try
+            {
                 return create_chronicle.on(service_ph)(client_id, name, attrs, flags);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
 
         }
 
-        int DestroyChronicle(ClientId const &client_id, std::string const &name) {
+        int DestroyChronicle(ClientId const &client_id, std::string const &name)
+        {
             LOGD("%s is called in PID=%d, with args: name=%s", __FUNCTION__, getpid(), name.c_str());
-            try {
+            try
+            {
                 return destroy_chronicle.on(service_ph)(client_id, name);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
@@ -92,37 +109,46 @@ namespace chronolog {
 
         chronolog::AcquireStoryResponseMsg
         AcquireStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name,
-                     const std::unordered_map<std::string, std::string> &attrs, const int &flags) {
+                     const std::unordered_map<std::string, std::string> &attrs, const int &flags)
+        {
             LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s, flags=%d",
                  __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str(), flags);
-            try {
+            try
+            {
                 return acquire_story.on(service_ph)(client_id, chronicle_name, story_name, attrs, flags);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (AcquireStoryResponseMsg(chronolog::CL_ERR_UNKNOWN, 0, std::vector<KeeperIdCard>{}));
         }
 
-        int ReleaseStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name) {
+        int ReleaseStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name)
+        {
             LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s",
                  __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str());
-            try {
+            try
+            {
                 return release_story.on(service_ph)(client_id, chronicle_name, story_name);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
         }
 
-        int DestroyStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name) {
+        int DestroyStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name)
+        {
             LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s",
                  __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
-            try {
+            try
+            {
                 return destroy_story.on(service_ph)(client_id, chronicle_name, story_name);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
@@ -130,26 +156,32 @@ namespace chronolog {
 
 
         int GetChronicleAttr(ClientId const &client_id, std::string const &name, const std::string &key,
-                             std::string &value) {
+                             std::string &value)
+        {
             LOGD("%s is called in PID=%d, with args: name=%s, key=%s", __FUNCTION__, getpid(), name.c_str(),
                  key.c_str());
-            try {
+            try
+            {
                 return get_chronicle_attr.on(service_ph)(client_id, name, key, value);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
         }
 
         int EditChronicleAttr(ClientId const &client_id, std::string const &name, const std::string &key,
-                              const std::string &value) {
+                              const std::string &value)
+        {
             LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s",
                  __FUNCTION__, getpid(), name.c_str(), key.c_str(), value.c_str());
-            try {
+            try
+            {
                 return edit_chronicle_attr.on(service_ph)(client_id, name, key, value);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (chronolog::CL_ERR_UNKNOWN);
@@ -158,10 +190,12 @@ namespace chronolog {
         std::vector<std::string> ShowChronicles(ClientId const &client_id) //, std::vector<std::string> & chronicles)
         {
             LOGD("%s is called in PID=%d, with args: client_id=%lu", __FUNCTION__, getpid(), client_id);
-            try {
+            try
+            {
                 return show_chronicles.on(service_ph)(client_id);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (std::vector<std::string>{});
@@ -172,17 +206,20 @@ namespace chronolog {
         {
             LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s",
                  __FUNCTION__, getpid(), client_id, chronicle_name.c_str());
-            try {
+            try
+            {
                 return show_stories.on(service_ph)(client_id, chronicle_name);
             }
-            catch (tl::exception const &) {
+            catch (tl::exception const &)
+            {
 
             }
             return (std::vector<std::string>{});
         }
 
 
-        ~RpcVisorClient() {
+        ~RpcVisorClient()
+        {
             visor_connect.deregister();
             visor_disconnect.deregister();
             create_chronicle.deregister();
@@ -222,7 +259,8 @@ namespace chronolog {
         // constructor is private to make sure thalium rpc objects are created on the heap, not stack
         RpcVisorClient(tl::engine &tl_engine, std::string const &service_addr, uint16_t provider_id)
                 : service_addr(service_addr), service_provider_id(provider_id),
-                  service_ph(tl_engine.lookup(service_addr), provider_id) {
+                  service_ph(tl_engine.lookup(service_addr), provider_id)
+        {
             std::cout << " RpcVisorClient created for Visor Service at {" << service_addr << "} provider_id {"
                       << service_provider_id << "}" << std::endl;
             visor_connect = tl_engine.define("Connect");

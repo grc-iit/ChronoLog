@@ -19,10 +19,12 @@
 #include "KeeperRegistry.h"
 #include "AcquireStoryResponseMsg.h"
 
-class RPCVisor {
+class RPCVisor
+{
 public:
     RPCVisor(chronolog::KeeperRegistry *keeper_registry)
-            : keeperRegistry(keeper_registry) {
+            : keeperRegistry(keeper_registry)
+    {
         LOGD("%s constructor is called", typeid(*this).name());
         clientManager = ChronoLog::Singleton<ClientRegistryManager>::GetInstance();
         chronicleMetaDirectory = ChronoLog::Singleton<ChronicleMetaDirectory>::GetInstance();
@@ -35,32 +37,38 @@ public:
              typeid(*this).name(), this, getpid());
     }
 
-    ~RPCVisor() {
+    ~RPCVisor()
+    {
     }
 
-    void Visor_start() { //chronolog::KeeperRegistry * keeper_registry) {
+    void Visor_start()
+    { //chronolog::KeeperRegistry * keeper_registry) {
         rpc->start();
     }
 
     /**
      * Admin APIs
      */
-    int LocalConnect(const std::string &uri, std::string const &client_id, int &flags, uint64_t &clock_offset) {
+    int LocalConnect(const std::string &uri, std::string const &client_id, int &flags, uint64_t &clock_offset)
+    {
         LOGD("%s in ChronoLogAdminRPCProxy@%p called in PID=%d, with args: uri=%s",
              __FUNCTION__, this, getpid(), uri.c_str());
         ClientInfo record;
         record.addr_ = "127.0.0.1";
-        if (std::strtol(client_id.c_str(), nullptr, 10) < 0) {
+        if (std::strtol(client_id.c_str(), nullptr, 10) < 0)
+        {
             LOGE("client_id=%s is invalid", client_id.c_str());
             return chronolog::CL_ERR_INVALID_ARG;
         }
         return clientManager->add_client_record(client_id, record);
     }
 
-    int LocalDisconnect(std::string const &client_id, int &flags) {
+    int LocalDisconnect(std::string const &client_id, int &flags)
+    {
         LOGD("%s is called in PID=%d, with args: client_id=%s, flags=%d",
              __FUNCTION__, getpid(), client_id.c_str(), flags);
-        if (std::strtol(client_id.c_str(), nullptr, 10) < 0) {
+        if (std::strtol(client_id.c_str(), nullptr, 10) < 0)
+        {
             LOGE("client_id=%s is invalid", client_id.c_str());
             return chronolog::CL_ERR_INVALID_ARG;
         }
@@ -72,36 +80,46 @@ public:
      */
     int LocalCreateChronicle(std::string const &name,
                              const std::unordered_map<std::string, std::string> &attrs,
-                             int &flags) {
+                             int &flags)
+    {
         LOGD("%s is called in PID=%d, with args: name=%s, attrs=", __FUNCTION__, getpid(), name.c_str());
-        for (auto iter = attrs.begin(); iter != attrs.end(); ++iter) {
+        for (auto iter = attrs.begin(); iter != attrs.end(); ++iter)
+        {
             LOGD("%s=%s", iter->first.c_str(), iter->second.c_str());
         }
 
-        if (!name.empty()) {
+        if (!name.empty())
+        {
             return chronicleMetaDirectory->create_chronicle(name);
-        } else {
+        } else
+        {
             LOGE("name is empty");
             return chronolog::CL_ERR_INVALID_ARG;
         }
     }
 
-    int LocalDestroyChronicle(std::string const &name) {
+    int LocalDestroyChronicle(std::string const &name)
+    {
         LOGD("%s is called in PID=%d, with args: name=%s", __FUNCTION__, getpid(), name.c_str());
-        if (!name.empty()) {
+        if (!name.empty())
+        {
             return chronicleMetaDirectory->destroy_chronicle(name);
-        } else {
+        } else
+        {
             LOGE("name is empty");
             return chronolog::CL_ERR_INVALID_ARG;
         }
     }
 
-    int LocalDestroyStory(std::string const &chronicle_name, std::string const &story_name) {
+    int LocalDestroyStory(std::string const &chronicle_name, std::string const &story_name)
+    {
         LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s",
              __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
-        if (!chronicle_name.empty() && !story_name.empty()) {
+        if (!chronicle_name.empty() && !story_name.empty())
+        {
             return chronicleMetaDirectory->destroy_story(chronicle_name, story_name);
-        } else {
+        } else
+        {
             if (chronicle_name.empty())
                 LOGE("chronicle name is empty");
             if (story_name.empty())
@@ -116,7 +134,8 @@ public:
                                                          std::string const &chronicle_name,
                                                          std::string const &story_name,
                                                          const std::unordered_map<std::string, std::string> &attrs,
-                                                         int &flags) {
+                                                         int &flags)
+    {
         LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s, flags=%d",
              __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str(), flags);
 
@@ -152,9 +171,11 @@ public:
         recording_keepers = keeperRegistry->getActiveKeepers(recording_keepers);
         // if this is the first client to acquire this story we need to notify the recording Keepers
         // so that they are ready to start recording this story
-        if (notify_keepers) {
+        if (notify_keepers)
+        {
             if (0 != keeperRegistry->notifyKeepersOfStoryRecordingStart(recording_keepers, chronicle_name, story_name,
-                                                                        story_id)) {  // RPC notification to the keepers might have failed, release the newly acquired story
+                                                                        story_id))
+            {  // RPC notification to the keepers might have failed, release the newly acquired story
                 chronicleMetaDirectory->release_story(client_id, chronicle_name, story_name, story_id, notify_keepers);
                 //TODO: chronicleMetaDirectory->release_story(client_id, story_id, notify_keepers);
                 //we do know that there's no need notify keepers of the story ending in this case as it hasn't started...
@@ -174,20 +195,24 @@ public:
     //TODO: check if flags are ever needed to release the story...
 
     int
-    LocalReleaseStory(std::string const &client_id, std::string const &chronicle_name, std::string const &story_name) {
+    LocalReleaseStory(std::string const &client_id, std::string const &chronicle_name, std::string const &story_name)
+    {
         LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s",
              __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
 
         //TODO: add this check on the client side so we dont' waste RPC call on empty strings...
-        if (chronicle_name.empty() || story_name.empty()) { return chronolog::CL_ERR_INVALID_ARG; }
+        if (chronicle_name.empty() || story_name.empty())
+        { return chronolog::CL_ERR_INVALID_ARG; }
 
         StoryId story_id(0);
         bool notify_keepers = false;
         auto return_code = chronicleMetaDirectory->release_story(client_id, chronicle_name, story_name, story_id,
                                                                  notify_keepers);
-        if (chronolog::CL_SUCCESS != return_code) { return return_code; }
+        if (chronolog::CL_SUCCESS != return_code)
+        { return return_code; }
 
-        if (notify_keepers && keeperRegistry->is_running()) {
+        if (notify_keepers && keeperRegistry->is_running())
+        {
             std::vector<chronolog::KeeperIdCard> recording_keepers;
             keeperRegistry->notifyKeepersOfStoryRecordingStop(keeperRegistry->getActiveKeepers(recording_keepers),
                                                               story_id);
@@ -198,12 +223,15 @@ public:
     }
     //////////////
 
-    int LocalGetChronicleAttr(std::string const &name, const std::string &key, std::string &value) {
+    int LocalGetChronicleAttr(std::string const &name, const std::string &key, std::string &value)
+    {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s", __FUNCTION__, getpid(), name.c_str(), key.c_str());
-        if (!name.empty() && !key.empty()) {
+        if (!name.empty() && !key.empty())
+        {
             chronicleMetaDirectory->get_chronicle_attr(name, key, value);
             return chronolog::CL_SUCCESS;
-        } else {
+        } else
+        {
             if (name.empty())
                 LOGE("name is empty");
             if (key.empty())
@@ -212,12 +240,15 @@ public:
         }
     }
 
-    int LocalEditChronicleAttr(std::string const &name, const std::string &key, const std::string &value) {
+    int LocalEditChronicleAttr(std::string const &name, const std::string &key, const std::string &value)
+    {
         LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s",
              __FUNCTION__, getpid(), name.c_str(), key.c_str(), value.c_str());
-        if (!name.empty() && !key.empty() && !value.empty()) {
+        if (!name.empty() && !key.empty() && !value.empty())
+        {
             return chronicleMetaDirectory->edit_chronicle_attr(name, key, value);
-        } else {
+        } else
+        {
             if (name.empty())
                 LOGE("name is empty");
             if (key.empty())
@@ -226,22 +257,27 @@ public:
         }
     }
 
-    std::vector<std::string> LocalShowChronicles(std::string &client_id) {
+    std::vector<std::string> LocalShowChronicles(std::string &client_id)
+    {
         LOGD("%s is called in PID=%d, with args: client_id=%s", __FUNCTION__, getpid(), client_id.c_str());
         return chronicleMetaDirectory->show_chronicles(client_id);
     }
 
-    std::vector<std::string> LocalShowStories(std::string &client_id, const std::string &chronicle_name) {
+    std::vector<std::string> LocalShowStories(std::string &client_id, const std::string &chronicle_name)
+    {
         LOGD("%s is called in PID=%d, with args: client_id=%s, chronicle_name=%s",
              __FUNCTION__, getpid(), client_id.c_str(), chronicle_name.c_str());
         return chronicleMetaDirectory->show_stories(client_id, chronicle_name);
     }
 
-    void bind_functions() {
-        switch (CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.RPC_IMPLEMENTATION) {
+    void bind_functions()
+    {
+        switch (CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.RPC_IMPLEMENTATION)
+        {
             case CHRONOLOG_THALLIUM_SOCKETS:
             case CHRONOLOG_THALLIUM_TCP:
-            case CHRONOLOG_THALLIUM_ROCE: {
+            case CHRONOLOG_THALLIUM_ROCE:
+            {
                 std::function<void(const tl::request &,
                                    const std::string &,
                                    std::string const &,
@@ -251,7 +287,8 @@ public:
                                auto &&PH2,
                                auto &&PH3,
                                auto &&PH4,
-                               auto &&PH5) {
+                               auto &&PH5)
+                        {
                             ThalliumLocalConnect(std::forward<decltype(PH1)>(PH1),
                                                  std::forward<decltype(PH2)>(PH2),
                                                  std::forward<decltype(PH3)>(PH3),
@@ -264,7 +301,8 @@ public:
                                    int &)> disconnectFunc(
                         [this](auto &&PH1,
                                auto &&PH2,
-                               auto &&PH3) {
+                               auto &&PH3)
+                        {
                             ThalliumLocalDisconnect(std::forward<decltype(PH1)>(PH1),
                                                     std::forward<decltype(PH2)>(PH2),
                                                     std::forward<decltype(PH3)>(PH3));
@@ -277,7 +315,8 @@ public:
                         [this](auto &&PH1,
                                auto &&PH2,
                                auto &&PH3,
-                               auto &&PH4) {
+                               auto &&PH4)
+                        {
                             ThalliumLocalCreateChronicle(std::forward<decltype(PH1)>(PH1), \
                                                          std::forward<decltype(PH2)>(PH2),
                                                          std::forward<decltype(PH3)>(PH3),
@@ -289,7 +328,8 @@ public:
                 )> destroyChronicleFunc(
                         [this](auto &&PH1,
                                auto &&PH2
-                        ) {
+                        )
+                        {
                             ThalliumLocalDestroyChronicle(std::forward<decltype(PH1)>(PH1),
                                                           std::forward<decltype(PH2)>(PH2)
                             );
@@ -303,7 +343,8 @@ public:
                         [this](auto &&PH1,
                                auto &&PH2,
                                auto &&PH3
-                        ) {
+                        )
+                        {
                             ThalliumLocalDestroyStory(std::forward<decltype(PH1)>(PH1),
                                                       std::forward<decltype(PH2)>(PH2),
                                                       std::forward<decltype(PH3)>(PH3)
@@ -321,7 +362,8 @@ public:
                                auto &&PH3,
                                auto &&PH4,
                                auto &&PH5,
-                               auto &&PH6) {
+                               auto &&PH6)
+                        {
                             ThalliumLocalAcquireStory(std::forward<decltype(PH1)>(PH1),
                                                       std::forward<decltype(PH2)>(PH2),
                                                       std::forward<decltype(PH3)>(PH3),
@@ -339,7 +381,8 @@ public:
                                auto &&PH2,
                                auto &&PH3,
                                auto &&PH4
-                        ) {
+                        )
+                        {
                             ThalliumLocalReleaseStory(std::forward<decltype(PH1)>(PH1),
                                                       std::forward<decltype(PH2)>(PH2),
                                                       std::forward<decltype(PH3)>(PH3),
@@ -355,7 +398,8 @@ public:
                         [this](auto &&PH1,
                                auto &&PH2,
                                auto &&PH3,
-                               auto &&PH4) {
+                               auto &&PH4)
+                        {
                             ThalliumLocalGetChronicleAttr(std::forward<decltype(PH1)>(PH1),
                                                           std::forward<decltype(PH2)>(PH2),
                                                           std::forward<decltype(PH3)>(PH3),
@@ -369,7 +413,8 @@ public:
                         [this](auto &&PH1,
                                auto &&PH2,
                                auto &&PH3,
-                               auto &&PH4) {
+                               auto &&PH4)
+                        {
                             ThalliumLocalEditChronicleAttr(std::forward<decltype(PH1)>(PH1),
                                                            std::forward<decltype(PH2)>(PH2),
                                                            std::forward<decltype(PH3)>(PH3),
@@ -379,7 +424,8 @@ public:
                 std::function<void(const tl::request &,
                                    std::string &client_id)> showChroniclesFunc(
                         [this](auto &&PH1,
-                               auto &&PH2) {
+                               auto &&PH2)
+                        {
                             ThalliumLocalShowChronicles(std::forward<decltype(PH1)>(PH1),
                                                         std::forward<decltype(PH2)>(PH2));
                         }
@@ -389,7 +435,8 @@ public:
                                    const std::string &chroicle_name)> showStoriesFunc(
                         [this](auto &&PH1,
                                auto &&PH2,
-                               auto &&PH3) {
+                               auto &&PH3)
+                        {
                             ThalliumLocalShowStories(std::forward<decltype(PH1)>(PH1),
                                                      std::forward<decltype(PH2)>(PH2),
                                                      std::forward<decltype(PH3)>(PH3));
@@ -452,9 +499,11 @@ public:
                               std::string &client_id, const std::string &chronicle_name)
 
 private:
-    void set_prefix(std::string prefix) {
+    void set_prefix(std::string prefix)
+    {
         func_prefix = prefix;
-        switch (CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.RPC_IMPLEMENTATION) {
+        switch (CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.RPC_IMPLEMENTATION)
+        {
             case CHRONOLOG_THALLIUM_SOCKETS:
             case CHRONOLOG_THALLIUM_TCP:
             case CHRONOLOG_THALLIUM_ROCE:

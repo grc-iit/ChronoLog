@@ -7,12 +7,14 @@
 
 #define STORY_NAME_LEN 32
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty()) {
+    if (conf_file_path.empty())
+    {
         conf_file_path = default_conf_file_path;
     }
 
@@ -33,7 +35,8 @@ int main(int argc, char **argv) {
     std::string client_id = gen_random(8);
     int ret = client->Connect();//server_uri, client_id, flags);//, offset);
 #pragma omp for
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++)
+    {
         std::string chronicle_name;
         if (i % 2 == 0) chronicle_name = "gscs5er9TcdJ9mOgUDteDVBcI0oQjozK";
         else chronicle_name = "6RPkwqX2IOpR41dVCqmWauX9RfXIuTAp";

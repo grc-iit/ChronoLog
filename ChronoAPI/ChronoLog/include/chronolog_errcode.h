@@ -4,8 +4,10 @@
 
 #ifndef CHRONOLOG_CHRONOLOG_ERRCODE_H
 #define CHRONOLOG_CHRONOLOG_ERRCODE_H
-namespace chronolog {
-    enum ErrorCode {
+namespace chronolog
+{
+    enum ErrorCode
+    {
         CL_SUCCESS = 0,                      // Success
         CL_ERR_UNKNOWN = -1,                 // Error does not belong to any categories below
         CL_ERR_INVALID_ARG = -2,             // Invalid arguments

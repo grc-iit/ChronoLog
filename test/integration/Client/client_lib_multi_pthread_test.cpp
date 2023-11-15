@@ -7,14 +7,16 @@
 
 #define STORY_NAME_LEN 32
 
-struct thread_arg {
+struct thread_arg
+{
     int tid;
     std::string client_id;
 };
 
 chronolog::Client *client;
 
-void thread_body(struct thread_arg *t) {
+void thread_body(struct thread_arg *t)
+{
 
     std::cout << "Start Thread tid=" << t->tid << std::endl;
     //std::string server_ip = CHRONOLOG_CONF->RPC_CONF.CLIENT_VISOR_CONF.VISOR_END_CONF.VISOR_IP.string();
@@ -66,7 +68,8 @@ void thread_body(struct thread_arg *t) {
     std::cout << "Stop Thread tid=" << t->tid << std::endl;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 
 
     int provided;
@@ -80,7 +83,8 @@ int main(int argc, char **argv) {
     std::string default_conf_file_path = "./default_conf.json";
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    if (conf_file_path.empty()) {
+    if (conf_file_path.empty())
+    {
         conf_file_path = default_conf_file_path;
     }
 
@@ -96,7 +100,8 @@ int main(int argc, char **argv) {
     uint64_t offset;
     int ret = client->Connect(); //;server_uri, client_id, flags);//, offset);
 
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++)
+    {
         t_args[i].tid = i;
         t_args[i].client_id = client_id;
         std::thread t{thread_body, &t_args[i]};

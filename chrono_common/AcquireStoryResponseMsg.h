@@ -17,8 +17,7 @@ namespace chronolog
 
     public:
 
-        AcquireStoryResponseMsg()
-                : error_code(chronolog::CL_SUCCESS), storyId(0)
+        AcquireStoryResponseMsg() : error_code(chronolog::CL_SUCCESS), storyId(0)
         {}
 
         AcquireStoryResponseMsg(int code, StoryId const &story_id, std::vector<KeeperIdCard> const &keepers_to_use)
@@ -28,13 +27,19 @@ namespace chronolog
         ~AcquireStoryResponseMsg() = default;
 
         int getErrorCode() const
-        { return error_code; }
+        {
+            return error_code;
+        }
 
         StoryId const &getStoryId() const
-        { return storyId; }
+        {
+            return storyId;
+        }
 
         std::vector<KeeperIdCard> const &getKeepers() const
-        { return keepers; }
+        {
+            return keepers;
+        }
 
         template<typename SerArchiveT>
         void serialize(SerArchiveT &serT)

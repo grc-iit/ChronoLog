@@ -34,8 +34,7 @@ int main(int argc, char **argv)
     bool ret = false;
     uint64_t offset;
     std::chrono::steady_clock::time_point t1, t2;
-    std::chrono::duration<double, std::nano> duration_connect{},
-            duration_disconnect{};
+    std::chrono::duration<double, std::nano> duration_connect{}, duration_disconnect{};
 
     client_ids.reserve(NUM_CONNECTION);
     for (int i = 0; i < NUM_CONNECTION; i++) client_ids.emplace_back(gen_random(8));

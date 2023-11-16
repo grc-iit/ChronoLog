@@ -63,7 +63,8 @@ int chronolog::KeeperDataStore::startStoryRecording(std::string const &chronicle
         theIngestionQueue.addStoryIngestionHandle(story_id, ingestionHandle);
 
         return chronolog::CL_SUCCESS;
-    } else
+    }
+    else
     {
         return CL_ERR_UNKNOWN;
     }
@@ -84,8 +85,8 @@ int chronolog::KeeperDataStore::stopStoryRecording(chronolog::StoryId const &sto
     auto pipeline_iter = theMapOfStoryPipelines.find(story_id);
     if (pipeline_iter != theMapOfStoryPipelines.end())
     {
-        uint64_t exit_time = std::chrono::high_resolution_clock::now().time_since_epoch().count()
-                             + (*pipeline_iter).second->getAcceptanceWindow();
+        uint64_t exit_time = std::chrono::high_resolution_clock::now().time_since_epoch().count() +
+                             (*pipeline_iter).second->getAcceptanceWindow();
         pipelinesWaitingForExit[(*pipeline_iter).first] = (std::pair<chl::StoryPipeline *, uint64_t>(
                 (*pipeline_iter).second, exit_time));
     }
@@ -97,9 +98,8 @@ int chronolog::KeeperDataStore::stopStoryRecording(chronolog::StoryId const &sto
 
 void chronolog::KeeperDataStore::collectIngestedEvents()
 {
-    std::cout << "KeeperDataStore::collectIngestedEvents state {" << state
-              << "} mapOfStoryPipelines {" << theMapOfStoryPipelines.size()
-              << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
+    std::cout << "KeeperDataStore::collectIngestedEvents state {" << state << "} mapOfStoryPipelines {"
+              << theMapOfStoryPipelines.size() << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
               << "} start , ULT " << tl::thread::self_id() << std::endl;
 
     theIngestionQueue.drainOrphanEvents();
@@ -118,9 +118,8 @@ void chronolog::KeeperDataStore::collectIngestedEvents()
 void chronolog::KeeperDataStore::extractDecayedStoryChunks()
 {
 
-    std::cout << "KeeperDataStore::extractDecayedStoryChunks state {" << state
-              << "} mapOfStoryPipelines {" << theMapOfStoryPipelines.size()
-              << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
+    std::cout << "KeeperDataStore::extractDecayedStoryChunks state {" << state << "} mapOfStoryPipelines {"
+              << theMapOfStoryPipelines.size() << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
               << "} start , ULT " << tl::thread::self_id() << std::endl;
 
     uint64_t current_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -139,9 +138,8 @@ void chronolog::KeeperDataStore::extractDecayedStoryChunks()
 
 void chronolog::KeeperDataStore::retireDecayedPipelines()
 {
-    std::cout << "KeeperDataStore::retireDecayedPipelines state {" << state
-              << "} mapOfStoryPipelines {" << theMapOfStoryPipelines.size()
-              << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
+    std::cout << "KeeperDataStore::retireDecayedPipelines state {" << state << "} mapOfStoryPipelines {"
+              << theMapOfStoryPipelines.size() << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
               << "} START , ULT " << tl::thread::self_id() << std::endl;
 
     if (!theMapOfStoryPipelines.empty())
@@ -149,8 +147,7 @@ void chronolog::KeeperDataStore::retireDecayedPipelines()
         std::lock_guard storeLock(dataStoreMutex);
 
         uint64_t current_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        for (auto pipeline_iter = pipelinesWaitingForExit.begin();
-             pipeline_iter != pipelinesWaitingForExit.end();)
+        for (auto pipeline_iter = pipelinesWaitingForExit.begin(); pipeline_iter != pipelinesWaitingForExit.end();)
         {
 
             if (current_time >= (*pipeline_iter).second.second)
@@ -161,16 +158,16 @@ void chronolog::KeeperDataStore::retireDecayedPipelines()
                 theIngestionQueue.removeIngestionHandle(pipeline->getStoryId());
                 pipeline_iter = pipelinesWaitingForExit.erase(pipeline_iter); //pipeline->getStoryId());
                 delete pipeline;
-            } else
+            }
+            else
             { pipeline_iter++; }
 
         }
     }
 
     //swipe through pipelineswaiting and remove all those with nullptr
-    std::cout << "KeeperDataStore::retireDecayedPipelines state {" << state
-              << "} mapOfStoryPipelines {" << theMapOfStoryPipelines.size()
-              << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
+    std::cout << "KeeperDataStore::retireDecayedPipelines state {" << state << "} mapOfStoryPipelines {"
+              << theMapOfStoryPipelines.size() << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size()
               << "} END , ULT " << tl::thread::self_id() << std::endl;
 
 }
@@ -182,9 +179,7 @@ void chronolog::KeeperDataStore::dataCollectionTask()
     // storyPipelines left to retire...
     tl::xstream es = tl::xstream::self();
     std::cout << "DataStoreCollectionTask ES " << es.get_rank() << ", ULT " << tl::thread::self_id() << std::endl;
-    while (!is_shutting_down()
-           || !theIngestionQueue.is_empty()
-           || !theMapOfStoryPipelines.empty())
+    while (!is_shutting_down() || !theIngestionQueue.is_empty() || !theMapOfStoryPipelines.empty())
     {
         std::cout << "DataStoreCollectionTask ES " << es.get_rank() << ", ULT " << tl::thread::self_id() << std::endl;
         for (int i = 0; i < 6; ++i)
@@ -216,9 +211,8 @@ void chronolog::KeeperDataStore::startDataCollection(int stream_count)
 
     for (int i = 0; i < 2 * stream_count; ++i)
     {
-        tl::managed<tl::thread> th = dataStoreStreams[i % (dataStoreStreams.size())]->make_thread(
-                [p = this]()
-                { p->dataCollectionTask(); });
+        tl::managed<tl::thread> th = dataStoreStreams[i % (dataStoreStreams.size())]->make_thread([p = this]()
+                                                                                                  { p->dataCollectionTask(); });
         dataStoreThreads.push_back(std::move(th));
     }
 }
@@ -226,9 +220,9 @@ void chronolog::KeeperDataStore::startDataCollection(int stream_count)
 
 void chronolog::KeeperDataStore::shutdownDataCollection()
 {
-    std::cout << "KeeperDataStore: shutdownDataCollection : state {" << state
-              << "} mapOfStoryPipelines {" << theMapOfStoryPipelines.size()
-              << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size() << "}" << std::endl;
+    std::cout << "KeeperDataStore: shutdownDataCollection : state {" << state << "} mapOfStoryPipelines {"
+              << theMapOfStoryPipelines.size() << "} pipelinesWaitingForExit {" << pipelinesWaitingForExit.size() << "}"
+              << std::endl;
 
     // switch the state to shuttingDown
     std::lock_guard storeLock(dataStoreStateMutex);

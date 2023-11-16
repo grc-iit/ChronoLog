@@ -14,8 +14,7 @@ ChronicleMetaDirectory::ChronicleMetaDirectory()
     chronicleMap_ = new std::unordered_map<uint64_t, Chronicle *>();
 //    chronicleName2IdMap_ = new std::unordered_map<std::string, uint64_t>();
 //    chronicleId2NameMap_ = new std::unordered_map<uint64_t, std::string>();
-    LOGD("%s constructor finishes, object created@%p in thread PID=%d",
-         typeid(*this).name(), this, getpid());
+    LOGD("%s constructor finishes, object created@%p in thread PID=%d", typeid(*this).name(), this, getpid());
 }
 
 ChronicleMetaDirectory::~ChronicleMetaDirectory()
@@ -85,7 +84,8 @@ int ChronicleMetaDirectory::create_chronicle(const std::string &name,
     {
         LOGD("Chronicle name=%s is created", name.c_str());
         return chronolog::CL_SUCCESS;
-    } else
+    }
+    else
     {
         LOGE("Fail to create Chronicle name=%s", name.c_str());
         return chronolog::CL_ERR_UNKNOWN;
@@ -129,8 +129,8 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
                 ret = chronolog::CL_ERR_ACQUIRED;
                 for (const auto &acquirerMapRecord: pStory->getAcquirerMap())
                 {
-                    LOGD("StoryID=%lu in Chronicle name=%s is still acquired by client_id=%lu",
-                         pStory->getSid(), name.c_str(), acquirerMapRecord.first);
+                    LOGD("StoryID=%lu in Chronicle name=%s is still acquired by client_id=%lu", pStory->getSid(),
+                         name.c_str(), acquirerMapRecord.first);
                 }
             }
         }
@@ -156,12 +156,14 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
         {
             LOGD("Chronicle name=%s is destroyed", name.c_str());
             return chronolog::CL_SUCCESS;
-        } else
+        }
+        else
         {
             LOGE("Fail to destroy Chronicle name=%s", name.c_str());
             return chronolog::CL_ERR_UNKNOWN;
         }
-    } else
+    }
+    else
     {
         LOGD("Chronicle name=%s does not exist", name.c_str());
         return chronolog::CL_ERR_NOT_EXIST;
@@ -226,9 +228,7 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
  *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
  *         CL_ERR_UNKNOWN otherwise
  */
-int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name,
-                                          const std::string &story_name
-)
+int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, const std::string &story_name)
 {
     LOGD("destroying Story name=%s in Chronicle name=%s", story_name.c_str(), chronicle_name.c_str());
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);
@@ -255,8 +255,8 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name,
         {
             for (const auto &acquirerMapRecord: pStory->getAcquirerMap())
             {
-                LOGD("StoryID=%lu in Chronicle name=%s is still acquired by client_id=%lu",
-                     pStory->getSid(), chronicle_name.c_str(), acquirerMapRecord.first);
+                LOGD("StoryID=%lu in Chronicle name=%s is still acquired by client_id=%lu", pStory->getSid(),
+                     chronicle_name.c_str(), acquirerMapRecord.first);
             }
             return chronolog::CL_ERR_ACQUIRED;
         }
@@ -267,7 +267,8 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name,
             LOGE("Fail to remove Story name=%s in Chronicle name=%s", story_name.c_str(), chronicle_name.c_str());
         }
         return res;
-    } else
+    }
+    else
     {
         LOGD("Chronicle name=%s does not exist", chronicle_name.c_str());
         return chronolog::CL_ERR_NOT_EXIST;
@@ -286,14 +287,13 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name,
  *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
  *         CL_ERR_UNKNOWN otherwise
  */
-int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id,
-                                          const std::string &chronicle_name,
+int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const std::string &chronicle_name,
                                           const std::string &story_name,
-                                          const std::unordered_map<std::string, std::string> &attrs,
-                                          int &flags, StoryId &story_id, bool &notify_keepers)
+                                          const std::unordered_map<std::string, std::string> &attrs, int &flags,
+                                          StoryId &story_id, bool &notify_keepers)
 {
-    LOGD("client_id=%lu acquiring Story name=%s in Chronicle name=%s, flags=%d",
-         client_id, story_name.c_str(), chronicle_name.c_str(), flags);
+    LOGD("client_id=%lu acquiring Story name=%s in Chronicle name=%s, flags=%d", client_id, story_name.c_str(),
+         chronicle_name.c_str(), flags);
 
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);
     /* First check if Chronicle exists, fail if false */
@@ -352,12 +352,11 @@ int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id,
  *         CL_ERR_UNKNOWN otherwise
  */
 //TO_DO return acquisition_count after the story has been released
-int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id,
-                                          const std::string &chronicle_name,
+int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const std::string &chronicle_name,
                                           const std::string &story_name, StoryId &story_id, bool &notify_keepers)
 {
-    LOGD("client_id=%lu releasing Story name=%s in Chronicle name=%s",
-         client_id, story_name.c_str(), chronicle_name.c_str());
+    LOGD("client_id=%lu releasing Story name=%s in Chronicle name=%s", client_id, story_name.c_str(),
+         chronicle_name.c_str());
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);
     /* First check if Chronicle exists, fail if false */
     uint64_t cid;
@@ -395,10 +394,10 @@ int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id,
             {
                 return ret;
             }
-        } else
+        }
+        else
         {
-            LOGD("Story name=%s is not acquired by client_id=%lu, cannot release", story_name.c_str(),
-                 client_id);
+            LOGD("Story name=%s is not acquired by client_id=%lu, cannot release", story_name.c_str(), client_id);
             ret = chronolog::CL_ERR_NOT_ACQUIRED;
         }
     }
@@ -427,26 +426,28 @@ int ChronicleMetaDirectory::get_chronicle_attr(std::string const &name, const st
             {
                 value = propertyRecord->second;
                 return chronolog::CL_SUCCESS;
-            } else
+            }
+            else
             {
                 LOGD("Property key=%s does not exist in Chronicle name=%s", key.c_str(), name.c_str());
                 return chronolog::CL_ERR_NOT_EXIST;
             }
-        } else
+        }
+        else
         {
             LOGE("Something is wrong, stored Chronicle object is null");
             return chronolog::CL_ERR_UNKNOWN;
         }
-    } else
+    }
+    else
     {
         LOGD("Chronicle name=%s does not exist", name.c_str());
         return chronolog::CL_ERR_NOT_EXIST;
     }
 }
 
-int ChronicleMetaDirectory::edit_chronicle_attr(std::string const &name,
-                                                const std::string &key,
-                                                const std::string &value)
+int
+ChronicleMetaDirectory::edit_chronicle_attr(std::string const &name, const std::string &key, const std::string &value)
 {
     LOGD("editing attribute key=%s, value=%s from Chronicle name=%s", key.c_str(), value.c_str(), name.c_str());
     std::lock_guard<std::mutex> chronicleMapLock(g_chronicleMetaDirectoryMutex_);
@@ -470,22 +471,26 @@ int ChronicleMetaDirectory::edit_chronicle_attr(std::string const &name,
                 if (res.second)
                 {
                     return chronolog::CL_SUCCESS;
-                } else
+                }
+                else
                 {
                     LOGE("Something is wrong, fail to insert property key=%s, value=%s", key.c_str(), value.c_str());
                     return chronolog::CL_ERR_UNKNOWN;
                 }
-            } else
+            }
+            else
             {
                 LOGD("Property key=%s does not exist in Chronicle name=%s", key.c_str(), name.c_str());
                 return chronolog::CL_ERR_NOT_EXIST;
             }
-        } else
+        }
+        else
         {
             LOGE("Something is wrong, stored Chronicle object is null");
             return chronolog::CL_ERR_UNKNOWN;
         }
-    } else
+    }
+    else
     {
         LOGD("Chronicle name=%s does not exist", name.c_str());
         return chronolog::CL_ERR_NOT_EXIST;

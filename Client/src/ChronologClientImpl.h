@@ -19,11 +19,7 @@ namespace chronolog
 
     enum ChronologClientState
     {
-        UNKNOWN = 0,
-        CONNECTED = 1,
-        READING = 2,
-        WRITING = 3,
-        SHUTTING_DOWN = 4
+        UNKNOWN = 0, CONNECTED = 1, READING = 2, WRITING = 3, SHUTTING_DOWN = 4
     };
 
     class ChronologClientImpl
@@ -50,9 +46,9 @@ namespace chronolog
         //const std::string &server_uri, std::string const& client_id, int &flags); //uint64_t &clock_offset);
         int Disconnect(); //const std::string &client_account, int &flags);
 
-        int CreateChronicle(std::string const &chronicle_name,
-                            const std::unordered_map<std::string, std::string> &attrs,
-                            int &flags);
+        int
+        CreateChronicle(std::string const &chronicle_name, const std::unordered_map<std::string, std::string> &attrs,
+                        int &flags);
 
         int DestroyChronicle(std::string const &chronicle_name); //, int &flags);
 

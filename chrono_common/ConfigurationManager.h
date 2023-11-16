@@ -23,9 +23,9 @@ namespace ChronoLog
 
         [[nodiscard]] std::string to_String() const
         {
-            return "CLOCKSOURCE_TYPE: " + std::string(getClocksourceTypeString(CLOCKSOURCE_TYPE))
-                   + ", DRIFT_CAL_SLEEP_SEC: " + std::to_string(DRIFT_CAL_SLEEP_SEC)
-                   + ", DRIFT_CAL_SLEEP_NSEC: " + std::to_string(DRIFT_CAL_SLEEP_NSEC);
+            return "CLOCKSOURCE_TYPE: " + std::string(getClocksourceTypeString(CLOCKSOURCE_TYPE)) +
+                   ", DRIFT_CAL_SLEEP_SEC: " + std::to_string(DRIFT_CAL_SLEEP_SEC) + ", DRIFT_CAL_SLEEP_NSEC: " +
+                   std::to_string(DRIFT_CAL_SLEEP_NSEC);
         }
     } ClockConf;
 
@@ -36,8 +36,7 @@ namespace ChronoLog
 
         [[nodiscard]] std::string to_String() const
         {
-            return "AUTH_TYPE: " + AUTH_TYPE
-                   + ", MODULE_PATH: " + MODULE_PATH;
+            return "AUTH_TYPE: " + AUTH_TYPE + ", MODULE_PATH: " + MODULE_PATH;
         }
     } AuthConf;
 
@@ -51,12 +50,9 @@ namespace ChronoLog
 
         [[nodiscard]] std::string to_String() const
         {
-            return "[RPC_IMPLEMENTATION: " + std::string(getRPCImplString(RPC_IMPLEMENTATION))
-                   + ", PROTO_CONF: " + PROTO_CONF
-                   + ", IP: " + IP
-                   + ", BASE_PORT: " + std::to_string(BASE_PORT)
-                   + ", SERVICE_PROVIDER_ID: " + std::to_string(SERVICE_PROVIDER_ID)
-                   + ", PORTS: " + "]";
+            return "[RPC_IMPLEMENTATION: " + std::string(getRPCImplString(RPC_IMPLEMENTATION)) + ", PROTO_CONF: " +
+                   PROTO_CONF + ", IP: " + IP + ", BASE_PORT: " + std::to_string(BASE_PORT) +
+                   ", SERVICE_PROVIDER_ID: " + std::to_string(SERVICE_PROVIDER_ID) + ", PORTS: " + "]";
         }
     } RPCProviderConf;
 
@@ -107,8 +103,8 @@ namespace ChronoLog
 
         [[nodiscard]] std::string to_String() const
         {
-            return "[VISOR_CLIENT_PORTAL_SERVICE_CONF: " + VISOR_CLIENT_PORTAL_SERVICE_CONF.to_String()
-                   + ", VISOR_KEEPER_REGISTRY_SERVICE_CONF: " + VISOR_KEEPER_REGISTRY_SERVICE_CONF.to_String() + "]";
+            return "[VISOR_CLIENT_PORTAL_SERVICE_CONF: " + VISOR_CLIENT_PORTAL_SERVICE_CONF.to_String() +
+                   ", VISOR_KEEPER_REGISTRY_SERVICE_CONF: " + VISOR_KEEPER_REGISTRY_SERVICE_CONF.to_String() + "]";
         }
     } VisorConf;
 
@@ -121,10 +117,10 @@ namespace ChronoLog
 
         [[nodiscard]] std::string to_String() const
         {
-            return "[KEEPER_RECORDING_SERVICE_CONF: " + KEEPER_RECORDING_SERVICE_CONF.to_String()
-                   + ", KEEPER_DATA_STORE_ADMIN_SERVICE_CONF: " + KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.to_String()
-                   + ", VISOR_KEEPER_REGISTRY_SERVICE_CONF: " + VISOR_KEEPER_REGISTRY_SERVICE_CONF.to_String()
-                   + ", STORY_FILES_DIR:" + STORY_FILES_DIR + "]";
+            return "[KEEPER_RECORDING_SERVICE_CONF: " + KEEPER_RECORDING_SERVICE_CONF.to_String() +
+                   ", KEEPER_DATA_STORE_ADMIN_SERVICE_CONF: " + KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.to_String() +
+                   ", VISOR_KEEPER_REGISTRY_SERVICE_CONF: " + VISOR_KEEPER_REGISTRY_SERVICE_CONF.to_String() +
+                   ", STORY_FILES_DIR:" + STORY_FILES_DIR + "]";
         }
     } KeeperConf;
 
@@ -246,7 +242,8 @@ namespace ChronoLog
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
                     parseClockConf(clock_conf);
-                } else if (strcmp(key, "authentication") == 0)
+                }
+                else if (strcmp(key, "authentication") == 0)
                 {
                     json_object *auth_conf = json_object_object_get(root, "authentication");
                     if (auth_conf == nullptr || !json_object_is_type(auth_conf, json_type_object))
@@ -257,7 +254,8 @@ namespace ChronoLog
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
                     parseAuthConf(auth_conf);
-                } else if (strcmp(key, "chrono_visor") == 0)
+                }
+                else if (strcmp(key, "chrono_visor") == 0)
                 {
                     json_object *chrono_visor_conf = json_object_object_get(root, "chrono_visor");
                     if (chrono_visor_conf == nullptr || !json_object_is_type(chrono_visor_conf, json_type_object))
@@ -267,7 +265,8 @@ namespace ChronoLog
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
                     parseVisorConf(chrono_visor_conf);
-                } else if (strcmp(key, "chrono_keeper") == 0)
+                }
+                else if (strcmp(key, "chrono_keeper") == 0)
                 {
                     json_object *chrono_keeper_conf = json_object_object_get(root, "chrono_keeper");
                     if (chrono_keeper_conf == nullptr || !json_object_is_type(chrono_keeper_conf, json_type_object))
@@ -277,7 +276,8 @@ namespace ChronoLog
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
                     parseKeeperConf(chrono_keeper_conf);
-                } else if (strcmp(key, "chrono_client") == 0)
+                }
+                else if (strcmp(key, "chrono_client") == 0)
                 {
                     json_object *chrono_client_conf = json_object_object_get(root, "chrono_client");
                     if (chrono_client_conf == nullptr || !json_object_is_type(chrono_client_conf, json_type_object))
@@ -287,7 +287,8 @@ namespace ChronoLog
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
                     parseClientConf(chrono_client_conf);
-                } else
+                }
+                else
                 {
                     LOGE("Unknown configuration item: %s", key);
                 }
@@ -306,17 +307,21 @@ namespace ChronoLog
                 if (strcmp(conf_str, "Thallium_sockets") == 0)
                 {
                     rpc_impl = CHRONOLOG_THALLIUM_SOCKETS;
-                } else if (strcmp(conf_str, "Thallium_tcp") == 0)
+                }
+                else if (strcmp(conf_str, "Thallium_tcp") == 0)
                 {
                     rpc_impl = CHRONOLOG_THALLIUM_TCP;
-                } else if (strcmp(conf_str, "Thallium_roce") == 0)
+                }
+                else if (strcmp(conf_str, "Thallium_roce") == 0)
                 {
                     rpc_impl = CHRONOLOG_THALLIUM_ROCE;
-                } else
+                }
+                else
                 {
                     LOGE("Unknown rpc implementation: %s", conf_str);
                 }
-            } else
+            }
+            else
             {
                 LOGE("Invalid rpc implementation configuration");
             }
@@ -339,27 +344,32 @@ namespace ChronoLog
                             CLOCK_CONF.CLOCKSOURCE_TYPE = ClocksourceType::TSC;
                         else
                             LOGI("Unknown clocksource type: %s", clocksource_type);
-                    } else
+                    }
+                    else
                     {
                         LOGE("clocksource_type is not a string");
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
-                } else if (strcmp(key, "drift_cal_sleep_sec") == 0)
+                }
+                else if (strcmp(key, "drift_cal_sleep_sec") == 0)
                 {
                     if (json_object_is_type(val, json_type_int))
                     {
                         CLOCK_CONF.DRIFT_CAL_SLEEP_SEC = json_object_get_int(val);
-                    } else
+                    }
+                    else
                     {
                         LOGE("drift_cal_sleep_sec is not an integer");
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
-                } else if (strcmp(key, "drift_cal_sleep_nsec") == 0)
+                }
+                else if (strcmp(key, "drift_cal_sleep_nsec") == 0)
                 {
                     if (json_object_is_type(val, json_type_int))
                     {
                         CLOCK_CONF.DRIFT_CAL_SLEEP_NSEC = json_object_get_int(val);
-                    } else
+                    }
+                    else
                     {
                         LOGE("drift_cal_sleep_nsec is not an integer");
                         exit(chronolog::CL_ERR_INVALID_CONF);
@@ -382,17 +392,20 @@ namespace ChronoLog
                     if (json_object_is_type(val, json_type_string))
                     {
                         AUTH_CONF.AUTH_TYPE = json_object_get_string(val);
-                    } else
+                    }
+                    else
                     {
                         LOGE("auth_type is not a string");
                         exit(chronolog::CL_ERR_INVALID_CONF);
                     }
-                } else if (strcmp(key, "module_location") == 0)
+                }
+                else if (strcmp(key, "module_location") == 0)
                 {
                     if (json_object_is_type(val, json_type_string))
                     {
                         AUTH_CONF.MODULE_PATH = json_object_get_string(val);
-                    } else
+                    }
+                    else
                     {
                         LOGE("module_location is not a string");
                         exit(chronolog::CL_ERR_INVALID_CONF);
@@ -409,23 +422,28 @@ namespace ChronoLog
                 {
                     assert(json_object_is_type(val, json_type_string));
                     parseRPCImplConf(val, rpc_provider_conf.RPC_IMPLEMENTATION);
-                } else if (strcmp(key, "protocol_conf") == 0)
+                }
+                else if (strcmp(key, "protocol_conf") == 0)
                 {
                     assert(json_object_is_type(val, json_type_string));
                     rpc_provider_conf.PROTO_CONF = json_object_get_string(val);
-                } else if (strcmp(key, "service_ip") == 0)
+                }
+                else if (strcmp(key, "service_ip") == 0)
                 {
                     assert(json_object_is_type(val, json_type_string));
                     rpc_provider_conf.IP = json_object_get_string(val);
-                } else if (strcmp(key, "service_base_port") == 0)
+                }
+                else if (strcmp(key, "service_base_port") == 0)
                 {
                     assert(json_object_is_type(val, json_type_int));
                     rpc_provider_conf.BASE_PORT = json_object_get_int(val);
-                } else if (strcmp(key, "service_provider_id") == 0)
+                }
+                else if (strcmp(key, "service_provider_id") == 0)
                 {
                     assert(json_object_is_type(val, json_type_int));
                     rpc_provider_conf.SERVICE_PROVIDER_ID = json_object_get_int(val);
-                } else
+                }
+                else
                 {
                     LOGE("Unknown client end configuration: %s", key);
                 }
@@ -446,12 +464,14 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, VISOR_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown VisorClientPortalService configuration: %s", key);
                         }
                     }
-                } else if (strcmp(key, "VisorKeeperRegistryService") == 0)
+                }
+                else if (strcmp(key, "VisorKeeperRegistryService") == 0)
                 {
                     assert(json_object_is_type(val, json_type_object));
                     json_object *visor_keeper_registry_service_conf = json_object_object_get(json_conf,
@@ -461,12 +481,14 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown VisorKeeperRegistryService configuration: %s", key);
                         }
                     }
-                } else
+                }
+                else
                 {
                     LOGE("Unknown visor configuration: %s", key);
                 }
@@ -487,12 +509,14 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown KeeperRecordingService configuration: %s", key);
                         }
                     }
-                } else if (strcmp(key, "KeeperDataStoreAdminService") == 0)
+                }
+                else if (strcmp(key, "KeeperDataStoreAdminService") == 0)
                 {
                     assert(json_object_is_type(val, json_type_object));
                     json_object *keeper_data_store_admin_service_conf = json_object_object_get(json_conf,
@@ -502,12 +526,14 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown KeeperDataStoreAdminService configuration: %s", key);
                         }
                     }
-                } else if (strcmp(key, "VisorKeeperRegistryService") == 0)
+                }
+                else if (strcmp(key, "VisorKeeperRegistryService") == 0)
                 {
                     assert(json_object_is_type(val, json_type_object));
                     json_object *visor_keeper_registry_service_conf = json_object_object_get(json_conf,
@@ -517,16 +543,19 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, KEEPER_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown VisorKeeperRegistryService configuration: %s", key);
                         }
                     }
-                } else if (strcmp(key, "story_files_dir") == 0)
+                }
+                else if (strcmp(key, "story_files_dir") == 0)
                 {
                     assert(json_object_is_type(val, json_type_string));
                     KEEPER_CONF.STORY_FILES_DIR = json_object_get_string(val);
-                } else
+                }
+                else
                 {
                     LOGE("Unknown keeper configuration: %s", key);
                 }
@@ -547,12 +576,14 @@ namespace ChronoLog
                         if (strcmp(key, "rpc") == 0)
                         {
                             parseRPCProviderConf(val, CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF);
-                        } else
+                        }
+                        else
                         {
                             LOGE("Unknown VisorClientPortalService configuration: %s", key);
                         }
                     }
-                } else
+                }
+                else
                 {
                     LOGE("Unknown client configuration: %s", key);
                 }

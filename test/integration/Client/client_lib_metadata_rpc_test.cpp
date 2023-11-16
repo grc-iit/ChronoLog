@@ -28,22 +28,13 @@ int main(int argc, char **argv)
     chronolog::Client client(confManager);
     std::vector<std::string> chronicle_names;
     std::chrono::steady_clock::time_point t1, t2;
-    std::chrono::duration<double, std::nano> duration_create_chronicle{},
-            duration_edit_chronicle_attr{},
-            duration_acquire_story{},
-            duration_release_story{},
-            duration_destroy_story{},
-            duration_get_chronicle_attr{},
-            duration_destroy_chronicle{},
-            duration_show_chronicles{},
-            duration_show_stories{};
+    std::chrono::duration<double, std::nano> duration_create_chronicle{}, duration_edit_chronicle_attr{}, duration_acquire_story{}, duration_release_story{}, duration_destroy_story{}, duration_get_chronicle_attr{}, duration_destroy_chronicle{}, duration_show_chronicles{}, duration_show_stories{};
     int flags;
     int ret;
     uint64_t offset = 0;
     std::string server_uri = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
-                             confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP +
-                             std::to_string(confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF
-                                                    .BASE_PORT);
+                             confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP + std::to_string(
+            confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.BASE_PORT);
 
     std::string client_id = gen_random(8);
     client.Connect();

@@ -66,34 +66,54 @@ public:
     }
 
     const std::string &getName() const
-    { return name_; }
+    {
+        return name_;
+    }
 
     uint64_t getSid() const
-    { return sid_; }
+    {
+        return sid_;
+    }
 
     uint64_t getCid() const
-    { return cid_; }
+    {
+        return cid_;
+    }
 
     const StoryStats &getStats() const
-    { return stats_; }
+    {
+        return stats_;
+    }
 
     const std::unordered_map<std::string, std::string> &getProperty() const
-    { return propertyList_; }
+    {
+        return propertyList_;
+    }
 
     const std::unordered_map<std::string, Event> &getEventMap() const
-    { return eventMap_; }
+    {
+        return eventMap_;
+    }
 
     void setName(const std::string &name)
-    { name_ = name; }
+    {
+        name_ = name;
+    }
 
     void setSid(uint64_t sid)
-    { sid_ = sid; }
+    {
+        sid_ = sid;
+    }
 
     void setCid(uint64_t cid)
-    { cid_ = cid; }
+    {
+        cid_ = cid;
+    }
 
     void setStats(const StoryStats &stats)
-    { stats_ = stats; }
+    {
+        stats_ = stats;
+    }
 
     std::unordered_map<chronolog::ClientId, ClientInfo *> &getAcquirerMap()
     {
@@ -118,7 +138,8 @@ public:
             acquirerClientMap_.erase(client_id);
             LOGD("acquirer client_id=%lu is removed from Story name=%s", client_id, name_.c_str());
             return chronolog::CL_SUCCESS;
-        } else
+        }
+        else
         {
             LOGD("Story name=%lu is not acquired by client_id=%s", client_id, name_.c_str());
             return chronolog::CL_ERR_UNKNOWN;
@@ -130,7 +151,8 @@ public:
         if (acquirerClientMap_.find(client_id) != acquirerClientMap_.end())
         {
             return true;
-        } else
+        }
+        else
         {
             return false;
         }
@@ -145,7 +167,9 @@ public:
     }
 
     void setEventMap(const std::unordered_map<std::string, Event> &eventMap)
-    { eventMap_ = eventMap; }
+    {
+        eventMap_ = eventMap;
+    }
 
     uint64_t incrementAcquisitionCount()
     {
@@ -160,7 +184,9 @@ public:
     }
 
     uint64_t getAcquisitionCount() const
-    { return stats_.count; }
+    {
+        return stats_.count;
+    }
 
     friend std::ostream &operator<<(std::ostream &os, const Story &story);
 
@@ -178,9 +204,7 @@ private:
 
 inline std::ostream &operator<<(std::ostream &os, const Story &story)
 {
-    os << "name: " << story.name_ << ", "
-       << "sid: " << story.sid_ << ", "
-       << "access count: " << story.stats_.count;
+    os << "name: " << story.name_ << ", " << "sid: " << story.sid_ << ", " << "access count: " << story.stats_.count;
     return os;
 }
 

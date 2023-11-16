@@ -1,4 +1,3 @@
-
 #include <unistd.h>
 #include <string>
 #include "ChronologClientImpl.h"
@@ -24,10 +23,10 @@ chronolog::ChronologClientImpl::GetClientImplInstance(ChronoLog::ConfigurationMa
 }
 
 ////////
-chronolog::ChronologClientImpl::ChronologClientImpl(const ChronoLog::ConfigurationManager &confManager)
-        : clientState(UNKNOWN), clientLogin(""), hostId(0), pid(0), clientId(0), tlEngine(nullptr),
-          rpcVisorClient(nullptr),
-          storyteller(nullptr)
+chronolog::ChronologClientImpl::ChronologClientImpl(const ChronoLog::ConfigurationManager &confManager) : clientState(
+        UNKNOWN), clientLogin(""), hostId(0), pid(0), clientId(0), tlEngine(nullptr), rpcVisorClient(nullptr),
+                                                                                                          storyteller(
+                                                                                                                  nullptr)
 {
     //pClocksourceManager_ = ClocksourceManager::getInstance();
     //pClocksourceManager_->setClocksourceType(CHRONOLOG_CONF->CLOCKSOURCE_TYPE);
@@ -36,10 +35,10 @@ chronolog::ChronologClientImpl::ChronologClientImpl(const ChronoLog::Configurati
     tlEngine = new thallium::engine(confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF,
                                     THALLIUM_CLIENT_MODE, true, 1);
 
-    std::string CLIENT_VISOR_NA_STRING = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF
-                                         + "://" + confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP
-                                         + ":" + std::to_string(
-            confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.BASE_PORT);
+    std::string CLIENT_VISOR_NA_STRING =
+            confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
+            confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP + ":" +
+            std::to_string(confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.BASE_PORT);
     rpcVisorClient = chl::RpcVisorClient::CreateRpcVisorClient(*tlEngine, CLIENT_VISOR_NA_STRING,
                                                                confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID);
 }
@@ -49,8 +48,7 @@ chronolog::ChronologClientImpl::ChronologClientImpl(const ChronoLog::Configurati
 chronolog::ChronologClientImpl::ChronologClientImpl(const std::string &protocol_string, const std::string &visor_ip,
                                                     int visor_port, uint16_t visor_portal_service_provider)
         : clientState(UNKNOWN), clientLogin(""), hostId(0), pid(0), clientId(0), tlEngine(nullptr),
-          rpcVisorClient(nullptr),
-          storyteller(nullptr)
+          rpcVisorClient(nullptr), storyteller(nullptr)
 {
     //pClocksourceManager_ = ClocksourceManager::getInstance();
     //pClocksourceManager_->setClocksourceType(CHRONOLOG_CONF->CLOCKSOURCE_TYPE);
@@ -58,9 +56,7 @@ chronolog::ChronologClientImpl::ChronologClientImpl(const std::string &protocol_
     defineClientIdentity();
     tlEngine = new thallium::engine(protocol_string, THALLIUM_CLIENT_MODE, true, 1);
 
-    std::string client_visor_na_string = protocol_string
-                                         + "://" + visor_ip
-                                         + ":" + std::to_string(visor_port);
+    std::string client_visor_na_string = protocol_string + "://" + visor_ip + ":" + std::to_string(visor_port);
 
     rpcVisorClient = chl::RpcVisorClient::CreateRpcVisorClient(*tlEngine, client_visor_na_string,
                                                                visor_portal_service_provider);
@@ -241,8 +237,7 @@ int chronolog::ChronologClientImpl::ReleaseStory(std::string const &chronicle_na
     // if we storyteller has active WritingHandle for this story
     // it should be cleared regardless of the Visor connection state
 
-    if (nullptr == storyteller
-        || nullptr == storyteller->findStoryWritingHandle(chronicle_name, story_name))
+    if (nullptr == storyteller || nullptr == storyteller->findStoryWritingHandle(chronicle_name, story_name))
     { return chronolog::CL_ERR_NOT_EXIST; }
 
     storyteller->removeAcquiredStoryHandle(chronicle_name, story_name);

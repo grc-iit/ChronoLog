@@ -1,4 +1,3 @@
-
 #ifndef DataStoreAdmin_CLIENT_H
 #define DataStoreAdmin_CLIENT_H
 
@@ -115,9 +114,11 @@ namespace chronolog
 
         // constructor is private to make sure thalium rpc objects are created on the heap, not stack
         DataStoreAdminClient(tl::engine &tl_engine, std::string const &collection_service_addr,
-                             uint16_t collection_provider_id)
-                : service_addr(collection_service_addr), service_provider_id(collection_provider_id),
-                  service_handle(tl_engine.lookup(collection_service_addr), collection_provider_id)
+                             uint16_t collection_provider_id) : service_addr(collection_service_addr),
+                                                                service_provider_id(collection_provider_id),
+                                                                service_handle(
+                                                                        tl_engine.lookup(collection_service_addr),
+                                                                        collection_provider_id)
         {
             collection_service_available = tl_engine.define("collection_service_available");
             shutdown_data_collection = tl_engine.define("shutdown_data_collection");

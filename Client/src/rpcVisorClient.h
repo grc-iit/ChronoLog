@@ -1,4 +1,3 @@
-
 #ifndef RPC_VISOR_PORTAL_CLIENT_H
 #define RPC_VISOR_PORTAL_CLIENT_H
 
@@ -48,8 +47,7 @@ namespace chronolog
 
         ConnectResponseMsg Connect(uint32_t client_euid, uint32_t client_host_ip, uint32_t client_pid)
         {
-            LOGD("%s  with args: accout=%u, host_id=%u pid=%u",
-                 __FUNCTION__, client_euid, client_host_ip, client_pid);
+            LOGD("%s  with args: accout=%u, host_id=%u pid=%u", __FUNCTION__, client_euid, client_host_ip, client_pid);
             try
             {
                 return visor_connect.on(service_ph)(client_euid, client_host_ip, client_pid);
@@ -76,11 +74,10 @@ namespace chronolog
         }
 
         int CreateChronicle(ClientId const &client_id, std::string const &name,
-                            const std::unordered_map<std::string, std::string> &attrs,
-                            int &flags)
+                            const std::unordered_map<std::string, std::string> &attrs, int &flags)
         {
-            LOGD("%s is called in PID=%d, with args: name=%s, flags=%d, attrs=",
-                 __FUNCTION__, getpid(), name.c_str(), flags);
+            LOGD("%s is called in PID=%d, with args: name=%s, flags=%d, attrs=", __FUNCTION__, getpid(), name.c_str(),
+                 flags);
             try
             {
                 return create_chronicle.on(service_ph)(client_id, name, attrs, flags);
@@ -126,8 +123,8 @@ namespace chronolog
 
         int ReleaseStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name)
         {
-            LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s",
-                 __FUNCTION__, getpid(), client_id, chronicle_name.c_str(), story_name.c_str());
+            LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s, story_name=%s", __FUNCTION__,
+                 getpid(), client_id, chronicle_name.c_str(), story_name.c_str());
             try
             {
                 return release_story.on(service_ph)(client_id, chronicle_name, story_name);
@@ -141,8 +138,8 @@ namespace chronolog
 
         int DestroyStory(ClientId const &client_id, std::string const &chronicle_name, std::string const &story_name)
         {
-            LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s",
-                 __FUNCTION__, getpid(), chronicle_name.c_str(), story_name.c_str());
+            LOGD("%s is called in PID=%d, with args: chronicle_name=%s, story_name=%s", __FUNCTION__, getpid(),
+                 chronicle_name.c_str(), story_name.c_str());
             try
             {
                 return destroy_story.on(service_ph)(client_id, chronicle_name, story_name);
@@ -174,8 +171,8 @@ namespace chronolog
         int EditChronicleAttr(ClientId const &client_id, std::string const &name, const std::string &key,
                               const std::string &value)
         {
-            LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s",
-                 __FUNCTION__, getpid(), name.c_str(), key.c_str(), value.c_str());
+            LOGD("%s is called in PID=%d, with args: name=%s, key=%s, value=%s", __FUNCTION__, getpid(), name.c_str(),
+                 key.c_str(), value.c_str());
             try
             {
                 return edit_chronicle_attr.on(service_ph)(client_id, name, key, value);
@@ -204,8 +201,8 @@ namespace chronolog
         std::vector<std::string> ShowStories(ClientId const &client_id,
                                              std::string const &chronicle_name) //, std::vector<std::string> & stories )
         {
-            LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s",
-                 __FUNCTION__, getpid(), client_id, chronicle_name.c_str());
+            LOGD("%s is called in PID=%d, with args: client_id=%lu, chronicle_name=%s", __FUNCTION__, getpid(),
+                 client_id, chronicle_name.c_str());
             try
             {
                 return show_stories.on(service_ph)(client_id, chronicle_name);
@@ -257,9 +254,8 @@ namespace chronolog
 
 
         // constructor is private to make sure thalium rpc objects are created on the heap, not stack
-        RpcVisorClient(tl::engine &tl_engine, std::string const &service_addr, uint16_t provider_id)
-                : service_addr(service_addr), service_provider_id(provider_id),
-                  service_ph(tl_engine.lookup(service_addr), provider_id)
+        RpcVisorClient(tl::engine &tl_engine, std::string const &service_addr, uint16_t provider_id) : service_addr(
+                service_addr), service_provider_id(provider_id), service_ph(tl_engine.lookup(service_addr), provider_id)
         {
             std::cout << " RpcVisorClient created for Visor Service at {" << service_addr << "} provider_id {"
                       << service_provider_id << "}" << std::endl;

@@ -67,13 +67,16 @@ int main(int argc, char **argv)
             if (args[i].compare("-protocol") == 0)
             {
                 protocol = (ChronoLogRPCImplementation) std::stoi(args[i + 1]);
-            } else if (args[i].compare("-hostname") == 0)
+            }
+            else if (args[i].compare("-hostname") == 0)
             {
                 hostname = args[i + 1];
-            } else if (args[i].compare("-port") == 0)
+            }
+            else if (args[i].compare("-port") == 0)
             {
                 portno = std::stoi(args[i + 1]);
-            } else
+            }
+            else
             {
                 end_program = true;
                 break;
@@ -111,12 +114,14 @@ int main(int argc, char **argv)
         protocolstring = "ofi+sockets";
         ChronoLogCharStruct prot_struct(protocolstring);
         CHRONOLOG_CONF->SOCKETS_CONF = prot_struct;
-    } else if (protocol == 1)
+    }
+    else if (protocol == 1)
     {
         protocolstring = "ofi+tcp";
         ChronoLogCharStruct prot_struct(protocolstring);
         CHRONOLOG_CONF->SOCKETS_CONF = prot_struct;
-    } else if (protocol == 2) protocolstring = "verbs";
+    }
+    else if (protocol == 2) protocolstring = "verbs";
 
     server_uri = protocolstring + "://" + host_ip + ":" + std::to_string(portno);
 
@@ -146,17 +151,13 @@ int main(int argc, char **argv)
 
     std::cout << " Metadata operations : -c <string> , create a chronicle with name <string>  " << std::endl
               << " -s <string1> <string2>, create a story with name string1+string2 : string1 = chronicle name, string2 = story name "
-              << std::endl
-              << " -a -c <string>, acquire chronicle with name <string>" << std::endl
+              << std::endl << " -a -c <string>, acquire chronicle with name <string>" << std::endl
               << " -a -s <string1> <string2>, acquire story with name string1+string2 : string1 = chronicle name, string2 = story name"
-              << std::endl
-              << " -r -c <string>, release chronicle with name <string>" << std::endl
+              << std::endl << " -r -c <string>, release chronicle with name <string>" << std::endl
               << " -r -s <string1> <string2>, release story with name string1+string2 : string1 = chronicle name, string2 = story name"
-              << std::endl
-              << " -d -c <string>, destroy chronicle with name <string>" << std::endl
+              << std::endl << " -d -c <string>, destroy chronicle with name <string>" << std::endl
               << " -d -s <string1> <string2>, destroy story with name string1+string2 : string1 = chronicle name, string2 = story name"
-              << std::endl
-              << " -disconnect " << std::endl;
+              << std::endl << " -disconnect " << std::endl;
 
 
     std::vector<std::string> commands;
@@ -197,7 +198,8 @@ int main(int argc, char **argv)
             chronicle_attrs.emplace("TieringPolicy", "Hot");
             ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
             assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS);
-        } else if (command_subs[0].compare("-s") == 0)
+        }
+        else if (command_subs[0].compare("-s") == 0)
         {
             assert(command_subs.size() == 3);
             std::string chronicle_name = command_subs[1];
@@ -209,28 +211,32 @@ int main(int argc, char **argv)
             ret = client.CreateStory(chronicle_name, story_name, story_attrs, flags);
             assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_STORY_EXISTS);
 
-        } else if (command_subs[0].compare("-a") == 0)
+        }
+        else if (command_subs[0].compare("-a") == 0)
         {
             if (command_subs[1].compare("-c") == 0)
             {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.AcquireChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0)
+            }
+            else if (command_subs[1].compare("-s") == 0)
             {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];
                 std::string story_name = command_subs[3];
                 ret = client.AcquireStory(chronicle_name, story_name, flags);
             }
-        } else if (command_subs[0].compare("-r") == 0)
+        }
+        else if (command_subs[0].compare("-r") == 0)
         {
             if (command_subs[1].compare("-c") == 0)
             {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.ReleaseChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0)
+            }
+            else if (command_subs[1].compare("-s") == 0)
             {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];
@@ -238,14 +244,16 @@ int main(int argc, char **argv)
                 ret = client.ReleaseStory(chronicle_name, story_name, flags);
             }
 
-        } else if (command_subs[0].compare("-d") == 0)
+        }
+        else if (command_subs[0].compare("-d") == 0)
         {
             if (command_subs[1].compare("-c") == 0)
             {
                 assert(command_subs.size() == 3);
                 std::string chronicle_name = command_subs[2];
                 ret = client.DestroyChronicle(chronicle_name, flags);
-            } else if (command_subs[1].compare("-s") == 0)
+            }
+            else if (command_subs[1].compare("-s") == 0)
             {
                 assert(command_subs.size() == 4);
                 std::string chronicle_name = command_subs[2];

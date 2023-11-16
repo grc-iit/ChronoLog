@@ -1,4 +1,3 @@
-
 #include <iostream>
 
 #include <thallium.hpp>
@@ -28,9 +27,8 @@ namespace chronolog
         {
             // initialise thalium engine for KeeperRegistryService
             std::string KEEPER_REGISTRY_SERVICE_NA_STRING =
-                    confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.PROTO_CONF
-                    + "://" + confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.IP
-                    + ":" +
+                    confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
+                    confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.IP + ":" +
                     std::to_string(confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.BASE_PORT);
 
             uint16_t provider_id = confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
@@ -42,13 +40,13 @@ namespace chronolog
                 std::cout << "KeeperRegistryService: Failed to initialize margo_instance" << std::endl;
                 return -1;
             }
-            std::cout << "KeeperRegistryService:margo_instance initialized with NA_STRING"
-                      << "{" << KEEPER_REGISTRY_SERVICE_NA_STRING << "}" << std::endl;
+            std::cout << "KeeperRegistryService:margo_instance initialized with NA_STRING" << "{"
+                      << KEEPER_REGISTRY_SERVICE_NA_STRING << "}" << std::endl;
 
             registryEngine = new tl::engine(margo_id);
 
-            std::cout << "Starting KeeperRegistryService  at address " << registryEngine->self()
-                      << " with provider id " << provider_id << std::endl;
+            std::cout << "Starting KeeperRegistryService  at address " << registryEngine->self() << " with provider id "
+                      << provider_id << std::endl;
 
 
             keeperRegistryService = KeeperRegistryService::CreateKeeperRegistryService(*registryEngine, provider_id,
@@ -132,8 +130,7 @@ namespace chronolog
         if (keeper_process_iter != keeperProcessRegistry.end())
         {
             // delete keeperAdminClient before erasing keeper_process entry
-            if ((*keeper_process_iter).second.keeperAdminClient !=
-                nullptr)
+            if ((*keeper_process_iter).second.keeperAdminClient != nullptr)
             { delete (*keeper_process_iter).second.keeperAdminClient; }
             keeperProcessRegistry.erase(keeper_process_iter);
 
@@ -141,8 +138,8 @@ namespace chronolog
 
         //create a client of Keeper's DataStoreAdminService listenning at adminServiceId
         std::string service_na_string("ofi+sockets://");
-        service_na_string = admin_service_id.getIPasDottedString(service_na_string)
-                            + ":" + std::to_string(admin_service_id.port);
+        service_na_string =
+                admin_service_id.getIPasDottedString(service_na_string) + ":" + std::to_string(admin_service_id.port);
 
         DataStoreAdminClient *collectionClient = DataStoreAdminClient::CreateDataStoreAdminClient(*registryEngine,
                                                                                                   service_na_string,
@@ -150,18 +147,15 @@ namespace chronolog
         if (nullptr == collectionClient)
         {
             std::cout << "ERROR: KeeperRegistry: registerKeeper {" << keeper_id_card
-                      << "} failed to create DataStoreAdminClient for {"
-                      << service_na_string << ": provider_id=" << admin_service_id.provider_id << "}" << std::endl;
+                      << "} failed to create DataStoreAdminClient for {" << service_na_string << ": provider_id="
+                      << admin_service_id.provider_id << "}" << std::endl;
             return chronolog::CL_ERR_UNKNOWN;
         }
 
         //now create a new KeeperRecord with the new DataAdminclient
-        auto insert_return = keeperProcessRegistry.insert(std::pair<std::pair<uint32_t, uint16_t>, KeeperProcessEntry>
-                                                                  (std::pair<uint32_t, uint16_t>(
-                                                                           keeper_id_card.getIPaddr(),
-                                                                           keeper_id_card.getPort()),
-                                                                   KeeperProcessEntry(keeper_id_card, admin_service_id))
-        );
+        auto insert_return = keeperProcessRegistry.insert(std::pair<std::pair<uint32_t, uint16_t>, KeeperProcessEntry>(
+                std::pair<uint32_t, uint16_t>(keeper_id_card.getIPaddr(), keeper_id_card.getPort()),
+                KeeperProcessEntry(keeper_id_card, admin_service_id)));
         if (false == insert_return.second)
         {
             std::cout << "ERROR:KeeperRegistry: registerKeeper {" << keeper_id_card << "} failed to registration"
@@ -175,8 +169,8 @@ namespace chronolog
         (*insert_return.first).second.keeperAdminClient = collectionClient;
 
         std::cout << "KeeperRegistry: registerKeeper {" << keeper_id_card
-                  << "} created DataStoreAdminClient for service {" << service_na_string
-                  << ": provider_id=" << admin_service_id.provider_id << "}" << std::endl;
+                  << "} created DataStoreAdminClient for service {" << service_na_string << ": provider_id="
+                  << admin_service_id.provider_id << "}" << std::endl;
 
         // now that communnication with the Keeper is established and we still holding registryLock
         // update registryState in case this is the first KeeperProcess registration
@@ -249,8 +243,7 @@ namespace chronolog
     }
 /////////////////
 
-    std::vector<KeeperIdCard> &KeeperRegistry::getActiveKeepers(
-            std::vector<KeeperIdCard> &keeper_id_cards)
+    std::vector<KeeperIdCard> &KeeperRegistry::getActiveKeepers(std::vector<KeeperIdCard> &keeper_id_cards)
     {  //the process of keeper selection will probably get more nuanced;
         //for now just return all the keepers registered
         if (is_shutting_down())

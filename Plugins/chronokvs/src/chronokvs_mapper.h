@@ -10,7 +10,7 @@
 #include "chronolog_client.h"
 #include "chronokvs_memorymanager.h"
 
-namespace chronolog
+namespace chronokvs
 {
 /**
  * Handles mapping between key-value pairs and ChronoLog's data model.
@@ -22,10 +22,9 @@ private:
     std::unique_ptr <ChronoLogClient> chronoClient;
 
 public:
-    // Default constructor that initializes MemoryManager and ChronoLogClient
-    chronokvs_mapper(): memoryManager(std::make_unique <MemoryManager>()), chronoClient(
-            std::make_unique <ChronoLogClient>())
-    {}
+    chronokvs_mapper();
+
+    ~chronokvs_mapper() = default;
 
     std::uint64_t storeKeyValue(const std::string &key, const std::string &value);
 
@@ -35,6 +34,6 @@ public:
 
     std::vector <std::string> retrieveByKeyAndTimestamp(const std::string &key, std::uint64_t timestamp);
 
-}; // namespace chronolog
+};
 }
 #endif // KVS_MAPPER_H_

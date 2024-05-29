@@ -91,19 +91,18 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                 break;
             case '?':
                 // Invalid option or missing argument
-                std::cerr << "\nUsage: \n"
-                             "-c|--config <config_file>\n"
-                             "-i|--interactive\n"
-                             "-h|--chronicle_count <chronicle_count>\n"
-                             "-t|--story_count <story_count>\n"
-                             "-a|--min_event_size <min_event_size>\n"
-                             "-s|--ave_event_size <ave_event_size>\n"
-                             "-b|--max_event_size <max_event_size>\n"
-                             "-n|--event_count <event_count>\n"
-                             "-g|--event_interval <event_interval>\n"
-                             "-r|--barrier\n"
-                             "-f|--input <event_input_file>\n"
-                             "-o|--shared_story\n" << argv[0] << std::endl;
+                std::cerr << "\nUsage:   " << argv[0] << " -c|--config <config_file>\n"
+                             "\t\t\t-i|--interactive\n"
+                             "\t\t\t-h|--chronicle_count <chronicle_count>\n"
+                             "\t\t\t-t|--story_count <story_count>\n"
+                             "\t\t\t-a|--min_event_size <min_event_size>\n"
+                             "\t\t\t-s|--ave_event_size <ave_event_size>\n"
+                             "\t\t\t-b|--max_event_size <max_event_size>\n"
+                             "\t\t\t-n|--event_count <event_count>\n"
+                             "\t\t\t-g|--event_interval <event_interval>\n"
+                             "\t\t\t-r|--barrier\n"
+                             "\t\t\t-f|--input <event_input_file>\n"
+                             "\t\t\t-o|--shared_story\n" << std::endl;
                 exit(EXIT_FAILURE);
             default:
                 // Unknown option
@@ -369,8 +368,20 @@ std::vector <std::string> &command_subs)
                                                                                                            , {"-w", [&](
                         std::vector <std::string> &command_subs)
                 {
-                    assert(command_subs.size() == 2);
-                    std::string event_payload = command_subs[1];
+                    std::string event_payload;
+                    if(command_subs.size() == 2)
+                    {
+                        event_payload = command_subs[1];
+                    }
+                    else
+                    {
+                        for(uint64_t i = 1; i < command_subs.size(); i++)
+                        {
+                            event_payload += command_subs[i];
+                            if(i != command_subs.size() - 1)
+                                event_payload += " ";
+                        }
+                    }
                     test_write_event(story_handle, event_payload);
                 }}
                                                                                                            , {"-d", [&](
@@ -395,6 +406,7 @@ std::vector <std::string> &command_subs)
         while(true)
         {
             command_line.clear();
+            std::cout << "Enter command: ";
             std::getline(std::cin, command_line);
             if(command_line == "-disconnect") break;
             command_dispatcher(command_line, command_map);

@@ -420,10 +420,17 @@ parallel_remote_stop_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
+    sleep_time=0
     LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
     while [[ -n $(parallel_remote_check_processes ${hosts_file} ${bin_filename}) ]]; do
         echo -e "${DEBUG}Some processes are still running, waiting for 10 seconds ...${NC}"
         sleep 10
+        sleep_time=$((sleep_time + 10))
+        if [[ ${sleep_time} -ge 180 ]]; then
+            echo -e "${ERR}Some processes are still running after 180 seconds, killing them instead ...${NC}"
+            parallel_remote_kill_processes ${hosts_file} ${bin_filename}
+            break
+        fi
     done
 }
 

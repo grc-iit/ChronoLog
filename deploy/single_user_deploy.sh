@@ -73,6 +73,24 @@ check_file_existence() {
     fi
 }
 
+check_dependencies() {
+    # check if mpssh is installed
+    if ! command -v mpssh &> /dev/null; then
+        echo -e "${ERR}mpssh is not installed, exiting ...${NC}" >&2
+        exit 1
+    fi
+    # check if jq is installed
+    if ! command -v jq &> /dev/null; then
+        echo -e "${ERR}jq is not installed, exiting ...${NC}" >&2
+        exit 1
+    fi
+    # check if patchelf is installed
+    if ! command -v patchelf &> /dev/null; then
+        echo -e "${ERR}patchelf is not installed, exiting ...${NC}" >&2
+        exit 1
+    fi
+}
+
 check_hosts_files() {
     echo -e "${INFO}Checking hosts files...${NC}"
     check_file_existence ${VISOR_HOSTS}
@@ -692,6 +710,8 @@ parse_args() {
     # Shift the arguments so that the non-option arguments are left
     shift $((OPTIND - 1))
 }
+
+check_dependencies
 
 parse_args "$@"
 

@@ -42,6 +42,8 @@ target_include_directories(chronolog_client PUBLIC include
 
 target_link_libraries(chronolog_client thallium)
 
+target_link_options(chronolog_client PRIVATE -Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib)
+
 add_subdirectory(storyteller_test)
 add_subdirectory(ChronoAdmin)
 

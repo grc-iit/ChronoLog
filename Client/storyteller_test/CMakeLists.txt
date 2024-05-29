@@ -7,7 +7,7 @@ target_link_libraries(storyteller_test chronolog_client thallium)
 configure_file(${CMAKE_SOURCE_DIR}/default_conf.json.in
     ${CMAKE_CURRENT_BINARY_DIR}/default_conf.json COPYONLY)
 
-set_target_properties(storyteller_test PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+target_link_options(storyteller_test PRIVATE -Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib)
 
 # install binary
 install(

@@ -28,7 +28,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../default_conf.json.in
     ${CMAKE_CURRENT_BINARY_DIR}/default_conf.json COPYONLY)
 message("build target : chrono_keeper")
 
-set_target_properties(chrono_keeper PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+target_link_options(chrono_keeper PRIVATE -Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib)
 
 # install binary
 install(

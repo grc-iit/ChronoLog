@@ -24,7 +24,7 @@ target_link_libraries(chrono_grapher chronolog_client thallium)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../default_conf.json.in
     ${CMAKE_CURRENT_BINARY_DIR}/default_conf.json COPYONLY)
 
-set_target_properties(chrono_grapher PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+target_link_options(chrono_grapher PRIVATE -Wl,-rpath,${CMAKE_INSTALL_PREFIX}/lib)
 
 # install binary
 install(

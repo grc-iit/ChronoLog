@@ -163,7 +163,7 @@ copy_shared_libs_recursive() {
     final_dest_lib_copies=false
     echo -e "${DEBUG}Copying ${lib_path} recursively ...${NC}"
     while [ "$final_dest_lib_copies" != true ]; do
-        cp -P "$lib_path" "$dest_path/"
+        cp -L "$lib_path" "$dest_path/"
         if [ "$lib_path" == "$linked_to_lib_path" ]
         then
             final_dest_lib_copies=true
@@ -192,6 +192,21 @@ copy_shared_libs() {
     done
 
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Copy shared libraries done${NC}"
+}
+
+update_rpath() {
+    # Update rpath of the binary and copied shared libs to point to the lib directory
+    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Updating rpath ...${NC}"
+    for bin_file in "${WORK_DIR}"/bin/*; do
+        echo -e "${DEBUG}Updating rpath of ${bin_file} ...${NC}"
+        patchelf --set-rpath "${LIB_DIR}" ${bin_file}
+    done
+    for lib_file in "${LIB_DIR}"/*; do
+        echo -e "${DEBUG}Updating rpath of ${lib_file} ...${NC}"
+        patchelf --set-rpath "${LIB_DIR}" ${lib_file}
+    done
+
+    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Update rpath done${NC}"
 }
 
 get_host_ip() {
@@ -345,6 +360,8 @@ install() {
     echo -e "${INFO}Installing ...${NC}"
 
     copy_shared_libs
+
+    update_rpath
 
     prepare_hosts
 

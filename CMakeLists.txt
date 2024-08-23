@@ -10,9 +10,9 @@ project(ChronoLog LANGUAGES CXX C)
 #------------------------------------------------------------------------------
 # Version information
 #------------------------------------------------------------------------------
-set(CHRONOLOG_VERSION_MAJOR "0")
-set(CHRONOLOG_VERSION_MINOR "7")
-set(CHRONOLOG_VERSION_PATCH "0")
+set(CHRONOLOG_VERSION_MAJOR "1")
+set(CHRONOLOG_VERSION_MINOR "0")
+set(CHRONOLOG_VERSION_PATCH "1")
 set(CHRONOLOG_PACKAGE "ChronoLog")
 set(CHRONOLOG_PACKAGE_NAME "CHRONOLOG")
 set(CHRONOLOG_PACKAGE_VERSION "${CHRONOLOG_VERSION_MAJOR}.${CHRONOLOG_VERSION_MINOR}.${CHRONOLOG_VERSION_PATCH}")
@@ -35,7 +35,7 @@ if(NOT DEFINED INSTALL_DIR)
     set(INSTALL_DIR "/home/$ENV{USER}/chronolog" CACHE PATH "Installation directory")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${INSTALL_DIR}/${CMAKE_BUILD_TYPE})
+set(CMAKE_INSTALL_PREFIX ${INSTALL_DIR}.${CHRONOLOG_PACKAGE_VERSION}/${CMAKE_BUILD_TYPE})
 message("Installation Directory CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 
 set(CHRONOLOG_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)

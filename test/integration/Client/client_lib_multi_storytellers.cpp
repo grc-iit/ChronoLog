@@ -35,263 +35,88 @@ std::vector <int> shared_state;
 std::mutex state_mutex;
 std::condition_variable state_cv;
 
-void thread_body(struct thread_arg*t)
-{
-    // Local variable declarations
-    int flags = 0;
-    uint64_t offset;
-    int ret;
-    std::string chronicle_name;
-
-    // Lock the mutex to safely update shared state
+// Function to update shared state and wait for all threads to reach a specific state
+void update_shared_state_and_wait(int tid, int target_state) {
     {
-        std::lock_guard <std::mutex> lock(state_mutex);
-        shared_state[t->tid] = 1; // Update shared state
-        LOG_DEBUG("[ClientLibMultiStorytellers] Created, State updated: tid={}, State={}", t->tid
-                  , shared_state[t->tid]);
-
-        // Notify other threads that might be waiting for state changes
-        state_cv.notify_all(); // Notify all threads that the state has changed
+        std::lock_guard<std::mutex> lock(state_mutex);
+        shared_state[tid] = target_state; // Update shared state
+        LOG_DEBUG("[ClientLibMultiStorytellers] State updated: tid={}, State={}", tid, shared_state[tid]);
+        state_cv.notify_all(); // Notify other threads
     }
-
-    // Wait until all threads have their state set to 1
     {
-        std::unique_lock <std::mutex> lock(state_mutex); // Lock mutex again
-        state_cv.wait(lock, []
-        {
-            return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-            { return state == 1; });
+        std::unique_lock<std::mutex> lock(state_mutex);
+        state_cv.wait(lock, [target_state] {
+            // Explicitly capture target_state by value
+            return std::all_of(shared_state.begin(), shared_state.end(), [target_state](int state) {
+                return state == target_state;
+            });
         });
-        LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 1, proceeding: tid={}", t->tid);
+        LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state {}, proceeding: tid={}", target_state, tid);
     }
+}
 
-    if(t->tid % 2 == 0)
-        chronicle_name = "CHRONICLE_2";
-    else
-        chronicle_name = "CHRONICLE_1";
+// Function to handle ChronoLog API call, log results, and assert conditions
+bool handle_chronolog_api_call(const std::string& log_message, int ret, const std::vector<int>& expected_errors) {
+    LOG_DEBUG(log_message + ", Ret: {}", ret);
+    if (std::find(expected_errors.begin(), expected_errors.end(), ret) == expected_errors.end()) {
+        LOG_ERROR(log_message + ", Unexpected ErrorCode: {}", ret);
+        return false;
+    }
+    return true;
+}
 
-    LOG_DEBUG("[ClientLibMultiStorytellers] Thread={} using chronicle name={}", t->tid, chronicle_name);
+void thread_body(struct thread_arg* t) {
+    int flags = 0;
+    std::string chronicle_name = (t->tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";
 
-
-    // Create attributes for the chronicle
-    std::map <std::string, std::string> chronicle_attrs;
-    chronicle_attrs.emplace("Priority", "High");
-    flags = 1;
+    update_shared_state_and_wait(t->tid, 1); // State 1: Threads initialized
 
     // Create the chronicle
-    ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
-    LOG_DEBUG("[ClientLibMultiStorytellers] Chronicle creation attempted: tid={}, ChronicleName={}, Flags: {}, Ret: {}"
-              , t->tid, chronicle_name, flags, ret);
+    std::map<std::string, std::string> chronicle_attrs;
+    chronicle_attrs.emplace("Priority", "High");
+    flags = 1;
+    int ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
 
-    // Check if chronicle creation was successful or if chronicle already exists
-    if(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS)
-    {
-        // Lock the mutex to safely update shared state to 2
-        {
-            std::lock_guard <std::mutex> lock(state_mutex);
-            shared_state[t->tid] = 2; // Update shared state to 2
-            LOG_DEBUG("[ClientLibMultiStorytellers] Chronicle handled, State updated to 2: tid={}, State={}", t->tid
-                      , shared_state[t->tid]);
-            state_cv.notify_all(); // Notify all threads that the state has changed
-        }
-
-        // Wait until all threads have their state set to 2
-        {
-            std::unique_lock <std::mutex> lock(state_mutex);
-            state_cv.wait(lock, []
-            {
-                return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                { return state == 2; });
-            });
-            LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 2, proceeding: tid={}", t->tid);
-        }
-    }
-    else
-    {
-        LOG_ERROR(
-                "[ClientLibMultiStorytellers] Failed to create chronicle: tid={}, ChronicleName={}, Flags: {}, ErrorCode: {}"
-                , t->tid, chronicle_name, flags, ret);
+    if (handle_chronolog_api_call("[ClientLibMultiStorytellers] Chronicle creation attempted: tid=" + std::to_string(t->tid), ret, {chronolog::CL_SUCCESS, chronolog::CL_ERR_CHRONICLE_EXISTS})) {
+        update_shared_state_and_wait(t->tid, 2); // State 2: Chronicle created
+    } else {
         assert(false && "Chronicle creation failed with unexpected error code!");
     }
 
-    // Create attributes for the story
-    std::string story_name = gen_random(STORY_NAME_LEN);
-    std::map <std::string, std::string> story_attrs;
-    flags = 2;
-
     // Acquire the story
+    std::string story_name = gen_random(STORY_NAME_LEN);
+    std::map<std::string, std::string> story_attrs;
+    flags = 2;
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
-    LOG_DEBUG("[ClientLibMultiStorytellers] Story acquired: tid={}, ChronicleName={}, StoryName={}, Ret: {}", t->tid
-              , chronicle_name, story_name, acquire_ret.first);
 
-    // Assertion for successful story acquisition or expected errors
-    assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST ||
-           acquire_ret.first == chronolog::CL_ERR_NO_KEEPERS);
+    if (handle_chronolog_api_call("[ClientLibMultiStorytellers] Story acquired: tid=" + std::to_string(t->tid), acquire_ret.first, {chronolog::CL_SUCCESS, chronolog::CL_ERR_NOT_EXIST, chronolog::CL_ERR_NO_KEEPERS})) {
+        update_shared_state_and_wait(t->tid, 3); // State 3: Story acquired
 
-    // If story acquisition is successful, log events to the story
-    if(chronolog::CL_SUCCESS == acquire_ret.first)
-    {
-        // Lock the mutex to safely update shared state to 3
-        {
-            std::lock_guard <std::mutex> lock(state_mutex);
-            shared_state[t->tid] = 3; // Update shared state to 3
-            LOG_DEBUG("[ClientLibMultiStorytellers] Story acquired, State updated to 3: tid={}, State={}", t->tid
-                      , shared_state[t->tid]);
-            state_cv.notify_all(); // Notify all threads that the state has changed
-        }
-
-        // Wait until all threads have their state set to 3
-        {
-            std::unique_lock <std::mutex> lock(state_mutex);
-            state_cv.wait(lock, []
-            {
-                return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                { return state == 3; });
-            });
-            LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 3, proceeding: tid={}", t->tid);
-        }
-
-        auto story_handle = acquire_ret.second;
-        for(int i = 0; i < 100; ++i)
-        {
-            // Log an event to the story
-            story_handle->log_event("line " + std::to_string(i));
-            std::this_thread::sleep_for(std::chrono::milliseconds(i % 10));
-        }
-        // Lock the mutex to safely update shared state to 3
-        {
-            std::lock_guard <std::mutex> lock(state_mutex);
-            shared_state[t->tid] = 4; // Update shared state to 3
-            LOG_DEBUG("[ClientLibMultiStorytellers] Data logged, State updated to 4: tid={}, State={}", t->tid
-                      , shared_state[t->tid]);
-            state_cv.notify_all(); // Notify all threads that the state has changed
-        }
-
-        // Wait until all threads have their state set to 3
-        {
-            std::unique_lock <std::mutex> lock(state_mutex);
-            state_cv.wait(lock, []
-            {
-                return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                { return state == 4; });
-            });
-            LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 4, proceeding: tid={}", t->tid);
-        }
-
-        // Release the story
-        ret = client->ReleaseStory(chronicle_name, story_name);
-        LOG_DEBUG("[ClientLibMultiStorytellers] Story released: tid={}, ChronicleName={}, StoryName={}, Ret: {}", t->tid
-                  , chronicle_name, story_name, ret);
-
-        // Assertion for successful story release or expected errors
-        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_CONNECTION);
-
-        if(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_CONNECTION)
-        {
-            // Lock the mutex to safely update shared state to 2
-            {
-                std::lock_guard <std::mutex> lock(state_mutex);
-                shared_state[t->tid] = 5; // Update shared state to 2
-                LOG_DEBUG("[ClientLibMultiStorytellers] Story released, State updated to 5: tid={}, State={}", t->tid
-                          , shared_state[t->tid]);
-                state_cv.notify_all(); // Notify all threads that the state has changed
+        if (acquire_ret.first == chronolog::CL_SUCCESS) {
+            auto story_handle = acquire_ret.second;
+            for (int i = 0; i < 100; ++i) {
+                story_handle->log_event("line " + std::to_string(i));
+                std::this_thread::sleep_for(std::chrono::milliseconds(i % 10));
             }
+            update_shared_state_and_wait(t->tid, 4); // State 4: Finished logging data
 
-            // Wait until all threads have their state set to 2
-            {
-                std::unique_lock <std::mutex> lock(state_mutex);
-                state_cv.wait(lock, []
-                {
-                    return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                    { return state == 5; });
-                });
-                LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 5, proceeding: tid={}", t->tid);
+            ret = client->ReleaseStory(chronicle_name, story_name);
+            if (handle_chronolog_api_call("[ClientLibMultiStorytellers] Story released: tid=" + std::to_string(t->tid), ret, {chronolog::CL_SUCCESS, chronolog::CL_ERR_NO_CONNECTION})) {
+                update_shared_state_and_wait(t->tid, 5); // State 5: Story released
             }
         }
-        else
-        {
-            LOG_ERROR(
-                    "[ClientLibMultiStorytellers] Failed to release the story: tid={}, ChronicleName={}, StoryName={}, Ret: {}"
-                    , t->tid, chronicle_name, story_name, ret);
-        }
-    }
 
-    // Destroy the story
-    ret = client->DestroyStory(chronicle_name, story_name);
-    LOG_DEBUG("[ClientLibMultiStorytellers] Story destroyed: tid={}, ChronicleName={}, StoryName={}, Ret: {}", t->tid
-              , chronicle_name, story_name, ret);
-
-    // Assertion for successful story destruction or expected errors
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
-
-    if(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-       ret == chronolog::CL_ERR_NO_CONNECTION)
-    {
-        // Lock the mutex to safely update shared state to 2
-        {
-            std::lock_guard <std::mutex> lock(state_mutex);
-            shared_state[t->tid] = 6; // Update shared state to 2
-            LOG_DEBUG("[ClientLibMultiStorytellers] Story destroyed, State updated to 6: tid={}, State={}", t->tid
-                      , shared_state[t->tid]);
-            state_cv.notify_all(); // Notify all threads that the state has changed
+        // Destroy the story
+        ret = client->DestroyStory(chronicle_name, story_name);
+        if (handle_chronolog_api_call("[ClientLibMultiStorytellers] Story destroyed: tid=" + std::to_string(t->tid), ret, {chronolog::CL_SUCCESS, chronolog::CL_ERR_NOT_EXIST, chronolog::CL_ERR_ACQUIRED, chronolog::CL_ERR_NO_CONNECTION})) {
+            update_shared_state_and_wait(t->tid, 6); // State 6: Story destroyed
         }
 
-        // Wait until all threads have their state set to 2
-        {
-            std::unique_lock <std::mutex> lock(state_mutex);
-            state_cv.wait(lock, []
-            {
-                return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                { return state == 6; });
-            });
-            LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 6, proceeding: tid={}", t->tid);
+        // Destroy the chronicle
+        ret = client->DestroyChronicle(chronicle_name);
+        if (handle_chronolog_api_call("[ClientLibMultiStorytellers] Chronicle destroyed: tid=" + std::to_string(t->tid), ret, {chronolog::CL_SUCCESS, chronolog::CL_ERR_NOT_EXIST, chronolog::CL_ERR_ACQUIRED, chronolog::CL_ERR_NO_CONNECTION})) {
+            update_shared_state_and_wait(t->tid, 7); // State 7: Chronicle destroyed
         }
-    }
-    else
-    {
-        LOG_ERROR(
-                "[ClientLibMultiStorytellers] Failed to destroy the story: tid={}, ChronicleName={}, StoryName={}, Ret:"
-                " {}", t->tid, chronicle_name, story_name, ret);
-    }
-
-    // Destroy the chronicle
-    ret = client->DestroyChronicle(chronicle_name);
-    LOG_DEBUG("[ClientLibMultiStorytellers] Chronicle destroyed: tid={}, ChronicleName={}", t->tid, chronicle_name);
-
-    // Assertion for successful chronicle destruction or expected errors
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
-
-    if(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-       ret == chronolog::CL_ERR_NO_CONNECTION)
-    {
-        // Lock the mutex to safely update shared state to 2
-        {
-            std::lock_guard <std::mutex> lock(state_mutex);
-            shared_state[t->tid] = 7; // Update shared state to 2
-            LOG_DEBUG("[ClientLibMultiStorytellers] Chronicle destroyed, State updated to 7: tid={}, State={}", t->tid
-                      , shared_state[t->tid]);
-            state_cv.notify_all(); // Notify all threads that the state has changed
-        }
-
-        // Wait until all threads have their state set to 2
-        {
-            std::unique_lock <std::mutex> lock(state_mutex);
-            state_cv.wait(lock, []
-            {
-                return std::all_of(shared_state.begin(), shared_state.end(), [](int state)
-                { return state == 7; });
-            });
-            LOG_DEBUG("[ClientLibMultiStorytellers] All threads have state 7, proceeding: tid={}", t->tid);
-        }
-    }
-    else
-    {
-        LOG_ERROR(
-                "[ClientLibMultiStorytellers] Failed to destroy the chronicle: tid={}, ChronicleName={}, StoryName={}, "
-                "Ret:"
-                " {}", t->tid, chronicle_name, story_name, ret);
     }
 }
 

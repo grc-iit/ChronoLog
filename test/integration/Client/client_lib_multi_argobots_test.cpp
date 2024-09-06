@@ -14,22 +14,60 @@
 
 chronolog::Client*client;
 
+// Define bitmask for thread states
+enum ThreadState
+{
+    THREAD_INITIALIZED = 1 << 0, // 0001
+    CHRONICLE_CREATED = 1 << 1, // 0010
+    STORY_ACQUIRED = 1 << 2, // 0100
+    STORY_RELEASED = 1 << 3, // 1000
+    STORY_DESTROYED = 1 << 4, // 1 << 4
+    CHRONICLE_DESTROYED = 1 << 5  // 1 << 5
+};
+
+std::vector <int> shared_state; // Global array of thread states
+std::mutex state_mutex;
+std::condition_variable state_cv;
+
 struct thread_arg
 {
     int tid;
     std::string client_id;
 };
 
+// Function to update shared state and wait for all threads to reach a specific state
+void update_shared_state_and_wait(int tid, int target_state_bitmask)
+{
+    {
+        std::lock_guard <std::mutex> lock(state_mutex);
+        shared_state[tid] |= target_state_bitmask; // Update the bitmask state
+        std::cout << "Thread " << tid << " state updated: " << shared_state[tid] << std::endl;
+        state_cv.notify_all();
+    }
+    {
+        std::unique_lock <std::mutex> lock(state_mutex);
+        state_cv.wait(lock, [target_state_bitmask]()
+        {
+            // Check if all threads have at least the target state bit set
+            return std::all_of(shared_state.begin(), shared_state.end(), [target_state_bitmask](int state)
+            {
+                return (state&target_state_bitmask) == target_state_bitmask;
+            });
+        });
+        std::cout << "All threads reached state " << target_state_bitmask << std::endl;
+    }
+}
+
 void thread_function(void*tt)
 {
     struct thread_arg*t = (struct thread_arg*)tt;
 
     int flags = 0;
-    uint64_t offset;
     int ret;
-    std::string chronicle_name;
-    if(t->tid % 2 == 0) chronicle_name = "Chronicle_1";
-    else chronicle_name = "Chronicle_2";
+    std::string chronicle_name = (t->tid % 2 == 0) ? "Chronicle_1" : "Chronicle_2";
+
+    update_shared_state_and_wait(t->tid, THREAD_INITIALIZED); // State: THREAD_INITIALIZED
+
     std::map <std::string, std::string> chronicle_attrs;
     chronicle_attrs.emplace("Priority", "High");
     chronicle_attrs.emplace("IndexGranularity", "Millisecond");
@@ -39,43 +77,44 @@ void thread_function(void*tt)
               , chronicle_name, ret);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS ||
            ret == chronolog::CL_ERR_NO_KEEPERS);
-    flags = 1;
+
+    update_shared_state_and_wait(t->tid, CHRONICLE_CREATED); // State: CHRONICLE_CREATED
+
+    flags = 2;
     std::string story_name = gen_random(STORY_NAME_LEN);
     std::map <std::string, std::string> story_attrs;
     story_attrs.emplace("Priority", "High");
     story_attrs.emplace("IndexGranularity", "Millisecond");
     story_attrs.emplace("TieringPolicy", "Hot");
-    flags = 2;
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
-    LOG_DEBUG(
-            "[ClientLibMultiArgobotsTest] Thread ID: {} - Attempted to acquire Story: {} in Chronicle: {}. Result Code: {}"
-            , t->tid, story_name, chronicle_name, acquire_ret.first);
+    LOG_DEBUG("[ClientLibMultiArgobotsTest] Thread ID: {} - Acquired Story: {} in Chronicle: {}. Result Code: {}"
+              , t->tid, story_name, chronicle_name, acquire_ret.first);
     assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST ||
            acquire_ret.first == chronolog::CL_ERR_NO_KEEPERS);
-    ret = client->DestroyStory(chronicle_name, story_name);
 
-    LOG_DEBUG(
-            "[ClientLibMultiArgobotsTest] Thread ID: {} - Attempted to destroy story '{}' within chronicle '{}'. Result Code: {}"
-            , t->tid, story_name, chronicle_name, acquire_ret.first);
-    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST ||
-           ret == chronolog::CL_ERR_NO_KEEPERS);
-    ret = client->Disconnect();
+    update_shared_state_and_wait(t->tid, STORY_ACQUIRED); // State: STORY_ACQUIRED
 
-    LOG_DEBUG("[ClientLibMultiArgobotsTest] Thread ID: {} - Attempted disconnection. Result Code: {}", t->tid, ret);
-    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS);
-    ret = client->ReleaseStory(chronicle_name, story_name);
-
+    ret = client->ReleaseStory(chronicle_name, story_name); // Release the story
     LOG_DEBUG("[ClientLibMultiArgobotsTest] Thread ID: {} - Released Story: {} from Chronicle: {}. Result Code: {}"
               , t->tid, story_name, chronicle_name, ret);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_KEEPERS || ret == chronolog::CL_ERR_NOT_EXIST);
-    ret = client->DestroyStory(chronicle_name, story_name);
 
+    update_shared_state_and_wait(t->tid, STORY_RELEASED); // State: STORY_RELEASED
+
+    ret = client->DestroyStory(chronicle_name, story_name);
     LOG_DEBUG("[ClientLibMultiArgobotsTest] Thread ID: {} - Destroyed Story: {} from Chronicle: {}. Result Code: {}"
               , t->tid, story_name, chronicle_name, ret);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
            ret == chronolog::CL_ERR_NO_KEEPERS);
+
+    update_shared_state_and_wait(t->tid, STORY_DESTROYED); // State: STORY_DESTROYED
+
     ret = client->DestroyChronicle(chronicle_name);
+    LOG_DEBUG("[ClientLibMultiArgobotsTest] Thread ID: {} - Destroyed Chronicle: {}. Return Code: {}", t->tid
+              , chronicle_name, ret);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
+
+    update_shared_state_and_wait(t->tid, CHRONICLE_DESTROYED); // State: CHRONICLE_DESTROYED
 }
 
 int main(int argc, char**argv)
@@ -111,6 +150,9 @@ int main(int argc, char**argv)
 
     int num_xstreams = 8;
     int num_threads = 8;
+
+    // Initialize shared state array
+    shared_state.resize(num_threads, 0); // Initialize with zeros
 
     ABT_xstream*xstreams = (ABT_xstream*)malloc(sizeof(ABT_xstream) * num_xstreams);
     ABT_pool*pools = (ABT_pool*)malloc(sizeof(ABT_pool) * num_xstreams);

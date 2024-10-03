@@ -323,26 +323,27 @@ prepare_hosts_for_recording_groups() {
 prepare_hosts() {
     echo -e "${INFO}Preparing hosts files ...${NC}"
 
-    hosts=""
+    hosts_regex=""
     if [ -n "$SLURM_JOB_ID" ]; then
         echo -e "${DEBUG}Launched as a SLURM job, getting hosts from job ${SLURM_JOB_ID} ...${NC}"
         echo -e "${DEBUG}Node list from this job will overwrite what's provided in all hosts files${NC}"
-        hosts="$(echo \"$SLURM_JOB_NODELIST\" | tr ',' '\n')"
+        hosts_regex="$(echo \"$SLURM_JOB_NODELIST\" | tr ',' '\n')"
     else
         echo -e "${DEBUG}Launched from a shell, getting hosts from command line or presets ...${NC}"
         if [ -n "${JOB_ID}" ]; then
             echo -e "${INFO}JOB_ID is set to be ${JOB_ID} via command line, use it${NC}"
             echo -e "${DEBUG}Node list from job ${JOB_ID} will overwrite what's provided in all hosts files${NC}"
             hosts_regex="$(squeue | grep ${JOB_ID} | awk '{print $NF}')"
-            if [[ -z ${hosts_regex} ]]; then
-                echo -e "${ERR}Cannot find job ${JOB_ID}, exiting ...${NC}" >&2
-                exit 1
-            fi
-            hosts="$(scontrol show hostnames ${hosts_regex})"
         else
             echo -e "${DEBUG}JOB_ID is not set, use what are already in hosts files from ${CONF_DIR}${NC}"
         fi
     fi
+
+    if [[ -z ${hosts_regex} ]]; then
+        echo -e "${ERR}Cannot get hostnames from SLURM_JOB_ID or specified job_id ${JOB_ID}, exiting ...${NC}" >&2
+        exit 1
+    fi
+    hosts="$(scontrol show hostnames ${hosts_regex})"
 
     if [[ -n "${hosts}" ]]; then
         # make sure we have enough nodes allocated

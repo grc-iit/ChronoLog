@@ -197,9 +197,9 @@ get_host_ip() {
     local hostname=$1
     local host_ip=""
     if [[ ${hostname} == *${HOSTNAME_HS_NET_SUFFIX} ]]; then
-        host_ip=$(dig -4 ${hostname} | grep "^${hostname}" | awk '{print $5}')
+        host_ip=$(timeout 1 ping -w 1 -c 1 ${hostname} | grep "PING ${hostname}" | awk '{print $3}' | sed 's/[()]//g')
     else
-        host_ip=$(dig -4 ${hostname}${HOSTNAME_HS_NET_SUFFIX} | grep "^${hostname}${HOSTNAME_HS_NET_SUFFIX}" | awk '{print $5}')
+        host_ip=$(timeout 1 ping -w 1 -c 1 ${hostname}${HOSTNAME_HS_NET_SUFFIX} | grep "PING ${hostname}${HOSTNAME_HS_NET_SUFFIX}" | awk '{print $3}' | sed 's/[()]//g')
     fi
     echo "${host_ip}"
 }

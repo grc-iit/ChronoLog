@@ -408,14 +408,14 @@ parallel_remote_launch_processes() {
     fi
 
     bin_path=${bin_dir}/${bin_filename}
-    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "cd ${bin_dir}; LD_LIBRARY_PATH=${lib_dir} nohup ${bin_path} ${args} > ${MONITOR_DIR}/${bin_filename}${hostname_suffix}.launch.log 2>&1 &" | grep "${simple_output_grep_keyword}" 2>&1
+    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -s -f ${hosts_file} "cd ${bin_dir}; LD_LIBRARY_PATH=${lib_dir} nohup ${bin_path} ${args} > ${MONITOR_DIR}/${bin_filename}${hostname_suffix}.launch.log 2>&1 &" | grep "${simple_output_grep_keyword}" 2>&1
 }
 
 parallel_remote_stop_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
-    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -s -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
     while [[ -n $(parallel_remote_check_processes ${hosts_file} ${bin_filename}) ]]; do
         echo -e "${DEBUG}Some processes are still running, waiting for 10 seconds ...${NC}"
         sleep 10
@@ -426,14 +426,14 @@ parallel_remote_kill_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
-    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "pkill --signal 9 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -s -f ${hosts_file} "pkill --signal 9 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
 }
 
 parallel_remote_check_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
-    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "pgrep -fla ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -s -f ${hosts_file} "pgrep -fla ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
 }
 
 parallel_remote_check_all() {

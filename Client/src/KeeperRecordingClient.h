@@ -40,9 +40,9 @@ public:
         {
             std::stringstream ss;
             ss << eventMsg;
-            LOG_INFO("[KeeperRecordingClient] Sending event message: {}", ss.str());
+            LOG_TRACE("[KeeperRecordingClient] Sending event message: {}", ss.str());
             int return_code = record_event.on(service_ph)(eventMsg);
-            LOG_INFO("[KeeperRecordingClient] Sent event message: {} with return code: {}", ss.str(), return_code);
+            LOG_TRACE("[KeeperRecordingClient] Sent event message: {} with return code: {}", ss.str(), return_code);
             return return_code;
         }
         catch(thallium::exception const &)

@@ -128,6 +128,8 @@ int chronolog::StorytellerClient::addKeeperRecordingClient(chronolog::KeeperIdCa
 {
     std::lock_guard <std::mutex> lock(recordingClientMapMutex);
 
+    std::stringstream ss;
+    ss << keeper_id_card;
     try
     {
         std::string a_string;
@@ -137,6 +139,12 @@ int chronolog::StorytellerClient::addKeeperRecordingClient(chronolog::KeeperIdCa
         chronolog::KeeperRecordingClient*keeperRecordingClient = chronolog::KeeperRecordingClient::CreateKeeperRecordingClient(
                 client_engine, keeper_id_card, keeper_service_na_string);
 
+        if(keeperRecordingClient == nullptr)
+        {
+            LOG_ERROR("[StorytellerClient] Failed to create KeeperRecordingClient for KeeperIdCard: {} with service: {}", ss.str(), keeper_service_na_string);
+            return 0;
+        }
+
         auto insert_return = recordingClientMap.insert(
                 std::pair <std::pair <uint32_t, uint16_t>, chronolog::KeeperRecordingClient*>(
                         std::pair <uint32_t, uint16_t>(keeper_id_card.getIPaddr(), keeper_id_card.getPort())
@@ -145,15 +153,12 @@ int chronolog::StorytellerClient::addKeeperRecordingClient(chronolog::KeeperIdCa
         {
             return 0;
         }
-        std::stringstream ss;
-        ss << keeper_id_card;
         LOG_DEBUG("[StorytellerClient] Added KeeperRecordingClient for KeeperIdCard: {}", ss.str());
     }
     catch(tl::exception const &ex)
     {
-        std::stringstream s1;
-        s1 << keeper_id_card;
-        LOG_DEBUG("[StorytellerClient] Failed to create KeeperRecordingClient for KeeperIdCard: {}", s1.str());
+        LOG_ERROR("[StorytellerClient] Failed to create KeeperRecordingClient for KeeperIdCard: {}", ss.str());
+        return 0;
     }
 
     // state = RUNNING;

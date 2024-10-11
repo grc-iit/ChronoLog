@@ -9,6 +9,7 @@
 #include <chrono>
 #include <mpi.h>
 #include <chrono_monitor.h>
+#include <TimerWrapper.h>
 #include <cstring>
 
 typedef struct workload_conf_args_
@@ -24,6 +25,7 @@ typedef struct workload_conf_args_
     std::string event_input_file;
     bool interactive = false;
     bool shared_story = false;
+    bool perf_test = false;
 } workload_conf_args;
 
 std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
@@ -45,11 +47,12 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                                     , {"barrier"         , optional_argument, nullptr, 'r'}
                                     , {"event_input_file", optional_argument, nullptr, 'f'}
                                     , {"shared_story"    , optional_argument, nullptr, 'o'}
+                                    , {"perf"            , optional_argument, nullptr, 'p'}
                                     , {nullptr           , 0                , nullptr, 0} // Terminate the options array
     };
 
     // Parse the command-line options
-    while((opt = getopt_long(argc, argv, "c:ih:t:a:s:b:n:g:rf:o", long_options, nullptr)) != -1)
+    while((opt = getopt_long(argc, argv, "c:ih:t:a:s:b:n:g:rf:op", long_options, nullptr)) != -1)
     {
         switch(opt)
         {
@@ -81,13 +84,16 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                 workload_args.event_interval = strtoll(optarg, nullptr, 10);
                 break;
             case 'r':
-                workload_args.barrier = false;
+                workload_args.barrier = true;
                 break;
             case 'f':
                 workload_args.event_input_file = optarg;
                 break;
             case 'o':
                 workload_args.shared_story = true;
+                break;
+            case 'p':
+                workload_args.perf_test = true;
                 break;
             case '?':
                 // Invalid option or missing argument
@@ -103,7 +109,8 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                              "-g|--event_interval <event_interval>\n"
                              "-r|--barrier\n"
                              "-f|--input <event_input_file>\n"
-                             "-o|--shared_story\n" << argv[0] << std::endl;
+                             "-o|--shared_story\n"
+                             "-p|--perf\n" << argv[0] << std::endl;
                 exit(EXIT_FAILURE);
             default:
                 // Unknown option
@@ -172,7 +179,7 @@ void random_sleep()
     usleep(usec * rank);
 }
 
-void test_create_chronicle(chronolog::Client &client, const std::string &chronicle_name)
+int test_create_chronicle(chronolog::Client &client, const std::string &chronicle_name)
 {
     int ret, flags = 0;
     std::map <std::string, std::string> chronicle_attrs;
@@ -181,6 +188,7 @@ void test_create_chronicle(chronolog::Client &client, const std::string &chronic
     chronicle_attrs.emplace("TieringPolicy", "Hot");
     ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS);
+    return ret;
 }
 
 chronolog::StoryHandle*
@@ -199,29 +207,33 @@ test_acquire_story(chronolog::Client &client, const std::string &chronicle_name,
     return acq_ret.second;
 }
 
-void test_write_event(chronolog::StoryHandle*story_handle, const std::string &event_payload)
+int test_write_event(chronolog::StoryHandle*story_handle, const std::string &event_payload)
 {
     int ret = story_handle->log_event(event_payload);
     assert(ret == 1);
+    return ret;
 }
 
-void test_release_story(chronolog::Client &client, const std::string &chronicle_name, const std::string &story_name)
+int test_release_story(chronolog::Client &client, const std::string &chronicle_name, const std::string &story_name)
 {
     random_sleep(); // TODO: (Kun) remove this when the hanging bug upon concurrent acquire is fixed
     int ret = client.ReleaseStory(chronicle_name, story_name);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST);
+    return ret;
 }
 
-void test_destroy_chronicle(chronolog::Client &client, const std::string &chronicle_name)
+int test_destroy_chronicle(chronolog::Client &client, const std::string &chronicle_name)
 {
     int ret = client.DestroyChronicle(chronicle_name);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
+    return ret;
 }
 
-void test_destroy_story(chronolog::Client &client, const std::string &chronicle_name, const std::string &story_name)
+int test_destroy_story(chronolog::Client &client, const std::string &chronicle_name, const std::string &story_name)
 {
     int ret = client.DestroyStory(chronicle_name, story_name);
     assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
+    return ret;
 }
 
 // function to extract and execute commands from command line input
@@ -282,7 +294,10 @@ uint64_t get_bigbang_timestamp(std::ifstream &file)
 
 int main(int argc, char**argv)
 {
+    int rank, size;
     MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     std::string default_conf_file_path = "./default_conf.json";
     std::pair <std::string, workload_conf_args> cmd_args = cmd_arg_parse(argc, argv);
@@ -308,8 +323,10 @@ int main(int argc, char**argv)
     chronolog::Client client(confManager);
     chronolog::StoryHandle*story_handle;
 
+    TimerWrapper timer(workload_args.perf_test);
+
     int ret;
-    uint64_t total_event_payload_size = 0;
+    uint64_t event_payload_size_per_rank = 0;
 
     std::string client_id = gen_random(8);
     std::cout << "Generated client id: " << client_id << std::endl;
@@ -320,7 +337,7 @@ int main(int argc, char**argv)
     server_uri += "://" + server_ip + ":" + std::to_string(base_port);
 
     std::string username = getpwuid(getuid())->pw_name;
-    ret = client.Connect();
+    ret = timer.timeBlock("Connect", &chronolog::Client::Connect, client);
     assert(ret == chronolog::CL_SUCCESS);
 
     std::cout << " connected to server address : " << server_uri << std::endl;
@@ -402,9 +419,6 @@ std::vector <std::string> &command_subs)
     }
     else
     {
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
         std::random_device rand_device;
         std::mt19937 gen(rand_device());
         std::uniform_int_distribution char_dist(0, 255);
@@ -418,7 +432,7 @@ std::vector <std::string> &command_subs)
                 chronicle_name = "chronicle_" + std::to_string(i);
             else
                 chronicle_name = "chronicle_" + std::to_string(rank) + "_" + std::to_string(i);
-            test_create_chronicle(client, chronicle_name);
+            ret = timer.timeBlock("CreateChronicle", test_create_chronicle, client, chronicle_name);
             if(workload_args.barrier)
                 MPI_Barrier(MPI_COMM_WORLD);
 
@@ -431,106 +445,134 @@ std::vector <std::string> &command_subs)
                     story_name = "story_" + std::to_string(j);
                 else
                     story_name = "story_" + std::to_string(rank) + "_" + std::to_string(j);
-                story_handle = test_acquire_story(client, chronicle_name, story_name);
+                story_handle = timer.timeBlock("AcquireStory", test_acquire_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
 
                 // write event test
-                uint64_t event_count_per_story = workload_args.event_count / workload_args.story_count;
-                for(uint64_t k = 0; k < event_count_per_story; k++)
-                {
-                    if(workload_args.event_input_file.empty())
-                    {
-                        // randomly generate events with size in specified range
-                        uint64_t event_size = (unsigned long)std::min(
-                                std::max(size_dist(gen), (double)workload_args.min_event_size * 1.0),
-                                (double)workload_args.max_event_size * 1.0);
-                        total_event_payload_size += event_size;
-                        std::string event_payload;
-                        event_payload.resize(event_size);
-                        for(uint64_t l = 0; l < event_size; l++)
-                            event_payload += std::to_string('a' + std::abs(char_dist(gen)) + 1);
-                        test_write_event(story_handle, event_payload);
-                        if(workload_args.barrier)
-                            MPI_Barrier(MPI_COMM_WORLD);
-
-                        if(workload_args.event_interval > 0)
-                            usleep(workload_args.event_interval);
-                    }
-                    else
-                    {
-                        // read event payload from input file line by line
-                        std::ifstream input_file(workload_args.event_input_file);
-
-                        // check if the file opened successfully
-                        if(input_file.is_open())
-                        {
-                            uint64_t bigbang_timestamp = get_bigbang_timestamp(input_file);
-                            uint64_t last_event_timestamp = bigbang_timestamp;
-                            uint64_t event_timestamp;
-                            std::string event_payload;
-                            struct timespec sleep_ts{};
-                            while(std::getline(input_file, event_payload))
-                            {
-                                event_timestamp = get_event_timestamp(event_payload);
-                                if(event_timestamp < last_event_timestamp)
+                timer.timeBlock("log_event", [&]()
                                 {
-                                    LOG_INFO("An Out-of-Order event is found, sleeping for 1 second ...");
-                                    sleep_ts.tv_sec = 1;
-                                    sleep_ts.tv_nsec = 0;
-                                }
-                                else
-                                {
-                                    sleep_ts.tv_sec = (long)(event_timestamp - last_event_timestamp) / 1000000000;
-                                    sleep_ts.tv_nsec = (long)(event_timestamp - last_event_timestamp) % 1000000000;
-                                }
-                                // TODO: (Kun) work around on failure when daytime changes
-                                if(sleep_ts.tv_sec > 3600) sleep_ts.tv_sec = 0;
-                                LOG_DEBUG("Sleeping for {}.{} seconds to emulate interval between events ..."
-                                          , sleep_ts.tv_sec, sleep_ts.tv_nsec);
-                                nanosleep(&sleep_ts, nullptr);
-                                last_event_timestamp = event_timestamp;
-                                total_event_payload_size += event_payload.size();
-                                test_write_event(story_handle, event_payload);
-                                if(workload_args.barrier)
-                                    MPI_Barrier(MPI_COMM_WORLD);
-                            }
+                                    uint64_t event_count_per_story =
+                                            workload_args.event_count / workload_args.story_count;
+                                    for(uint64_t k = 0; k < event_count_per_story; k++)
+                                    {
+                                        if(workload_args.event_input_file.empty())
+                                        {
+                                            // randomly generate events with size in specified range
+                                            uint64_t event_size = (unsigned long)std::min(
+                                                    std::max(size_dist(gen), (double)workload_args.min_event_size * 1.0)
+                                                    , (double)workload_args.max_event_size * 1.0);
+                                            event_payload_size_per_rank += event_size;
+                                            std::string event_payload;
+                                            event_payload.resize(event_size);
+                                            for(uint64_t l = 0; l < event_size; l++)
+                                                event_payload += std::to_string('a' + std::abs(char_dist(gen)) + 1);
+                                            ret = test_write_event(story_handle, event_payload);
+                                            if(workload_args.barrier)
+                                                MPI_Barrier(MPI_COMM_WORLD);
 
-                            input_file.close();
-                        }
-                        else
-                        {
-                            std::cout << "Unable to open the file";
-                        }
-                    }
-                }
+                                            if(workload_args.event_interval > 0)
+                                                usleep(workload_args.event_interval);
+                                        }
+                                        else
+                                        {
+                                            // read event payload from input file line by line
+                                            std::ifstream input_file(workload_args.event_input_file);
+
+                                            // check if the file opened successfully
+                                            if(input_file.is_open())
+                                            {
+                                                uint64_t bigbang_timestamp = get_bigbang_timestamp(input_file);
+                                                uint64_t last_event_timestamp = bigbang_timestamp;
+                                                uint64_t event_timestamp;
+                                                std::string event_payload;
+                                                struct timespec sleep_ts{};
+                                                while(std::getline(input_file, event_payload))
+                                                {
+                                                    event_timestamp = get_event_timestamp(event_payload);
+                                                    if(event_timestamp < last_event_timestamp)
+                                                    {
+                                                        LOG_INFO(
+                                                                "An Out-of-Order event is found, sleeping for 1 second ...");
+                                                        sleep_ts.tv_sec = 1;
+                                                        sleep_ts.tv_nsec = 0;
+                                                    }
+                                                    else
+                                                    {
+                                                        sleep_ts.tv_sec =
+                                                                (long)(event_timestamp - last_event_timestamp) /
+                                                                1000000000;
+                                                        sleep_ts.tv_nsec =
+                                                                (long)(event_timestamp - last_event_timestamp) %
+                                                                1000000000;
+                                                    }
+                                                    // TODO: (Kun) work around on failure when daytime changes
+                                                    if(sleep_ts.tv_sec > 3600) sleep_ts.tv_sec = 0;
+                                                    LOG_DEBUG(
+                                                            "Sleeping for {}.{} seconds to emulate interval between events ..."
+                                                            , sleep_ts.tv_sec, sleep_ts.tv_nsec);
+                                                    nanosleep(&sleep_ts, nullptr);
+                                                    last_event_timestamp = event_timestamp;
+                                                    event_payload_size_per_rank += event_payload.size();
+                                                    ret = test_write_event(story_handle, event_payload);
+                                                    if(workload_args.barrier)
+                                                        MPI_Barrier(MPI_COMM_WORLD);
+                                                }
+
+                                                input_file.close();
+                                            }
+                                            else
+                                            {
+                                                std::cout << "Unable to open the file";
+                                            }
+                                        }
+                                    }
+                                });
 
                 // release story test
-                test_release_story(client, chronicle_name, story_name);
+                ret = timer.timeBlock("ReleaseStory", test_release_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
 
                 // destroy story test
-                test_destroy_story(client, chronicle_name, story_name);
+                ret = timer.timeBlock("DestroyStory", test_destroy_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
             }
 
             // destroy chronicle test
-            test_destroy_chronicle(client, chronicle_name);
+            ret = timer.timeBlock("DestroyChronicle", test_destroy_chronicle, client, chronicle_name);
             if(workload_args.barrier)
                 MPI_Barrier(MPI_COMM_WORLD);
         }
     }
     t2 = std::chrono::steady_clock::now();
 
-    ret = client.Disconnect();
+    ret = timer.timeBlock("Disconnect", &chronolog::Client::Disconnect, client);
     assert(ret == chronolog::CL_SUCCESS);
+    if(workload_args.barrier)
+        MPI_Barrier(MPI_COMM_WORLD);
 
-    std::cout << "Total payload written: " << total_event_payload_size << std::endl;
     double duration = (double)(t2 - t1).count() / 1.0e9;
-    std::cout << "Time used: " << duration << " seconds" << std::endl;
-    std::cout << "Bandwidth: " << (double)total_event_payload_size / duration / 1e6 << " MB/s" << std::endl;
+    double duration_max, duration_min, duration_ave;
+    MPI_Reduce(&duration, &duration_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&duration, &duration_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&duration, &duration_ave, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    uint64_t total_event_payload_size = 0;
+    MPI_Reduce(&event_payload_size_per_rank, &total_event_payload_size, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    if(rank == 0)
+    {
+        std::cout << "Total payload written: " << total_event_payload_size << std::endl;
+        duration_ave /= size;
+        std::cout << "Time used (max): " << duration_max << " seconds" << std::endl;
+        std::cout << "Time used (min): " << duration_min << " seconds" << std::endl;
+        std::cout << "Time used (ave): " << duration_ave << " seconds" << std::endl;
+        if(workload_args.barrier)
+            std::cout << "Bandwidth: " << (double)total_event_payload_size / duration / 1e6 << " MB/s" << std::endl;
+        else
+            std::cout << "Bandwidth: " << (double)total_event_payload_size / duration_ave / 1e6 << " MB/s" << std::endl;
+    }
 
     MPI_Finalize();
 

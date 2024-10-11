@@ -57,8 +57,8 @@ public:
     {
         std::stringstream ss;
         ss << event;
-        LOG_DEBUG("[IngestionQueue] Received event for StoryID={}: Event Details={}, HandleMapSize={}", event.storyId
-             , ss.str(), storyIngestionHandles.size());
+        LOG_TRACE("[IngestionQueue] Received event for StoryID={}: Event Details={}, HandleMapSize={}", event.storyId
+                  , ss.str(), storyIngestionHandles.size());
         auto ingestionHandle_iter = storyIngestionHandles.find(event.storyId);
         if(ingestionHandle_iter == storyIngestionHandles.end())
         {

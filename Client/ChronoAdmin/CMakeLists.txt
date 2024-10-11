@@ -7,7 +7,8 @@ find_package(MPI REQUIRED)
 message("Building CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}")
 message("build target : client_admin")
 
-add_executable(client_admin ${CMAKE_CURRENT_SOURCE_DIR}/client_admin.cpp)
+add_executable(client_admin ${CMAKE_CURRENT_SOURCE_DIR}/client_admin.cpp
+    ../../chrono_common/TimerWrapper.h)
 
 target_link_libraries(client_admin chronolog_client thallium ${MPI_CXX_LIBRARIES})
 

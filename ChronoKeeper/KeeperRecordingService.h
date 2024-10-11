@@ -37,7 +37,7 @@ public:
         //  ChronoTick const& chrono_tick, std::string const& record)
         std::stringstream ss;
         ss << log_event;
-        LOG_DEBUG("[KeeperRecordingService] Recording event: {}", ss.str());
+        LOG_TRACE("[KeeperRecordingService] Recording event: {}", ss.str());
         theIngestionQueue.ingestLogEvent(log_event);
         request.respond(chronolog::CL_SUCCESS);
     }

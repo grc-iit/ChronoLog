@@ -1,5 +1,4 @@
 #include <chronolog_client.h>
-#include <cassert>
 #include <common.h>
 #include <thread>
 #include <chrono>
@@ -19,372 +18,424 @@ struct thread_arg
 
 chronolog::Client*client;
 std::vector <int> shared_state;
+std::mutex shared_state_mutex;
 
-// Enum for thread states represented as bitmasks
-enum ThreadState
+enum class ThreadState
 {
-    UNKNOWN = 1 << 0,              // 00000001
-    THREAD_INITIALIZED = 1 << 1,   // 00000010
-    CHRONICLE_CREATED = 1 << 2,    // 00000100
-    STORY_ACQUIRED = 1 << 3,       // 00001000
-    DATA_ACCESS_FINISHED = 1 << 4, // 00010000
-    STORY_RELEASED = 1 << 5,       // 00100000
-    STORY_DESTROYED = 1 << 6,      // 01000000
-    CHRONICLE_DESTROYED = 1 << 7,  // 10000000
-    THREAD_FINALIZED = 1 << 8      // 10000001
+    UNKNOWN = 0,
+    THREAD_INITIALIZED = 1,
+    CHRONICLE_CREATED = 2,
+    STORY_ACQUIRED = 3,
+    STORY_RELEASED = 4,
+    STORY_DESTROYED = 5,
+    CHRONICLE_DESTROYED = 6,
+    THREAD_FINALIZED = 7
 };
 
-// Helper function to get the state name from the bitmask
-std::string get_state_name(int state_bitmask)
+std::string get_state_name(ThreadState state)
 {
-    switch(state_bitmask)
+    switch(state)
     {
-        case UNKNOWN:
-            return "UNKNOWN";
-        case THREAD_INITIALIZED:
-            return "THREAD_INITIALIZED";
-        case CHRONICLE_CREATED:
-            return "CHRONICLE_CREATED";
-        case STORY_ACQUIRED:
-            return "STORY_ACQUIRED";
-        case DATA_ACCESS_FINISHED:
-            return "DATA_ACCESS_FINISHED";
-        case STORY_RELEASED:
-            return "STORY_RELEASED";
-        case STORY_DESTROYED:
-            return "STORY_DESTROYED";
-        case CHRONICLE_DESTROYED:
-            return "CHRONICLE_DESTROYED";
-        case THREAD_FINALIZED:
+        case ThreadState::THREAD_FINALIZED:
             return "THREAD_FINALIZED";
+        case ThreadState::CHRONICLE_DESTROYED:
+            return "CHRONICLE_DESTROYED";
+        case ThreadState::STORY_DESTROYED:
+            return "STORY_DESTROYED";
+        case ThreadState::STORY_RELEASED:
+            return "STORY_RELEASED";
+        case ThreadState::STORY_ACQUIRED:
+            return "STORY_ACQUIRED";
+        case ThreadState::CHRONICLE_CREATED:
+            return "CHRONICLE_CREATED";
+        case ThreadState::THREAD_INITIALIZED:
+            return "THREAD_INITIALIZED";
+        case ThreadState::UNKNOWN:
+            return "UNKNOWN";
         default:
             return "UNKNOWN_STATE";
     }
 }
 
-void validate_chronicle_created(int tid, int ret)
+void update_chronicle_threads_state(int tid, ThreadState new_state)
 {
-    // Check if the chronicle is already created
-    bool chronicle_already_created = false;
     for(size_t i = 0; i < shared_state.size(); ++i)
     {
         if(i == tid) continue;
-        if(i % 2 == tid % 2)
+        if((i % 2 == tid % 2))
         {
-            if(shared_state[i]&CHRONICLE_CREATED)
-            {
-                chronicle_already_created = true;
-                break;
-            }
+            shared_state[i] = static_cast<int>(new_state);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- Thread {} state updated to: {}", tid, i
+                     , get_state_name(new_state));
         }
     }
+}
 
-    // Validate the return value based on the chronicle creation status
+
+void update_story_threads_state(int tid, ThreadState new_state)
+{
+    for(size_t i = 0; i < shared_state.size(); ++i)
+    {
+        if(i == tid) continue;
+        if((i % 2 == tid % 2) && ((i % 4) / 2 == (tid % 4) / 2))
+        {
+            shared_state[i] = static_cast<int>(new_state);  // Update state
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- Thread {} state updated to: {}", tid, i
+                     , get_state_name(new_state));
+        }
+    }
+}
+
+
+void check_thread_initialization(int tid, int ret)
+{
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
+    if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::UNKNOWN)
+    {
+        shared_state[tid] = static_cast<int>(ThreadState::THREAD_INITIALIZED);
+        LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                ThreadState::THREAD_INITIALIZED));
+    }
+    else
+    {
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- wanted to transition to THREAD_INITIALIZED state "
+                  "from a state different than UNKNOWN", tid);
+    }
+}
+
+void check_chronicle_created(int tid, int ret)
+{
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
     if(ret == chronolog::CL_SUCCESS)
     {
-        // Assert that the chronicle was not already created by another thread
-        assert(!chronicle_already_created && "Chronicle was already created, but return value is CL_SUCCESS!");
-        std::cout << "Chronicle successfully created by thread " << tid << "." << std::endl;
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::THREAD_INITIALIZED)
+        {
+            shared_state[tid] = static_cast<int>(ThreadState::CHRONICLE_CREATED);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                    ThreadState::CHRONICLE_CREATED));
+            update_chronicle_threads_state(tid, ThreadState::CHRONICLE_CREATED);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS when transitioning to "
+                      "CHRONICLE_CREATED state from a state different than THREAD_INITIALIZED", tid);
+        }
     }
     else if(ret == chronolog::CL_ERR_CHRONICLE_EXISTS)
     {
-        // Assert that the chronicle was already created by another thread
-        assert(chronicle_already_created && "Chronicle was not created, but return value is CL_ERR_CHRONICLE_EXISTS!");
-        std::cout << "Chronicle was already created by another thread, as expected." << std::endl;
-    }
-    else
-    {
-        assert(false && "Chronicle creation failed!");
-    }
-}
-
-
-void validate_story_acquired(int tid, int ret)
-{
-    // Check if the chronicle has already been destroyed
-    bool chronicle_destroyed = false;
-
-    for(size_t i = 0; i < shared_state.size(); ++i)
-    {
-        if(i == tid) continue; // Skip the current thread
-        if(i % 2 == tid % 2) // Check if the thread operates on the same chronicle
+        if(static_cast<ThreadState>(shared_state[tid]) != ThreadState::UNKNOWN ||
+           static_cast<ThreadState>(shared_state[tid]) != ThreadState::THREAD_INITIALIZED)
         {
-            if(shared_state[i]&CHRONICLE_DESTROYED)
-            {
-                chronicle_destroyed = true;
-                break; // Exit loop once chronicle destruction is confirmed
-            }
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_CHRONICLE_EXISTS return "
+                     "value when trying to create a chronicle on a state different from UNKNOWN or THREAD_INITIALIZED"
+                     , tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_CHRONICLE_EXISTS return value"
+                      " when trying to create a chronicle on the UNKNOWN or THREAD_INITIALIZED state", tid);
         }
     }
-
-    // Validate the return value based on the chronicle state
-    if(ret == chronolog::CL_SUCCESS)
-    {
-        // Assert that the chronicle was not destroyed
-        assert(!chronicle_destroyed && "Chronicle was destroyed, but return value is CL_SUCCESS!");
-        std::cout << "Thread " << tid << " successfully acquired the story." << std::endl;
-    }
-    else if(ret == chronolog::CL_ERR_NOT_EXIST)
-    {
-        // Assert that the chronicle was destroyed or not created
-        assert(chronicle_destroyed && "Chronicle was not destroyed, but return value is CL_ERR_NOT_EXIST!");
-        std::cerr << "Thread " << tid << " attempted to acquire a story, but the chronicle does not exist."
-                  << std::endl;
-    }
     else
     {
-        std::cerr << "Thread " << tid << " encountered an unexpected error while acquiring the story." << std::endl;
-        assert(false && "Unexpected error during story acquisition.");
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- the return value is an unexpected one", tid);
     }
 }
 
-
-void validate_story_released(int tid, int ret)
+void check_story_acquired(int tid, int ret)
 {
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
     if(ret == chronolog::CL_SUCCESS)
     {
-        std::cout << "Thread " << tid << " successfully released the story." << std::endl;
-    }
-    else if(ret == chronolog::CL_ERR_NOT_EXIST)
-    {
-        // Assert that the chronicle does not exist and the story can't be acquired
-        std::cerr << "Thread " << tid << " attempted to acquire a story, but the chronicle does not exist."
-                  << std::endl;
-        assert(false && "Chronicle has not been created. Cannot acquire the story.");
-    }
-    else
-    {
-        std::cerr << "Thread " << tid << " attempted to acquire a story that was already acquired." << std::endl;
-        assert(false && "Story was already acquired by another thread.");
-    }
-}
-
-
-void validate_story_destroyed(int tid, int ret)
-{
-    // Determine the current thread's chronicle and story
-    std::string chronicle_name = (tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";
-    std::string story_name = (tid % 4 < 2) ? "STORY_1" : "STORY_2";
-
-    // Check if the chronicle or story has already been destroyed or if the story is still acquired
-    bool chronicle_destroyed = false;
-    bool story_acquired = false;
-    bool story_destroyed = false;
-
-    for(size_t i = 0; i < shared_state.size(); ++i)
-    {
-        if(i == tid) continue; // Skip the current thread
-
-        // Check if the thread operates on the same chronicle
-        if(i % 2 == tid % 2)
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_CREATED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED)
         {
-            if(shared_state[i]&CHRONICLE_DESTROYED)
-            {
-                chronicle_destroyed = true;
-                break; // No need to check further if chronicle is destroyed
-            }
-
-            // Now, check if the thread also operates on the same story
-            if(i % 4 < 2 == tid % 4 < 2)
-            {
-                if(shared_state[i]&STORY_DESTROYED)
-                {
-                    story_destroyed = true;
-                }
-                if(shared_state[i]&STORY_ACQUIRED)
-                {
-                    story_acquired = true;
-                }
-            }
+            shared_state[tid] = static_cast<int>(ThreadState::STORY_ACQUIRED);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                    ThreadState::STORY_ACQUIRED));
+            update_story_threads_state(tid, ThreadState::STORY_ACQUIRED);
+        }
+        else if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_ACQUIRED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS return value when trying"
+                     " to acquire a Story on a STORY_ACQUIRED", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS return value when trying "
+                      "to acquire a story on a state different than CHRONICLE_CREATED, STORY_RELEASED, STORY_DESTROYED "
+                      "or STORY_ACQUIRED", tid);
         }
     }
+    else if(ret == chronolog::CL_ERR_NOT_EXIST)
+    {
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::THREAD_INITIALIZED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                     "trying to acquire a Story on a THREAD_INITIALIZED, STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                      "trying to acquire a story on the THREAD_INITIALIZED, STORY_DESTROYED or CHRONICLE_DESTROYED "
+                      "state", tid);
+        }
+    }
+    else
+    {
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- the return value is an unexpected one", tid);
+    }
+}
 
-    // Validate the return value based on the story and chronicle state
+void check_story_released(int tid, int ret)
+{
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
     if(ret == chronolog::CL_SUCCESS)
     {
-        // Assert that no other threads have acquired or destroyed the story and the chronicle is not destroyed
-        assert(!story_acquired && !chronicle_destroyed &&
-               "Story is still acquired or chronicle was destroyed, but return value is CL_SUCCESS!");
-        std::cout << "Thread " << tid << " successfully destroyed the story." << std::endl;
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_ACQUIRED)
+        {
+            shared_state[tid] = static_cast<int>(ThreadState::STORY_RELEASED);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                    ThreadState::STORY_RELEASED));
+            update_story_threads_state(tid, ThreadState::STORY_RELEASED);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS return value when "
+                      "trying to release a story on the a STORY_RELEASED state", tid);
+        }
+    }
+    else if(ret == chronolog::CL_ERR_NOT_ACQUIRED)
+    {
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_ACQUIRED return value "
+                     "when trying to release a Story on a STORY_RELEASED state", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_ACQUIRED return value "
+                      "when trying to release a story on the a state different from STORY_RELEASED.", tid);
+        }
     }
     else if(ret == chronolog::CL_ERR_NOT_EXIST)
     {
-        // Assert that the story or chronicle was destroyed
-        assert((chronicle_destroyed || story_destroyed) &&
-               "Chronicle or story was not destroyed, but return value is CL_ERR_NOT_EXIST!");
-        std::cerr << "Thread " << tid
-                  << " attempted to destroy a story, but the chronicle or story was already destroyed." << std::endl;
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                     "trying to release a Story on a STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                      "trying to release a story on a state different from STORY_DESTROYED or CHRONICLE_DESTROYED."
+                      , tid);
+        }
+    }
+    else
+    {
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- the return value is an unexpected one", tid);
+    }
+}
+
+void check_story_destroyed(int tid, int ret)
+{
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
+
+    if(ret == chronolog::CL_SUCCESS)
+    {
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED)
+        {
+            shared_state[tid] = static_cast<int>(ThreadState::STORY_DESTROYED);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                    ThreadState::STORY_DESTROYED));
+            update_story_threads_state(tid, ThreadState::STORY_DESTROYED);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS return value when"
+                      " trying to destroy a story on a state different from STORY_RELEASED", tid);
+        }
     }
     else if(ret == chronolog::CL_ERR_ACQUIRED)
     {
-        // Assert that the story is still acquired by other threads
-        assert(story_acquired && "Story was not acquired by other threads, but return value is CL_ERR_ACQUIRED!");
-        std::cerr << "Thread " << tid << " attempted to destroy a story that is still acquired by other threads."
-                  << std::endl;
-    }
-    else
-    {
-        std::cerr << "Thread " << tid << " encountered an unexpected error while destroying the story." << std::endl;
-        assert(false && "Unexpected error during story destruction.");
-    }
-}
-
-void validate_chronicle_destroyed(int tid, int ret)
-{
-    // Determine the current thread's chronicle
-    std::string chronicle_name = (tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";
-
-    // Variables to track states for chronicle destruction
-    bool chronicle_destroyed = false;
-    bool story_acquired = false;
-
-    // Iterate over all threads to check their states based on the same chronicle
-    for(size_t i = 0; i < shared_state.size(); ++i)
-    {
-        if(i == tid) continue; // Skip the current thread
-
-        // Check if the thread operates on the same chronicle
-        if(i % 2 == tid % 2)
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_ACQUIRED)
         {
-            if(shared_state[i]&CHRONICLE_DESTROYED)
-            {
-                chronicle_destroyed = true;
-                break; // If the chronicle is already destroyed, no need to check further
-            }
-            if(shared_state[i]&STORY_ACQUIRED)
-            {
-                story_acquired = true; // Track if any thread still has an acquired story
-            }
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_ACQUIRED return value when "
+                     "trying to destroy a Story on the STORY_ACQUIRED state.", tid);
         }
-    }
-
-    // Validate the return value based on the chronicle and story state
-    if(ret == chronolog::CL_SUCCESS)
-    {
-        // Assert that neither the chronicle is destroyed nor stories are still acquired
-        assert(!chronicle_destroyed && !story_acquired &&
-               "Chronicle is destroyed or stories are still acquired, but return value is CL_SUCCESS!");
-        std::cout << "Chronicle successfully destroyed by thread " << tid << "." << std::endl;
+        else
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_ACQUIRED return value when "
+                     "trying to destroy a story on a state different from STORY_ACQUIRED state.", tid);
+        }
     }
     else if(ret == chronolog::CL_ERR_NOT_EXIST)
     {
-        // Assert that the chronicle was destroyed
-        assert(chronicle_destroyed && "Chronicle was not destroyed, but return value is CL_ERR_NOT_EXIST!");
-        std::cerr << "Thread " << tid << " attempted to destroy the chronicle, but it was already destroyed."
-                  << std::endl;
-    }
-    else if(ret == chronolog::CL_ERR_ACQUIRED)
-    {
-        // Assert that stories are still acquired by other threads
-        assert(story_acquired && "No stories are acquired by other threads, but return value is CL_ERR_ACQUIRED!");
-        std::cerr << "Thread " << tid
-                  << " attempted to destroy the chronicle, but stories are still acquired by other threads."
-                  << std::endl;
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                     " trying to destroy a Story on the STORY_DESTROYED or CHRONICLE_DESTROYED state.", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                      "trying to destroy a story on a state different than STORY_DESTROYED or CHRONICLE_DESTROYED "
+                      "state.", tid);
+        }
     }
     else
     {
-        std::cerr << "Thread " << tid << " encountered an unexpected error while destroying the chronicle."
-                  << std::endl;
-        assert(false && "Unexpected error during chronicle destruction.");
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- the return value is an unexpected one", tid);
     }
 }
 
-
-// Function to update shared state and notify other threads
-void update_shared_state_and_notify(int tid, int target_state_bitmask, int ret)
+void check_chronicle_destroyed(int tid, int ret)
 {
-    switch(target_state_bitmask)
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
+    if(ret == chronolog::CL_SUCCESS)
     {
-        case THREAD_INITIALIZED:
-        case DATA_ACCESS_FINISHED:
-        case THREAD_FINALIZED:
-            break;
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED)
+        {
+            shared_state[tid] = static_cast<int>(ThreadState::CHRONICLE_DESTROYED);
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+                    ThreadState::CHRONICLE_DESTROYED));
+            update_chronicle_threads_state(tid, ThreadState::CHRONICLE_DESTROYED);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_SUCCESS return value when trying "
+                      "to destroy chronicle on a state different than STORY_RELEASED", tid);
+        }
+    }
+    else if(ret == chronolog::CL_ERR_ACQUIRED)
+    {
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_ACQUIRED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_ACQUIRED return value when "
+                     "trying to destroy chronicle on STORY_ACQUIRED state", tid);
+        }
+        else
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_ACQUIRED return value when "
+                     "trying to destroy chronicle on a state different than STORY_ACQUIRED", tid);
+        }
+    }
+    else if(ret == chronolog::CL_ERR_NOT_EXIST)
+    {
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
+        {
+            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                     "trying to destroy chronicle on a state STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
+        }
+        else
+        {
+            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
+                      "trying to destroy chronicle on a state different than STORY_DESTROYED or CHRONICLE_DESTROYED"
+                      , tid);
+        }
+    }
+    else
+    {
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- the return value is an unexpected one", tid);
+    }
+}
 
-        case CHRONICLE_CREATED:
-            validate_chronicle_created(tid, ret);
-            break;
+void check_thread_finalized(int tid, int ret)
+{
+    std::lock_guard <std::mutex> lock(shared_state_mutex);
+    shared_state[tid] = static_cast<int>(ThreadState::THREAD_FINALIZED);
+    LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
+            ThreadState::THREAD_FINALIZED));
+}
 
-        case STORY_ACQUIRED:
-            validate_story_acquired(tid, ret);
+void handle_return_value(int tid, int ret, ThreadState success_state)
+{
+    switch(success_state)
+    {
+        case ThreadState::THREAD_INITIALIZED:
+            check_thread_initialization(tid, ret);
             break;
-
-        case STORY_RELEASED:
-            validate_story_released(tid, ret);
+        case ThreadState::CHRONICLE_CREATED:
+            check_chronicle_created(tid, ret);
             break;
-
-        case STORY_DESTROYED:
-            validate_story_destroyed(tid, ret);
+        case ThreadState::STORY_ACQUIRED:
+            check_story_acquired(tid, ret);
             break;
-
-        case CHRONICLE_DESTROYED:
-            validate_chronicle_destroyed(tid, ret);
+        case ThreadState::STORY_RELEASED:
+            check_story_released(tid, ret);
             break;
-
+        case ThreadState::STORY_DESTROYED:
+            check_story_destroyed(tid, ret);
+            break;
+        case ThreadState::CHRONICLE_DESTROYED:
+            check_chronicle_destroyed(tid, ret);
+            break;
+        case ThreadState::THREAD_FINALIZED:
+            check_thread_finalized(tid, ret);
+            break;
+        case ThreadState::UNKNOWN:
         default:
-            std::cerr << "Error: Unknown or unsupported state transition!" << std::endl;
             break;
     }
-    shared_state[tid] |= target_state_bitmask;
-    std::cout << "Thread " << tid << " state updated to: " << get_state_name(target_state_bitmask) << std::endl;
+    //std::cout << "Thread " << tid << " checked its state: "
+    //          << get_state_name(static_cast<ThreadState>(shared_state[tid])) << std::endl;
 }
 
 void thread_body(struct thread_arg*t)
 {
-    // Initiate thread
-    //update_shared_state_and_notify(t->tid, THREAD_INITIALIZED, 0); // State: Thread initialized
+    // Thread Initialized
+    handle_return_value(t->tid, 0, ThreadState::THREAD_INITIALIZED);
 
 
-    // Chronicle creation
-    std::string chronicle_name = (t->tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";
+    // Chronicle Variables
+    std::string chronicle_name = (t->tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";//"CHRONICLE";
     std::map <std::string, std::string> chronicle_attrs;
     chronicle_attrs.emplace("Priority", "High");
     int flags = 1;
+    // Chronicle creation
     int ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
-    std::cout << "[ClientLibMultiStorytellers] Chronicle creation: tid=" << t->tid << ", Ret: " << ret << std::endl;
-    //update_shared_state_and_notify(t->tid, CHRONICLE_CREATED, ret);
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Chronicle created: tid={}, Ret: {}", t->tid, ret);
+    handle_return_value(t->tid, ret, ThreadState::CHRONICLE_CREATED);
 
 
-    // Acquire story
+    // Story Variables
     std::string story_name = (t->tid % 4 < 2) ? "STORY_1" : "STORY_2";
     std::map <std::string, std::string> story_attrs;
     flags = 2;
+    // Acquire story
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
-    std::cout << "[ClientLibMultiStorytellers] Story acquired: tid=" << t->tid << ", Ret: " << acquire_ret.first
-              << std::endl;
-    //update_shared_state_and_notify(t->tid, STORY_ACQUIRED, acquire_ret.first);
-
-    std::cout << "Thread: " << t->tid << ", Chronicle: " << chronicle_name << ", Story: " << story_name << std::endl;
-
-    // Log Data
-    auto story_handle = acquire_ret.second;
-    for(int i = 0; i < 100; ++i)
-    {
-        story_handle->log_event("line " + std::to_string(i));
-        std::this_thread::sleep_for(std::chrono::milliseconds(i % 10)); // Simulate work
-    }
-    //update_shared_state_and_notify(t->tid, DATA_ACCESS_FINISHED, ret); // State: Data logging finished
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Story acquired: tid={}, Ret: {}", t->tid, acquire_ret.first);
+    handle_return_value(t->tid, acquire_ret.first, ThreadState::STORY_ACQUIRED);
 
 
     // Release the story
     ret = client->ReleaseStory(chronicle_name, story_name);
-    std::cout << "[ClientLibMultiStorytellers] Story released: tid=" << t->tid << ", Ret: " << ret << std::endl;
-    //update_shared_state_and_notify(t->tid, STORY_RELEASED, ret);
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Story released: tid={}, Ret: {}", t->tid, ret);
+    handle_return_value(t->tid, ret, ThreadState::STORY_RELEASED);
 
 
     // Destroy the story
     ret = client->DestroyStory(chronicle_name, story_name);
-    std::cout << "[ClientLibMultiStorytellers] Story destroyed: tid=" << t->tid << ", Ret: " << ret << std::endl;
-    //update_shared_state_and_notify(t->tid, STORY_DESTROYED, ret);
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Story destroyed: tid={}, Ret: {}", t->tid, ret);
+    handle_return_value(t->tid, ret, ThreadState::STORY_DESTROYED);
 
 
     // Destroy the chronicle
     ret = client->DestroyChronicle(chronicle_name);
-    std::cout << "[ClientLibMultiStorytellers] Chronicle destroyed: tid=" << t->tid << ", Ret: " << ret << std::endl;
-    //update_shared_state_and_notify(t->tid, CHRONICLE_DESTROYED, ret);
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Chronicle destroyed: tid={}, Ret: {}", t->tid, ret);
+    handle_return_value(t->tid, ret, ThreadState::CHRONICLE_DESTROYED);
 
 
-    // End thread
-    //update_shared_state_and_notify(t->tid, THREAD_FINALIZED, 0);
+    // Thread Finalized
+    handle_return_value(t->tid, 0, ThreadState::THREAD_FINALIZED);
 }
 
 
@@ -415,13 +466,13 @@ int main(int argc, char**argv)
     int ret = client->Connect();
     if(chronolog::CL_SUCCESS != ret)
     {
-        LOG_ERROR("[ClientLibMultiStorytellers] Failed to connect to ChronoVisor");
+        LOG_ERROR("[ClientLibThreadInterdependencyTest] Failed to connect to ChronoVisor");
         delete client;
         return -1;
     }
 
     // Initiate test
-    LOG_INFO("[ClientLibMultiStorytellers] Running test.");
+    LOG_INFO("[ClientLibThreadInterdependencyTest] Running test.");
     int num_threads = 8;
     std::vector <struct thread_arg> t_args(num_threads);
     std::vector <std::thread> workers(num_threads);
@@ -442,6 +493,8 @@ int main(int argc, char**argv)
     {
         workers[i].join();
     }
+
+    LOG_INFO("[ClientLibThreadInterdependencyTest] End of the test.");
 
     // Disconnect the client and clean up
     ret = client->Disconnect();

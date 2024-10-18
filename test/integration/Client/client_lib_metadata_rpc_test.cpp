@@ -176,8 +176,7 @@ int main(int argc, char**argv)
         assert(ret == chronolog::CL_ERR_NOT_EXIST);
     }
 
-    LOG_INFO("[ClientLibMetadataRPCTest] CreateChronicle takes {} ns",
-            duration_create_chronicle.count() / NUM_CHRONICLE);
+    LOG_INFO("[ClientLibMetadataRPCTest] CreateChronicle takes {} ns", duration_create_chronicle.count() / NUM_CHRONICLE);
     LOG_INFO("[ClientLibMetadataRPCTest] EditChronicleAttr takes {} ns",
             duration_edit_chronicle_attr.count() / NUM_CHRONICLE);
     LOG_INFO("[ClientLibMetadataRPCTest] AcquireStory takes {} ns",
@@ -188,8 +187,7 @@ int main(int argc, char**argv)
             duration_destroy_story.count() / (NUM_CHRONICLE * NUM_STORY));
     LOG_INFO("[ClientLibMetadataRPCTest] GetChronileAttr(Date) takes {} ns",
             duration_get_chronicle_attr.count() / NUM_CHRONICLE);
-    LOG_INFO("[ClientLibMetadataRPCTest] DestroyChronicle takes {} ns",
-            duration_destroy_chronicle.count() / NUM_CHRONICLE);
+    LOG_INFO("[ClientLibMetadataRPCTest] DestroyChronicle takes {} ns", duration_destroy_chronicle.count() / NUM_CHRONICLE);
     LOG_INFO("[ClientLibMetadataRPCTest] ShowChronicles takes {} ns", duration_show_chronicles.count() / NUM_CHRONICLE);
     LOG_INFO("[ClientLibMetadataRPCTest] ShowStories takes {} ns", duration_show_stories.count() / NUM_CHRONICLE);
 
@@ -226,8 +224,7 @@ int main(int argc, char**argv)
     LOG_INFO("[ClientLibMetadataRPCTest] Disconnecting from the server.");
     client.Disconnect();
 
-    LOG_INFO("[ClientLibMetadataRPCTest] CreateChronicle2 takes {} ns",
-            duration_create_chronicle.count() / NUM_CHRONICLE);
+    LOG_INFO("[ClientLibMetadataRPCTest] CreateChronicle2 takes {} ns", duration_create_chronicle.count() / NUM_CHRONICLE);
     LOG_INFO("[ClientLibMetadataRPCTest] DestroyChronicle2 takes {} ns",
             duration_destroy_chronicle.count() / NUM_CHRONICLE);
     return 0;

@@ -96,11 +96,6 @@ void check_thread_initialization(int tid, int ret)
         LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- State updated to: {}", tid, get_state_name(
                 ThreadState::THREAD_INITIALIZED));
     }
-    else
-    {
-        LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- wanted to transition to THREAD_INITIALIZED state "
-                  "from a state different than UNKNOWN", tid);
-    }
 }
 
 void check_chronicle_created(int tid, int ret)

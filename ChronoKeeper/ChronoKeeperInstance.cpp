@@ -4,8 +4,6 @@
 
 #include <signal.h>
 
-//#include "chrono_common/KeeperIdCard.h"
-//#include "chrono_common/KeeperStatsMsg.h"
 #include "KeeperRecordingService.h"
 #include "KeeperRegClient.h"
 #include "IngestionQueue.h"
@@ -226,7 +224,7 @@ int main(int argc, char**argv)
         std::stringstream s1;
         s1 << recordingEngine->self();
         LOG_INFO("[ChronoKeeperInstance] GroupID={} starting KeeperRecordingService at {} with provider_id {}"
-                 , keeper_group_id, s1.str(), datastore_service_provider_id);
+                 , keeper_group_id, s1.str(), recording_service_provider_id);
         keeperRecordingService = chronolog::KeeperRecordingService::CreateKeeperRecordingService(*recordingEngine
                                                                                                  , recording_service_provider_id
                                                                                                  , ingestionQueue);
@@ -301,7 +299,7 @@ int main(int argc, char**argv)
     while(keep_running)
     {
         keeperRegistryClient->send_stats_msg(keeperStatsMsg);
-        sleep(30);
+        sleep(10);
     }
 
     /// Unregister from ChronoVisor ____________________________________________________________________________________

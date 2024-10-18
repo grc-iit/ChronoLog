@@ -15,6 +15,7 @@
 #include "KeeperRegistrationMsg.h"
 #include "GrapherIdCard.h"
 #include "GrapherRegistrationMsg.h"
+#include "GrapherStatsMsg.h"
 #include "ConfigurationManager.h"
 
 namespace chronolog
@@ -140,33 +141,33 @@ public:
         int ShutdownRegistryService();
 
         int registerKeeperProcess(KeeperRegistrationMsg const& keeper_reg_msg);
-
         int unregisterKeeperProcess(KeeperIdCard const& keeper_id_card);
-
         void updateKeeperProcessStats(KeeperStatsMsg const& keeperStatsMsg);
 
-        int notifyRecordingGroupOfStoryRecordingStart(ChronicleName const&, StoryName const&, StoryId const&,
-                                                      std::vector<KeeperIdCard>&);
+        int notifyRecordingGroupOfStoryRecordingStart(ChronicleName const &, StoryName const &, StoryId const &
+                                                      , std::vector <KeeperIdCard> &);
         int notifyRecordingGroupOfStoryRecordingStop(StoryId const&);
 
         int registerGrapherProcess(GrapherRegistrationMsg const& reg_msg);
         int unregisterGrapherProcess(GrapherIdCard const& id_card);
+        void updateGrapherProcessStats(GrapherStatsMsg const& );
 
     private:
         KeeperRegistry(KeeperRegistry const&) = delete;//disable copying
         KeeperRegistry& operator=(KeeperRegistry const&) = delete;
 
-        int notifyGrapherOfStoryRecordingStart(RecordingGroup&, ChronicleName const&, StoryName const&, StoryId const&,
-                                               uint64_t);
+        int notifyGrapherOfStoryRecordingStart(RecordingGroup &, ChronicleName const &, StoryName const &, StoryId const &
+                                               , uint64_t);
         int notifyGrapherOfStoryRecordingStop(RecordingGroup&, StoryId const&);
-        int notifyKeepersOfStoryRecordingStart(RecordingGroup&, std::vector<KeeperIdCard>&, ChronicleName const&,
-                                               StoryName const&, StoryId const&, uint64_t);
-        int notifyKeepersOfStoryRecordingStop(RecordingGroup&, std::vector<KeeperIdCard> const&, StoryId const&);
+        int notifyKeepersOfStoryRecordingStart(RecordingGroup&, std::vector<KeeperIdCard> &, ChronicleName const &
+                                               , StoryName const &, StoryId const &, uint64_t);
+        int notifyKeepersOfStoryRecordingStop(RecordingGroup &, std::vector <KeeperIdCard> const &, StoryId const &);
 
         RegistryState registryState;
         std::mutex registryLock;
         thallium::engine* registryEngine;
         KeeperRegistryService* keeperRegistryService;
+        std::string dataStoreAdminServiceProtocol;
         size_t delayedDataAdminExitSeconds;
 
         std::map<RecordingGroupId, RecordingGroup> recordingGroups;

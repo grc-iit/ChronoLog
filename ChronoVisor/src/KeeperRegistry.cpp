@@ -45,11 +45,19 @@ int KeeperRegistry::InitializeRegistryService(ChronoLog::ConfigurationManager co
 
         std::stringstream ss;
         ss << registryEngine->self();
-        LOG_INFO("[KeeperRegistry] Starting at address {} with provider id: {}", ss.str(), provider_id);
+        LOG_INFO("[KeeperRegistry] Starting RegistryService at {} provider id: {}", ss.str(), provider_id);
 
         keeperRegistryService = KeeperRegistryService::CreateKeeperRegistryService(*registryEngine, provider_id, *this);
 
         delayedDataAdminExitSeconds = confManager.VISOR_CONF.DELAYED_DATA_ADMIN_EXIT_IN_SECS;
+
+        // Kun: This protocol will be used to create dataStoreAdminClient for both Keeper and Grapher.
+        // Since they share the same Thallium engine, we have to use the same protocol for both.
+        // This is a temporary solution until we have a better way to handle this.
+        // Currently, it is protected by the deployment script that ensures the same protocol is used for both.
+        // TODO (Kun): add DataStoreAdminService section to the configuration of ChronoVisor and make sure all three
+        //  ends (Keeper, Grapher, and Visor) use the same protocol.
+        dataStoreAdminServiceProtocol = confManager.KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.PROTO_CONF;
 
         registryState = INITIALIZED;
         status = chronolog::CL_SUCCESS;
@@ -275,8 +283,10 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
         }
     }
 
-    //create a client of Keeper's DataStoreAdminService listenning at adminServiceId
-    std::string service_na_string("ofi+sockets://"); //TODO: add protocol to serviceId and keeperIdCard
+    //create a client of Keeper's DataStoreAdminService listening at adminServiceId
+    //std::string service_na_string("ofi+sockets://"); //TODO: add protocol to serviceId and keeperIdCard
+    std::string service_na_string(dataStoreAdminServiceProtocol + "://");
+
     service_na_string =
             admin_service_id.getIPasDottedString(service_na_string) + ":" + std::to_string(admin_service_id.port);
 
@@ -400,6 +410,13 @@ void KeeperRegistry::updateKeeperProcessStats(KeeperStatsMsg const &keeperStatsM
     { return; }
 
     KeeperIdCard keeper_id_card = keeperStatsMsg.getKeeperIdCard();
+
+#ifdef DEBUG
+    std::string id_string;
+    id_string += keeper_id_card;
+    LOG_DEBUG("[KeeperRegistry] Received KeeperStatsMsg from {}", id_string.str());
+#endif
+
     auto group_iter = recordingGroups.find(keeper_id_card.getGroupId());
     if(group_iter == recordingGroups.end()) { return; }
 
@@ -902,7 +919,8 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
     }
 
     //create a client of the new grapher's DataStoreAdminService listenning at adminServiceId
-    std::string service_na_string("ofi+sockets://"); //TODO: add protocol string to serviceIdCard
+    //std::string service_na_string("ofi+sockets://"); //TODO: add protocol string to serviceIdCard
+    std::string service_na_string(dataStoreAdminServiceProtocol + "://");
     service_na_string =
             admin_service_id.getIPasDottedString(service_na_string) + ":" + std::to_string(admin_service_id.port);
 
@@ -1019,12 +1037,39 @@ int KeeperRegistry::unregisterGrapherProcess(GrapherIdCard const& grapher_id_car
 
 }//namespace chronolog
 
+void chl::KeeperRegistry::updateGrapherProcessStats(chl::GrapherStatsMsg const &statsMsg)
+{
+    // NOTE: we don't lock registryLock while updating the keeperProcess stats
+    // delayed destruction of keeperProcessEntry protects us from the case when
+    // stats message is received from the KeeperProcess that has unregistered
+    // on the other thread
+    if(is_shutting_down())
+    { return; }
 
+#ifdef DEBUG
+    std::string id_string;
+    id_string += stats.getGrapherIdCard;
+    LOG_DEBUG("[KeeperRegistry] Received GrapherStatsMsg from {}", id_string.str());
+#endif
+
+    auto group_iter = recordingGroups.find(statsMsg.getGrapherIdCard().getGroupId());
+    if(group_iter == recordingGroups.end()) 
+    { return; }
+
+    RecordingGroup& recording_group = ((*group_iter).second);
+    if(recording_group.grapherProcess != nullptr && recording_group.grapherProcess->active)
+    {
+        // there's no need to update stats of inactive process
+        recording_group.grapherProcess->lastStatsTime = std::chrono::steady_clock::now().time_since_epoch().count();
+        recording_group.grapherProcess->activeStoryCount = statsMsg.getActiveStoryCount();
+
+    }
+}
 ///////////////
 
 bool chl::RecordingGroup::isActive() const
 {
-    //TODO: we might add a check for time since the last stats message received from 
+    //TODO: we might add a check for time since the last stats message received from
     // the processes listed as active 
 
     if(grapherProcess != nullptr && grapherProcess->active && activeKeeperCount >0)

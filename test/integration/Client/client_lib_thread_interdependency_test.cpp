@@ -5,7 +5,6 @@
 #include <cmd_arg_parse.h>
 #include "chrono_monitor.h"
 #include <vector>
-#include "thread_interdependency.h"
 #include <bitset>
 
 #define STORY_NAME_LEN 5

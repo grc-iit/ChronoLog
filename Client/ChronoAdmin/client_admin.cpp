@@ -11,6 +11,9 @@
 #include <chrono_monitor.h>
 #include <TimerWrapper.h>
 #include <cstring>
+#include <margo.h>
+
+#define MAX_EVENT_SIZE (32 * 1024 * 1024)
 
 typedef struct workload_conf_args_
 {
@@ -30,6 +33,8 @@ typedef struct workload_conf_args_
 
 std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
 {
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int opt;
     char*config_file = nullptr;
     workload_conf_args workload_args;
@@ -122,49 +127,56 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
     // Check if the config file option is provided
     if(config_file)
     {
-        std::cout << "Config file specified: " << config_file << std::endl;
-        if(workload_args.interactive)
+        if(rank == 0)
         {
-            std::cout << "Interactive mode: on" << std::endl;
-        }
-        else
-        {
-            std::cout << "Interactive mode: off" << std::endl;
-            std::cout << "Chronicle count: " << workload_args.chronicle_count << std::endl;
-            std::cout << "Story count: " << workload_args.story_count << std::endl;
-            if(!workload_args.event_input_file.empty())
+            std::cout << "Config file specified: " << config_file << std::endl;
+            if(workload_args.interactive)
             {
-                std::cout << "Event input file specified: " << workload_args.event_input_file.c_str() << std::endl;
-                std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
-                std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+                std::cout << "Interactive mode: on" << std::endl;
             }
             else
             {
-                std::cout << "No event input file specified, use default/specified separate conf args ..." << std::endl;
-                std::cout << "Min event size: " << workload_args.min_event_size << std::endl;
-                std::cout << "Ave event size: " << workload_args.ave_event_size << std::endl;
-                std::cout << "Max event size: " << workload_args.max_event_size << std::endl;
-                std::cout << "Event count: " << workload_args.event_count << std::endl;
-                std::cout << "Event interval: " << workload_args.event_interval << std::endl;
-                std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
-                std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+                std::cout << "Interactive mode: off" << std::endl;
+                std::cout << "Chronicle count: " << workload_args.chronicle_count << std::endl;
+                std::cout << "Story count: " << workload_args.story_count << std::endl;
+                if(!workload_args.event_input_file.empty())
+                {
+                    std::cout << "Event input file specified: " << workload_args.event_input_file.c_str() << std::endl;
+                    std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
+                    std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+                }
+                else
+                {
+                    std::cout << "No event input file specified, use default/specified separate conf args ..."
+                              << std::endl;
+                    std::cout << "Min event size: " << workload_args.min_event_size << std::endl;
+                    std::cout << "Ave event size: " << workload_args.ave_event_size << std::endl;
+                    std::cout << "Max event size: " << workload_args.max_event_size << std::endl;
+                    std::cout << "Event count: " << workload_args.event_count << std::endl;
+                    std::cout << "Event interval: " << workload_args.event_interval << std::endl;
+                    std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
+                    std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+                }
             }
         }
         return {std::pair <std::string, workload_conf_args>((config_file), workload_args)};
     }
     else
     {
-        std::cout << "No config file specified, using default settings instead:" << std::endl;
-        std::cout << "Interactive mode: " << (workload_args.interactive ? "on" : "off") << std::endl;
-        std::cout << "Chronicle count: " << workload_args.chronicle_count << std::endl;
-        std::cout << "Story count: " << workload_args.story_count << std::endl;
-        std::cout << "Min event size: " << workload_args.min_event_size << std::endl;
-        std::cout << "Ave event size: " << workload_args.ave_event_size << std::endl;
-        std::cout << "Max event size: " << workload_args.max_event_size << std::endl;
-        std::cout << "Event count: " << workload_args.event_count << std::endl;
-        std::cout << "Event interval: " << workload_args.event_interval << std::endl;
-        std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
-        std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+        if(rank == 0)
+        {
+            std::cout << "No config file specified, using default settings instead:" << std::endl;
+            std::cout << "Interactive mode: " << (workload_args.interactive ? "on" : "off") << std::endl;
+            std::cout << "Chronicle count: " << workload_args.chronicle_count << std::endl;
+            std::cout << "Story count: " << workload_args.story_count << std::endl;
+            std::cout << "Min event size: " << workload_args.min_event_size << std::endl;
+            std::cout << "Ave event size: " << workload_args.ave_event_size << std::endl;
+            std::cout << "Max event size: " << workload_args.max_event_size << std::endl;
+            std::cout << "Event count: " << workload_args.event_count << std::endl;
+            std::cout << "Event interval: " << workload_args.event_interval << std::endl;
+            std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
+            std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
+        }
         return {};
     }
 }
@@ -294,6 +306,10 @@ uint64_t get_bigbang_timestamp(std::ifstream &file)
 
 int main(int argc, char**argv)
 {
+    std::string argobots_conf_str = R"({"argobots" : {"abt_mem_max_num_stacks" : 8
+                                                    , "abt_thread_stacksize" : 2097152}})";
+    margo_set_environment(argobots_conf_str.c_str());
+
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -323,33 +339,38 @@ int main(int argc, char**argv)
     chronolog::Client client(confManager);
     chronolog::StoryHandle*story_handle;
 
-    TimerWrapper timer(workload_args.perf_test);
+    TimerWrapper connectTimer(workload_args.perf_test, "Connect");
+    TimerWrapper createChronicleTimer(workload_args.perf_test, "CreateChronicle");
+    TimerWrapper acquireStoryTimer(workload_args.perf_test, "AcquireStory");
+    TimerWrapper writeEventTimer(workload_args.perf_test, "WriteEvent");
+    TimerWrapper releaseStoryTimer(workload_args.perf_test, "ReleaseStory");
+    TimerWrapper destroyStoryTimer(workload_args.perf_test, "DestroyStory");
+    TimerWrapper destroyChronicleTimer(workload_args.perf_test, "DestroyChronicle");
+    TimerWrapper disconnectTimer(workload_args.perf_test, "Disconnect");
 
     int ret;
     uint64_t event_payload_size_per_rank = 0;
 
     std::string client_id = gen_random(8);
-    std::cout << "Generated client id: " << client_id << std::endl;
+//    std::cout << "Generated client id: " << client_id << std::endl;
 
     std::string server_ip = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.IP;
-    int base_port = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.BASE_PORT;
     std::string server_uri = confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF;
-    server_uri += "://" + server_ip + ":" + std::to_string(base_port);
 
     std::string username = getpwuid(getuid())->pw_name;
-    ret = timer.timeBlock("Connect", &chronolog::Client::Connect, client);
+    ret = connectTimer.timeBlock(&chronolog::Client::Connect, client);
     assert(ret == chronolog::CL_SUCCESS);
 
-    std::cout << " connected to server address : " << server_uri << std::endl;
+//    std::cout << "Connected to server address: " << server_uri << std::endl;
+    std::string payload_str(MAX_EVENT_SIZE, 'a');
 
-    std::chrono::steady_clock::time_point t1, t2;
-    t1 = std::chrono::steady_clock::now();
+    double local_e2e_start = MPI_Wtime();
     if(workload_args.interactive)
     {
+        // Interactive mode, accept commands from stdin
         std::cout << "Metadata operations: \n" << "\t-c <chronicle_name> , create a Chronicle <chronicle_name>\n"
                   << "\t-a -s <chronicle_name> <story_name>, acquire Story <story_name> in Chronicle <chronicle_name>\n"
                   << "\t-w <event_string>, write Event with <event_string> as payload\n"
-                  //                  << "\t-r <event_id>, read Event <event_id>"
                   << "\t-q -s <chronicle_name> <story_name>, release Story <story_name> in Chronicle <chronicle_name>\n"
                   << "\t-d -s <chronicle_name> <story_name>, destroy Story <story_name> in Chronicle <chronicle_name>\n"
                   << "\t-d -c <chronicle_name>, destroy Chronicle <chronicle_name>\n" << "\t-disconnect\n" << std::endl;
@@ -419,11 +440,13 @@ std::vector <std::string> &command_subs)
     }
     else
     {
+        // Non-interactive mode, execute workload via command line arguments
         std::random_device rand_device;
         std::mt19937 gen(rand_device());
         std::uniform_int_distribution char_dist(0, 255);
         double sigma = (double)(workload_args.max_event_size - workload_args.min_event_size) / 6;
         std::normal_distribution <double> size_dist((double)workload_args.ave_event_size, sigma);
+        MPI_Barrier(MPI_COMM_WORLD);
         for(uint64_t i = 0; i < workload_args.chronicle_count; i++)
         {
             // create chronicle test
@@ -432,7 +455,7 @@ std::vector <std::string> &command_subs)
                 chronicle_name = "chronicle_" + std::to_string(i);
             else
                 chronicle_name = "chronicle_" + std::to_string(rank) + "_" + std::to_string(i);
-            ret = timer.timeBlock("CreateChronicle", test_create_chronicle, client, chronicle_name);
+            ret = createChronicleTimer.timeBlock(test_create_chronicle, client, chronicle_name);
             if(workload_args.barrier)
                 MPI_Barrier(MPI_COMM_WORLD);
 
@@ -445,12 +468,13 @@ std::vector <std::string> &command_subs)
                     story_name = "story_" + std::to_string(j);
                 else
                     story_name = "story_" + std::to_string(rank) + "_" + std::to_string(j);
-                story_handle = timer.timeBlock("AcquireStory", test_acquire_story, client, chronicle_name, story_name);
+                story_handle = acquireStoryTimer.timeBlock(test_acquire_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
 
                 // write event test
-                timer.timeBlock("log_event", [&]()
+                std::string event_payload;
+                writeEventTimer.timeBlock([&]()
                                 {
                                     uint64_t event_count_per_story =
                                             workload_args.event_count / workload_args.story_count;
@@ -458,15 +482,24 @@ std::vector <std::string> &command_subs)
                                     {
                                         if(workload_args.event_input_file.empty())
                                         {
-                                            // randomly generate events with size in specified range
-                                            uint64_t event_size = (unsigned long)std::min(
-                                                    std::max(size_dist(gen), (double)workload_args.min_event_size * 1.0)
-                                                    , (double)workload_args.max_event_size * 1.0);
+                                            // randomly generate events size if range is specified
+                                            writeEventTimer.pauseTimer();
+
+                                            uint64_t event_size;
+                                            if(workload_args.ave_event_size == workload_args.min_event_size &&
+                                               workload_args.ave_event_size == workload_args.max_event_size)
+                                            {
+                                                event_size = workload_args.ave_event_size;
+                                            }
+                                            else
+                                            {
+                                                event_size = (unsigned long)std::min(std::max(size_dist(gen),
+                                                                                             (double)workload_args.min_event_size * 1.0),
+                                                        (double)workload_args.max_event_size * 1.0);
+                                            }
+                                            event_payload = payload_str.substr(0, event_size);
                                             event_payload_size_per_rank += event_size;
-                                            std::string event_payload;
-                                            event_payload.resize(event_size);
-                                            for(uint64_t l = 0; l < event_size; l++)
-                                                event_payload += std::to_string('a' + std::abs(char_dist(gen)) + 1);
+                                            writeEventTimer.resumeTimer();
                                             ret = test_write_event(story_handle, event_payload);
                                             if(workload_args.barrier)
                                                 MPI_Barrier(MPI_COMM_WORLD);
@@ -482,10 +515,10 @@ std::vector <std::string> &command_subs)
                                             // check if the file opened successfully
                                             if(input_file.is_open())
                                             {
+                                                writeEventTimer.pauseTimer();
                                                 uint64_t bigbang_timestamp = get_bigbang_timestamp(input_file);
                                                 uint64_t last_event_timestamp = bigbang_timestamp;
                                                 uint64_t event_timestamp;
-                                                std::string event_payload;
                                                 struct timespec sleep_ts{};
                                                 while(std::getline(input_file, event_payload))
                                                 {
@@ -514,6 +547,7 @@ std::vector <std::string> &command_subs)
                                                     nanosleep(&sleep_ts, nullptr);
                                                     last_event_timestamp = event_timestamp;
                                                     event_payload_size_per_rank += event_payload.size();
+                                                    writeEventTimer.resumeTimer();
                                                     ret = test_write_event(story_handle, event_payload);
                                                     if(workload_args.barrier)
                                                         MPI_Barrier(MPI_COMM_WORLD);
@@ -530,48 +564,97 @@ std::vector <std::string> &command_subs)
                                 });
 
                 // release story test
-                ret = timer.timeBlock("ReleaseStory", test_release_story, client, chronicle_name, story_name);
+                ret = releaseStoryTimer.timeBlock(test_release_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
 
                 // destroy story test
-                ret = timer.timeBlock("DestroyStory", test_destroy_story, client, chronicle_name, story_name);
+                ret = destroyStoryTimer.timeBlock(test_destroy_story, client, chronicle_name, story_name);
                 if(workload_args.barrier)
                     MPI_Barrier(MPI_COMM_WORLD);
             }
 
             // destroy chronicle test
-            ret = timer.timeBlock("DestroyChronicle", test_destroy_chronicle, client, chronicle_name);
+            ret = destroyChronicleTimer.timeBlock(test_destroy_chronicle, client, chronicle_name);
             if(workload_args.barrier)
                 MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-    t2 = std::chrono::steady_clock::now();
+    double local_e2e_end = MPI_Wtime();
 
-    ret = timer.timeBlock("Disconnect", &chronolog::Client::Disconnect, client);
+    ret = disconnectTimer.timeBlock(&chronolog::Client::Disconnect, client);
     assert(ret == chronolog::CL_SUCCESS);
     if(workload_args.barrier)
         MPI_Barrier(MPI_COMM_WORLD);
 
-    double duration = (double)(t2 - t1).count() / 1.0e9;
-    double duration_max, duration_min, duration_ave;
-    MPI_Reduce(&duration, &duration_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&duration, &duration_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&duration, &duration_ave, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    double local_e2e_duration = local_e2e_end - local_e2e_start;
+    double global_e2e_start, global_e2e_end, global_e2e_duration_ave, global_e2e_duration;
+    MPI_Reduce(&local_e2e_start, &global_e2e_start, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_e2e_end, &global_e2e_end, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    global_e2e_duration = global_e2e_end - global_e2e_start;
+    MPI_Reduce(&local_e2e_duration, &global_e2e_duration_ave, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     uint64_t total_event_payload_size = 0;
     MPI_Reduce(&event_payload_size_per_rank, &total_event_payload_size, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
     if(rank == 0)
     {
+        std::cout << "======================================" << std::endl;
+        std::cout << "======== Performance results: ========" << std::endl;
+        std::cout << "======================================" << std::endl;
+        global_e2e_duration_ave /= size;
         std::cout << "Total payload written: " << total_event_payload_size << std::endl;
-        duration_ave /= size;
-        std::cout << "Time used (max): " << duration_max << " seconds" << std::endl;
-        std::cout << "Time used (min): " << duration_min << " seconds" << std::endl;
-        std::cout << "Time used (ave): " << duration_ave << " seconds" << std::endl;
         if(workload_args.barrier)
-            std::cout << "Bandwidth: " << (double)total_event_payload_size / duration / 1e6 << " MB/s" << std::endl;
+        {
+            std::cout << "Connect throughput: " << (double)size / connectTimer.getDuration() << " op/s" << std::endl;
+            std::cout << "CreateChronicle throughput: "
+                      << (double)workload_args.chronicle_count * size / createChronicleTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "AcquireStory throughput: "
+                      << (double)workload_args.story_count * size / acquireStoryTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "ReleaseStory throughput: "
+                      << (double)workload_args.story_count * size / releaseStoryTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "DestroyStory throughput: "
+                      << (double)workload_args.story_count * size / destroyStoryTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "DestroyChronicle throughput: "
+                      << (double)workload_args.chronicle_count * size / destroyChronicleTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "Disconnect throughput: " << (double)size / disconnectTimer.getDuration() << " op/s"
+                      << std::endl;
+            std::cout << "End-to-end bandwidth: " << (double)total_event_payload_size / global_e2e_duration / 1e6
+                      << " MB/s" << std::endl;
+            std::cout << "Data access bandwidth: "
+                      << (double)total_event_payload_size / writeEventTimer.getDuration() / 1e6 << " "
+                                                                                                   "MB/s" << std::endl;
+        }
         else
-            std::cout << "Bandwidth: " << (double)total_event_payload_size / duration_ave / 1e6 << " MB/s" << std::endl;
+        {
+            std::cout << "Connect throughput: " << (double)size / connectTimer.getDurationAve() << " op/s" << std::endl;
+            std::cout << "CreateChronicle throughput: "
+                      << (double)workload_args.chronicle_count * size / createChronicleTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "AcquireStory throughput: "
+                      << (double)workload_args.story_count * size / acquireStoryTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "ReleaseStory throughput: "
+                      << (double)workload_args.story_count * size / releaseStoryTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "DestroyStory throughput: "
+                      << (double)workload_args.story_count * size / destroyStoryTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "DestroyChronicle throughput: "
+                      << (double)workload_args.chronicle_count / destroyChronicleTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "Disconnect throughput: " << (double)size / disconnectTimer.getDurationAve() << " op/s"
+                      << std::endl;
+            std::cout << "End-to-end bandwidth: " << (double)total_event_payload_size / global_e2e_duration_ave / 1e6
+                      << " MB/s" << std::endl;
+            std::cout << "Data access bandwidth: "
+                      << (double)total_event_payload_size / writeEventTimer.getDurationAve() / 1e6 << " MB/s"
+                      << std::endl;
+        }
     }
 
     MPI_Finalize();

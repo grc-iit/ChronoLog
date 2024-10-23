@@ -1,10 +1,10 @@
 #!/bin/bash
 
-REP=1
+REP=3
 EVENT_SIZE_MIN=16
 EVENT_SIZE_MAX=1024
 EVENT_SIZE_AVE=512
-EVENT_COUNT=1
+EVENT_COUNT=100
 STORY_COUNT=1
 CHRONICLE_COUNT=1
 SHARED_STORY=false
@@ -24,14 +24,14 @@ OUTPUT_LOG_FILE=./perf_test.log
 
 rm -f ${OUTPUT_LOG_FILE}
 head -${NUM_NODES} ${HOST_FILE} > "${HOST_FILE}.${NUM_NODES}"
-cmd_args="-a ${EVENT_SIZE_MIN} -b ${EVENT_SIZE_MAX} -s ${EVENT_SIZE_AVE} -n ${EVENT_COUNT} -t ${STORY_COUNT} -h ${CHRONICLE_COUNT} -p"
-[[ "S{SHARED_STORY}" == "true" ]] && cmd_args+=" -o"
-[[ "${BARRIER}" == "true" ]] && cmd_args+=" -r"
+cli_args_args="-a ${EVENT_SIZE_MIN} -b ${EVENT_SIZE_MAX} -s ${EVENT_SIZE_AVE} -n ${EVENT_COUNT} -t ${STORY_COUNT} -h ${CHRONICLE_COUNT} -p"
+[[ "S{SHARED_STORY}" == "true" ]] && cli_args_args+=" -o"
+[[ "${BARRIER}" == "true" ]] && cli_args_args+=" -r"
 for i in $(seq 1 ${REP}); do
     echo "======================================================================================" >> ${OUTPUT_LOG_FILE}
     echo "Iteration ${i}" >> ${OUTPUT_LOG_FILE}
     echo LD_LIBRARY_PATH=${CHRONOLOG_LIB_DIR} ${MPIEXEC_BIN} -n ${NUM_PROCS} -f "${HOST_FILE}.${NUM_NODES}" \
-             "${CLIENT_ADMIN_BIN}" -c "${CONF_FILE}" "${cmd_args}"
+             "${CLIENT_ADMIN_BIN}" -c "${CONF_FILE}" "${cli_args_args}"
     LD_LIBRARY_PATH=${CHRONOLOG_LIB_DIR} ${MPIEXEC_BIN} -n ${NUM_PROCS} -f "${HOST_FILE}.${NUM_NODES}" \
-    "${CLIENT_ADMIN_BIN}" -c "${CONF_FILE}" "${cmd_args}" #>> ${OUTPUT_LOG_FILE} 2>&1
+    "${CLIENT_ADMIN_BIN}" -c "${CONF_FILE}" "${cli_args_args}" >> ${OUTPUT_LOG_FILE} 2>&1
 done

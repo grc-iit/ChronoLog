@@ -25,8 +25,14 @@ fi
 # Move to the root directory of the project
 cd "$(dirname "$0")/.."
 
-# Load Spack environment
-source ~/Spack/spack/share/spack/setup-env.sh
+# Check if Spack is installed
+if ! command -v spack &> /dev/null; then
+    echo "Spack is not installed or not in the PATH."
+    echo "Please install Spack and make it accessible in your PATH. Refer to the prerequisites section of the Wiki at https://github.com/grc-iit/ChronoLog/wiki"
+    exit 1
+else
+    echo "Spack installed and detected"
+fi
 
 # Activate Spack environment
 spack env activate -p .

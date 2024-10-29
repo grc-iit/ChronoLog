@@ -8,6 +8,9 @@ BUILD_TYPE=""
 NUM_KEEPERS=""
 NUM_GRAPHERS=""
 
+# Directory of the script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Usage function to show required and optional parameters
 usage() {
     echo "Usage: $0 -type <BuildType> -n <NUM_KEEPERS> -j <NUM_GRAPHERS>"
@@ -53,17 +56,17 @@ CONF_DIR="${INSTALL_DIR}/conf"
 
 # Print a message with a green background indicating that the build process is starting
 echo -e "\033[42;30mBuilding ChronoLog in ${BUILD_TYPE} mode...\033[0m"
-./build.sh -type "$BUILD_TYPE"
+"${SCRIPT_DIR}/build.sh" -type "$BUILD_TYPE"
 
 # Print a message with a green background indicating that the install process is starting
 echo -e "\033[42;30mInstalling ChronoLog...\033[0m"
-./install.sh
+"${SCRIPT_DIR}/install.sh"
 
 # Print a message with a green background indicating that the deployment process is starting
 echo -e "\033[42;30mDeploying ChronoLog...\033[0m"
 
 # Run the deployment script with the specified parameters and standard directories
-./local_single_user_deploy.sh \
+"${SCRIPT_DIR}/local_single_user_deploy.sh" \
     -n "$NUM_KEEPERS" \
     -j "$NUM_GRAPHERS" \
     -w "$INSTALL_DIR" \

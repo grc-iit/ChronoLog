@@ -264,21 +264,21 @@ install() {
 deploy() {
     echo -e "${INFO}Deploying ...${NC}"
     install
-    launch_process ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.log"
+    launch_process ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.launch.log"
     sleep 2
     num_keepers=${NUM_KEEPERS}
     for (( i=1; i<num_keepers+1; i++ ))
     do
-        launch_process ${KEEPER_BIN} "--config ${CONF_DIR}/keeper_conf_$i.json" "keeper_$i.log"
+        launch_process ${KEEPER_BIN} "--config ${CONF_DIR}/keeper_conf_$i.json" "keeper_$i.launch.log"
     done
     sleep 2
     num_graphers=${NUM_GRAPHERS}
     for (( i=1; i<num_graphers+1; i++ ))
     do
-        launch_process ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.log"
+        launch_process ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
     done
     sleep 2
-    launch_process ${CLIENT_BIN} "--config ${CONF_DIR}/client_conf.json" "client.log"
+    launch_process ${CLIENT_BIN} "--config ${CONF_DIR}/client_conf.json" "client.launch.log"
     echo -e "${DEBUG}Deployment done${NC}"
 }
 

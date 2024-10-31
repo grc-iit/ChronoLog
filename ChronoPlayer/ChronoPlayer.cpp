@@ -4,16 +4,15 @@
 
 #include <signal.h>
 
-#include "GrapherIdCard.h"
-#include "GrapherRecordingService.h"
-#include "GrapherRegClient.h"
-#include "ChunkIngestionQueue.h"
+#include "PlayerIdCard.h"
+#include "PlayerRegClient.h"
+#include "StoryChunkIngestionQueue.h"
 #include "StoryChunkExtractionQueue.h"
-#include "StoryChunkExtractor.h"
-#include "GrapherDataStore.h"
-#include "DataStoreAdminService.h"
+//#include "StoryChunkExtractor.h"
+#include "PlayerDataStore.h"
+#include "PlayerStoreAdminService.h"
 #include "ConfigurationManager.h"
-#include "CSVFileChunkExtractor.h"
+//#include "CSVFileChunkExtractor.h"
 #include "cmd_arg_parse.h"
 
 // we will be using a combination of the uint32_t representation of the service IP address
@@ -48,7 +47,7 @@ volatile sig_atomic_t keep_running = true;
 
 void sigterm_handler(int)
 {
-    LOG_INFO("[ChronoGrapher] Received SIGTERM signal. Initiating shutdown procedure.");
+    LOG_INFO("[ChronoPlayer] Received SIGTERM signal. Initiating shutdown procedure.");
     keep_running = false;
     return;
 }
@@ -79,7 +78,7 @@ int main(int argc, char**argv)
     {
         exit(EXIT_FAILURE);
     }
-    LOG_INFO("Running ChronoGrapher ");
+    LOG_INFO("Running ChronoPlayer ");
 
     // Instantiate MemoryDataStore
     // instantiate DataStoreAdminService
@@ -98,14 +97,14 @@ int main(int argc, char**argv)
 
     if(-1 == service_endpoint_from_dotted_string(datastore_service_ip, datastore_service_port, datastore_endpoint))
     {
-        LOG_CRITICAL("[ChronoGrapher] Failed to start DataStoreAdminService. Invalid endpoint provided.");
+        LOG_CRITICAL("[ChronoPlayer] Failed to start DataStoreAdminService. Invalid endpoint provided.");
         return (-1);
     }
-    LOG_INFO("[ChronoGrapher] DataStoreAdminService started successfully.");
+    LOG_INFO("[ChronoPlayer] DataStoreAdminService started successfully.");
 
     // Instantiate GrapherRecordingService
     chronolog::RecordingGroupId recording_group_id = confManager.GRAPHER_CONF.RECORDING_GROUP;
-    std::string RECORDING_SERVICE_PROTOCOL = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF;
+ /*   std::string RECORDING_SERVICE_PROTOCOL = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF;
     std::string RECORDING_SERVICE_IP = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.IP;
     uint16_t RECORDING_SERVICE_PORT = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.BASE_PORT;
     uint16_t recording_service_provider_id = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.SERVICE_PROVIDER_ID;
@@ -123,27 +122,26 @@ int main(int argc, char**argv)
         return (-1);
     }
     LOG_INFO("[ChronoGrapher] RecordingService started successfully.");
-
-    // create GrapherIdCard to identify this Grapher process in ChronoVisor's Registry
-    chronolog::GrapherIdCard processIdCard(recording_group_id, recording_endpoint.first, recording_endpoint.second
-                                           , recording_service_provider_id);
+*/
+    // create PlayerIdCard to identify this Player process in ChronoVisor's Registry
+    chronolog::PlayerIdCard processIdCard(recording_group_id, datastore_endpoint.first, datastore_endpoint.second
+                                           , datastore_service_provider_id);
 
     std::stringstream process_id_string;
     process_id_string << processIdCard;
     LOG_INFO("[ChronoGrapher] GrapherIdCard: {}", process_id_string.str());
 
     // Instantiate MemoryDataStore & ExtractorModule
-    chronolog::ChunkIngestionQueue ingestionQueue;
-    std::string csv_files_directory = confManager.GRAPHER_CONF.EXTRACTOR_CONF.story_files_dir;
+    chronolog::StoryChunkIngestionQueue ingestionQueue;
+    chronolog::StoryChunkExtractionQueue extractionQueue;
 
-    chronolog::CSVFileStoryChunkExtractor storyExtractor(process_id_string.str(), csv_files_directory);
-    chronolog::GrapherDataStore theDataStore(ingestionQueue, storyExtractor.getExtractionQueue());
+    chronolog::PlayerDataStore theDataStore(ingestionQueue, extractionQueue);
 
     chronolog::ServiceId collectionServiceId(datastore_endpoint.first, datastore_endpoint.second
                                              , datastore_service_provider_id);
-    tl::engine*dataAdminEngine = nullptr;
+    tl::engine * dataAdminEngine = nullptr;
 
-    chronolog::DataStoreAdminService*grapherDataAdminService = nullptr;
+    chronolog::PlayerStoreAdminService * playerStoreAdminService = nullptr;
 
     try
     {
@@ -154,53 +152,24 @@ int main(int argc, char**argv)
 
         std::stringstream s3;
         s3 << dataAdminEngine->self();
-        LOG_DEBUG("[ChronoGrapher] starting DataStoreAdminService at address {} with ProviderID={}", s3.str()
+        LOG_DEBUG("[ChronoPlayer] starting DataStoreAdminService at address {} with ProviderID={}", s3.str()
                   , datastore_service_provider_id);
-        grapherDataAdminService = chronolog::DataStoreAdminService::CreateDataStoreAdminService(*dataAdminEngine
+        playerStoreAdminService = chronolog::PlayerStoreAdminService::CreatePlayerStoreAdminService(*dataAdminEngine
                                                                                                 , datastore_service_provider_id
                                                                                                 , theDataStore);
     }
     catch(tl::exception const &)
     {
-        LOG_ERROR("[ChronoGrapher]  failed to create DataStoreAdminService");
-        grapherDataAdminService = nullptr;
+        LOG_ERROR("[ChronoPlayer]  failed to create DataStoreAdminService");
+        playerStoreAdminService = nullptr;
     }
 
-    if(nullptr == grapherDataAdminService)
+    if(nullptr == playerStoreAdminService)
     {
-        LOG_CRITICAL("[ChronoGrapher] failed to create DataStoreAdminService exiting");
+        LOG_CRITICAL("[ChronoPlayer] failed to create DataStoreAdminService exiting");
         return (-1);
     }
 
-    // Instantiate RecordingService
-    tl::engine*recordingEngine = nullptr;
-    chronolog::GrapherRecordingService*grapherRecordingService = nullptr;
-
-    try
-    {
-        margo_instance_id margo_id = margo_init(RECORDING_SERVICE_NA_STRING.c_str(), MARGO_SERVER_MODE, 1, 1);
-        recordingEngine = new tl::engine(margo_id);
-
-        std::stringstream s1;
-        s1 << recordingEngine->self();
-        LOG_INFO("[ChronoGrapher] starting RecordingService at {} with provider_id {}", s1.str()
-                 , recording_service_provider_id);
-        grapherRecordingService = chronolog::GrapherRecordingService::CreateRecordingService(*recordingEngine
-                                                                                             , recording_service_provider_id
-                                                                                             , ingestionQueue);
-    }
-    catch(tl::exception const &)
-    {
-        LOG_ERROR("[ChronoGrapher] failed to create RecordingService");
-        grapherRecordingService = nullptr;
-    }
-
-    if(nullptr == grapherRecordingService)
-    {
-        LOG_CRITICAL("[ChronoGrapher] failed to create RecordingService exiting");
-        delete grapherDataAdminService;
-        return (-1);
-    }
 
     /// RegistryClient SetUp _____________________________________________________________________________________
     // create RegistryClient and register the new Recording service with the Registry
@@ -211,80 +180,77 @@ int main(int argc, char**argv)
 
     uint16_t REGISTRY_SERVICE_PROVIDER_ID = confManager.GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
-    chronolog::GrapherRegistryClient*grapherRegistryClient = chronolog::GrapherRegistryClient::CreateRegistryClient(
+    chronolog::PlayerRegistryClient * playerRegistryClient = chronolog::PlayerRegistryClient::CreateRegistryClient(
             *dataAdminEngine, REGISTRY_SERVICE_NA_STRING, REGISTRY_SERVICE_PROVIDER_ID);
 
-    if(nullptr == grapherRegistryClient)
+    if(nullptr == playerRegistryClient)
     {
-        LOG_CRITICAL("[ChronoGrapher] failed to create RegistryClient; exiting");
-        delete grapherRecordingService;
-        delete grapherDataAdminService;
+        LOG_CRITICAL("[ChronoPlayer] failed to create RegistryClient; exiting");
+        delete playerStoreAdminService;
         return (-1);
     }
 
     /// Registration with ChronoVisor __________________________________________________________________________________
     // try to register with chronoVisor a few times than log ERROR and exit...
-    int registration_status = grapherRegistryClient->send_register_msg(
-            chronolog::GrapherRegistrationMsg(processIdCard, collectionServiceId));
+    int registration_status = playerRegistryClient->send_register_msg(
+            chronolog::PlayerRegistrationMsg(processIdCard, collectionServiceId));
     //if the first attemp failes retry 
     int retries = 5;
     while((chronolog::CL_SUCCESS != registration_status) && (retries > 0))
     {
-        registration_status = grapherRegistryClient->send_register_msg(
-                chronolog::GrapherRegistrationMsg(processIdCard, collectionServiceId));
+        registration_status = playerRegistryClient->send_register_msg(
+                chronolog::PlayerRegistrationMsg(processIdCard, collectionServiceId));
         sleep(5);
         retries--;
     }
 
     if(chronolog::CL_SUCCESS != registration_status)
     {
-        LOG_CRITICAL("[ChronoGrapher] Failed to register with ChronoVisor after multiple attempts. Exiting.");
-        delete grapherRegistryClient;
-        delete grapherRecordingService;
-        delete grapherDataAdminService;
+        LOG_CRITICAL("[ChronoPlayer] Failed to register with ChronoVisor after multiple attempts. Exiting.");
+        delete playerRegistryClient;
+        delete playerStoreAdminService;
         return (-1);
     }
-    LOG_INFO("[ChronoGrapher] Successfully registered with ChronoVisor.");
+    LOG_INFO("[ChronoPlayer] Successfully registered with ChronoVisor.");
 
     /// Start data collection and extraction threads ___________________________________________________________________
     // services are successfully created and keeper process had registered with ChronoVisor
     // start all dataCollection and Extraction threads...
     tl::abt scope;
-    theDataStore.startDataCollection(3);
+   // theDataStore.startDataCollection(3);
     // start extraction streams & threads
-    storyExtractor.startExtractionThreads(2);
+    //storyExtractor.startExtractionThreads(2);
 
     /// Main loop for sending stats message until receiving SIGTERM ____________________________________________________
     // now we are ready to ingest records coming from the storyteller clients ....
     // main thread would be sending stats message until keeper process receives
     // sigterm signal
-    chronolog::GrapherStatsMsg grapherStatsMsg(processIdCard);
+    chronolog::PlayerStatsMsg playerStatsMsg(processIdCard);
     while(keep_running)
     {
-        grapherRegistryClient->send_stats_msg(grapherStatsMsg);
+        playerRegistryClient->send_stats_msg(playerStatsMsg);
         sleep(10);
     }
 
     /// Unregister from ChronoVisor ____________________________________________________________________________________
     // Unregister from the chronoVisor so that no new story requests would be coming
-    grapherRegistryClient->send_unregister_msg(processIdCard);
-    delete grapherRegistryClient;
+    playerRegistryClient->send_unregister_msg(processIdCard);
+    delete playerRegistryClient;
 
     /// Stop services and shut down ____________________________________________________________________________________
-    LOG_INFO("[ChronoGrapher] Initiating shutdown procedures.");
+    LOG_INFO("[ChronoPlayer] Initiating shutdown procedures.");
     // Stop recording events
-    delete grapherRecordingService;
-    delete grapherDataAdminService;
+    delete playerStoreAdminService;
     // Shutdown the Data Collection
-    theDataStore.shutdownDataCollection();
+    //theDataStore.shutdownDataCollection();
     // Shutdown extraction module
     // drain extractionQueue and stop extraction xStreams
-    storyExtractor.shutdownExtractionThreads();
+    //storyExtractor.shutdownExtractionThreads();
     // these are not probably needed as thallium handles the engine finalization...
     //  recordingEngine.finalize();
     //  collectionEngine.finalize();
-    delete recordingEngine;
+   // delete recordingEngine;
     delete dataAdminEngine;
-    LOG_INFO("[ChronoGrapher] Shutdown completed. Exiting.");
+    LOG_INFO("[ChronoPlayer] Shutdown completed. Exiting.");
     return exit_code;
 }

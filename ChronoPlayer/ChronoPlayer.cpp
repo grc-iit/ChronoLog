@@ -67,13 +67,13 @@ int main(int argc, char**argv)
         std::exit(EXIT_FAILURE);
     }
     ChronoLog::ConfigurationManager confManager(conf_file_path);
-    int result = chronolog::chrono_monitor::initialize(confManager.GRAPHER_CONF.LOG_CONF.LOGTYPE
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.LOGFILE
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.LOGLEVEL
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.LOGNAME
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.LOGFILESIZE
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.LOGFILENUM
-                                                       , confManager.GRAPHER_CONF.LOG_CONF.FLUSHLEVEL);
+    int result = chronolog::chrono_monitor::initialize(confManager.PLAYER_CONF.LOG_CONF.LOGTYPE
+                                                       , confManager.PLAYER_CONF.LOG_CONF.LOGFILE
+                                                       , confManager.PLAYER_CONF.LOG_CONF.LOGLEVEL
+                                                       , confManager.PLAYER_CONF.LOG_CONF.LOGNAME
+                                                       , confManager.PLAYER_CONF.LOG_CONF.LOGFILESIZE
+                                                       , confManager.PLAYER_CONF.LOG_CONF.LOGFILENUM
+                                                       , confManager.PLAYER_CONF.LOG_CONF.FLUSHLEVEL);
     if(result == 1)
     {
         exit(EXIT_FAILURE);
@@ -84,13 +84,13 @@ int main(int argc, char**argv)
     // instantiate DataStoreAdminService
 
     /// DataStoreAdminService setup ____________________________________________________________________________________
-    std::string datastore_service_ip = confManager.GRAPHER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.IP;
-    int datastore_service_port = confManager.GRAPHER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.BASE_PORT;
+    std::string datastore_service_ip = confManager.PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.IP;
+    int datastore_service_port = confManager.PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.BASE_PORT;
     std::string DATASTORE_SERVICE_NA_STRING =
-            confManager.GRAPHER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF + "://" + datastore_service_ip + ":" +
+            confManager.PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF + "://" + datastore_service_ip + ":" +
             std::to_string(datastore_service_port);
 
-    uint16_t datastore_service_provider_id = confManager.GRAPHER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.SERVICE_PROVIDER_ID;
+    uint16_t datastore_service_provider_id = confManager.PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
     chronolog::service_endpoint datastore_endpoint;
     // validate ip address, instantiate DataAdminService and create ServiceId to be included in RegistrationMsg
@@ -103,7 +103,7 @@ int main(int argc, char**argv)
     LOG_INFO("[ChronoPlayer] DataStoreAdminService started successfully.");
 
     // Instantiate GrapherRecordingService
-    chronolog::RecordingGroupId recording_group_id = confManager.GRAPHER_CONF.RECORDING_GROUP;
+    chronolog::RecordingGroupId recording_group_id = confManager.PLAYER_CONF.RECORDING_GROUP;
  /*   std::string RECORDING_SERVICE_PROTOCOL = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF;
     std::string RECORDING_SERVICE_IP = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.IP;
     uint16_t RECORDING_SERVICE_PORT = confManager.GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.BASE_PORT;
@@ -173,12 +173,12 @@ int main(int argc, char**argv)
 
     /// RegistryClient SetUp _____________________________________________________________________________________
     // create RegistryClient and register the new Recording service with the Registry
-    std::string REGISTRY_SERVICE_NA_STRING = confManager.GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.PROTO_CONF + "://" +
-                                             confManager.GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.IP + ":" +
+    std::string REGISTRY_SERVICE_NA_STRING = confManager.PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.PROTO_CONF + "://" +
+                                             confManager.PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.IP + ":" +
                                              std::to_string(
-                                                     confManager.GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.BASE_PORT);
+                                                     confManager.PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.BASE_PORT);
 
-    uint16_t REGISTRY_SERVICE_PROVIDER_ID = confManager.GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID;
+    uint16_t REGISTRY_SERVICE_PROVIDER_ID = confManager.PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
     chronolog::PlayerRegistryClient * playerRegistryClient = chronolog::PlayerRegistryClient::CreateRegistryClient(
             *dataAdminEngine, REGISTRY_SERVICE_NA_STRING, REGISTRY_SERVICE_PROVIDER_ID);

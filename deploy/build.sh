@@ -3,8 +3,11 @@
 # Exit on any error
 set -e
 
-# Initialize build type variable as empty to ensure it's set by the user
+# Default values and color codes
 BUILD_TYPE=""
+BUILD_DIR="build"
+GREEN="\033[42;30m"
+RESET="\033[0m"
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
@@ -15,8 +18,8 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-# Check if BUILD_TYPE is set, if not, print usage and exit
-if [[ -z "$BUILD_TYPE" ]]; then
+# Validate BUILD_TYPE
+if [[ -z "$BUILD_TYPE" || ! "$BUILD_TYPE" =~ ^(Debug|Release)$ ]]; then
     echo "Usage: $0 -type <BuildType>"
     echo "Example: $0 -type Debug or $0 -type Release"
     exit 1
@@ -32,28 +35,27 @@ if ! command -v spack &> /dev/null; then
     exit 1
 fi
 
-# Activate Spack environment
+# Activate Spack environment and install dependencies if not already installed
 spack env activate -p .
-spack install -v
-
-# Check if build directory exists and delete it if it does
-if [ -d "build" ]; then
-  echo "Build directory exists. Removing it..."
-  rm -rf build
+if ! spack find --loaded | grep -q "ChronoLog"; then
+    spack install -v
 fi
 
-# Create a fresh build directory
-mkdir build
-cd build
+# Remove and recreate the build directory
+if [ -d "$BUILD_DIR" ]; then
+  echo "Build directory exists. Removing it..."
+  rm -rf "$BUILD_DIR"
+fi
 
-# Print a message with a green background indicating that the build process is starting
-echo -e "\033[42;30mBuilding ChronoLog in ${BUILD_TYPE} mode...\033[0m"
+mkdir "$BUILD_DIR"
+cd "$BUILD_DIR"
 
-# Run CMake configuration with specified build type
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ..
+# Print a message indicating that the build process is starting
+echo -e "${GREEN}Building ChronoLog in ${BUILD_TYPE} mode...${RESET}"
 
-# Build all targets
+# Run CMake configuration and build all targets
+cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..
 make all
 
-# Print a message with a green background indicating that the build process has completed
-echo -e "\033[42;30mChronoLog Built in ${BUILD_TYPE} mode\033[0m"
+# Print a message indicating that the build process has completed
+echo -e "${GREEN}ChronoLog Built in ${BUILD_TYPE} mode${RESET}"

@@ -3,10 +3,21 @@
 # Exit on any error
 set -e
 
+# Color codes
+GREEN="\033[42;30m"
+RED="\033[41;30m"
+RESET="\033[0m"
+
 # Define required variables with no defaults
 BUILD_TYPE=""
 NUM_KEEPERS=""
 NUM_GRAPHERS=""
+
+# Set default values for optional flags
+DEPLOY=false
+STOP=false
+RESET=false
+KILL=false
 
 # Directory of the script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,14 +49,19 @@ while [[ "$#" -gt 0 ]]; do
         -s|--stop) STOP=true ;;
         -r|--reset) RESET=true ;;
         -k|--kill) KILL=true ;;
-        *) echo "Unknown parameter passed: $1"; usage ;;
+        *) echo -e "${RED}Unknown parameter passed: $1${RESET}"; usage ;;
     esac
     shift
 done
 
-# Check if mandatory parameters are set, otherwise show usage
+# Check if mandatory parameters are set and validate BUILD_TYPE
 if [[ -z "$BUILD_TYPE" || -z "$NUM_KEEPERS" || -z "$NUM_GRAPHERS" ]]; then
-    echo "Error: Missing mandatory parameter(s)"
+    echo -e "${RED}Error: Missing mandatory parameter(s)${RESET}"
+    usage
+fi
+
+if [[ ! "$BUILD_TYPE" =~ ^(Debug|Release)$ ]]; then
+    echo -e "${RED}Error: Invalid build type. Use 'Debug' or 'Release'.${RESET}"
     usage
 fi
 
@@ -54,23 +70,29 @@ INSTALL_DIR="/home/$USER/chronolog/$BUILD_TYPE"
 BIN_DIR="${INSTALL_DIR}/bin"
 CONF_DIR="${INSTALL_DIR}/conf"
 
-# Print a message with a green background indicating that the build process is starting
-echo -e "\033[42;30mBuilding ChronoLog in ${BUILD_TYPE} mode...\033[0m"
+# Check if the required scripts exist and are executable
+for script in build.sh install.sh local_single_user_deploy.sh; do
+    if [[ ! -x "${SCRIPT_DIR}/${script}" ]]; then
+        echo -e "${RED}Error: ${script} not found or not executable in ${SCRIPT_DIR}${RESET}"
+        exit 1
+    fi
+done
+
+# Build ChronoLog
+echo -e "${GREEN}Building ChronoLog in ${BUILD_TYPE} mode...${RESET}"
 "${SCRIPT_DIR}/build.sh" -type "$BUILD_TYPE"
 
-# Print a message with a green background indicating that the install process is starting
-echo -e "\033[42;30mInstalling ChronoLog...\033[0m"
-"${SCRIPT_DIR}/install.sh"
+# Install ChronoLog
+echo -e "${GREEN}Installing ChronoLog...${RESET}"
+"${SCRIPT_DIR}/install.sh" -type "$BUILD_TYPE"
 
-# Print a message with a green background indicating that the deployment process is starting
-echo -e "\033[42;30mDeploying ChronoLog...\033[0m"
-
-# Run the deployment script with the specified parameters and standard directories
+# Deploy ChronoLog
+echo -e "${GREEN}Deploying ChronoLog...${RESET}"
 "${SCRIPT_DIR}/local_single_user_deploy.sh" \
     -n "$NUM_KEEPERS" \
     -j "$NUM_GRAPHERS" \
     -w "$INSTALL_DIR" \
     ${DEPLOY:+-d} ${RESET:+-r} ${STOP:+-s} ${KILL:+-k}
 
-# Print a message with a green background indicating that the deployment process has completed
-echo -e "\033[42;30mChronoLog Deployed Successfully\033[0m"
+# Completion message
+echo -e "${GREEN}ChronoLog Deployed Successfully${RESET}"

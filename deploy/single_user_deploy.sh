@@ -15,49 +15,41 @@ OUTPUT_DIR=""
 VISOR_BIN_FILE_NAME="chronovisor_server"
 GRAPHER_BIN_FILE_NAME="chrono_grapher"
 KEEPER_BIN_FILE_NAME="chrono_keeper"
-CLIENT_BIN_FILE_NAME="client_lib_multi_storytellers"
 VISOR_BIN=""
 GRAPHER_BIN=""
 KEEPER_BIN=""
-CLIENT_BIN=""
 VISOR_BIN_DIR=""
 GRAPHER_BIN_DIR=""
 KEEPER_BIN_DIR=""
-CLIENT_BIN_DIR=""
 CONF_FILE=""
 VISOR_ARGS="--config ${CONF_FILE}"
 GRAPHER_ARGS="--config ${CONF_FILE}"
 KEEPER_ARGS="--config ${CONF_FILE}"
-CLIENT_ARGS="--config ${CONF_FILE}"
 VISOR_HOSTS=""
 GRAPHER_HOSTS=""
 KEEPER_HOSTS=""
-CLIENT_HOSTS=""
 NUM_RECORDING_GROUP=1
 HOSTNAME_HS_NET_SUFFIX="-40g"
 JOB_ID=""
-deploy=false
+install=false
+start=false
 stop=false
-kill=false
-reset=false
-local=false
+clean=false
 verbose=false
 
 usage() {
-    echo "Usage: $0 -d|--deploy Start ChronoLog deployment (default: false)
-                               -s|--stop Stop ChronoLog deployment (default: false)
-                               -k|--kill Terminate ChronoLog deployment (default: false)
-                               -r|--reset Reset/cleanup ChronoLog deployment (default: false)
+    echo "Usage: $0 -d|--install Install ChronoLog binary, library, and conf files (default: false)
+                               -t|--start Start ChronoLog processes (default: false)
+                               -s|--stop Stop ChronoLog processes (default: false)
+                               -r|--clean Cleanup files from previous ChronoLog deployment (default: false)
                                -w|--work_dir WORK_DIR (Mandatory)
                                -u|--output_dir OUTPUT_DIR (default: work_dir/output)
                                -v|--visor VISOR_BIN (default: work_dir/bin/chronovisor_server)
                                -g|--grapher GRAPHER_BIN (default: work_dir/bin/chrono_grapher)
                                -p|--keeper KEEPER_BIN (default: work_dir/bin/chrono_keeper)
-                               -c|--client CLIENT_BIN (default: work_dir/bin/client_lib_multi_storytellers)
                                -i|--visor_hosts VISOR_HOSTS (default: work_dir/conf/hosts_visor)
                                -a|--grapher_hosts GRAPHER_HOSTS (default: work_dir/conf/hosts_grapher)
                                -o|--keeper_hosts KEEPER_HOSTS (default: work_dir/conf/hosts_keeper)
-                               -t|--client_hosts CLIENT_HOSTS (default: work_dir/conf/hosts_client)
                                -f|--conf_file CONF_FILE (default: work_dir/conf/default_conf.json)
                                -j|--job_id JOB_ID (default: \"\", overwrites hosts files if set)
                                -n|--num_recording_group NUM_RECORDING_GROUP (default: #hosts in GRAPHER_HOSTS if exists, 1 otherwise, overwrites hosts files if set)
@@ -79,7 +71,6 @@ check_hosts_files() {
     check_file_existence ${VISOR_HOSTS}
     check_file_existence ${GRAPHER_HOSTS}
     check_file_existence ${KEEPER_HOSTS}
-    check_file_existence ${CLIENT_HOSTS}
 
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Check hosts files done${NC}"
 }
@@ -89,7 +80,6 @@ check_bin_files() {
     check_file_existence ${VISOR_BIN}
     check_file_existence ${GRAPHER_BIN}
     check_file_existence ${KEEPER_BIN}
-    check_file_existence ${CLIENT_BIN}
 
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Check binary files done${NC}"
 }
@@ -117,7 +107,7 @@ check_rpc_comm_conf() {
     keeper_grapher_drain_rpc_in_grapher=$(jq '.chrono_grapher.KeeperGrapherDrainService.rpc' "${CONF_FILE}")
     [[ "${keeper_grapher_drain_rpc_in_keeper}" != "${keeper_grapher_drain_rpc_in_grapher}" ]] && echo -e "${ERR}mismatched KeeperGrapherDrainService conf in ${CONF_FILE}, exiting ...${NC}" >&2 && exit 1
 
-    # to assume Keeper and Grapher use the same protocol for dataStoreAdminService
+    # to assure Keeper and Grapher use the same protocol for dataStoreAdminService
     keeper_data_store_admin_protocol=$(jq '.chrono_keeper.KeeperDataStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
     grapher_data_store_admin_protocol=$(jq '.chrono_grapher.DataStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
     [[ "${keeper_data_store_admin_protocol}" != "${grapher_data_store_admin_protocol}" ]] && echo -e "${ERR}mismatched protocol for DataStoreAdminService in Keeper and Grapher conf in ${CONF_FILE}, exiting ...${NC}" >&2 && exit 1
@@ -129,13 +119,13 @@ check_rpc_comm_conf() {
 
 check_op_validity() {
     count=0
-    [[ $deploy == true ]] && ((count++))
+    [[ $install == true ]] && ((count++))
+    [[ $start == true ]] && ((count++))
     [[ $stop == true ]] && ((count++))
-    [[ $kill == true ]] && ((count++))
-    [[ $reset == true ]] && ((count++))
+    [[ $clean == true ]] && ((count++))
 
     if [[ $count -ne 1 ]]; then
-        echo -e "${ERR}Error: Please select exactly one operation in deploy (-d), stop (-s), kill (-k) and reset (-r).${NC}" >&2
+        echo -e "${ERR}Error: Please select exactly one operation in install (-d), start (-t), stop (-s), and clean (-r).${NC}" >&2
         usage
     fi
 }
@@ -147,7 +137,7 @@ check_recording_group_mapping() {
 
     num_keepers=$(wc -l <${KEEPER_HOSTS})
     num_recording_group=${NUM_RECORDING_GROUP}
-    if [[ "${num_recording_group}" -lt 1 ]] || [[ "${num_recording_group}" -gt "${num_keepers}" ]]; then # || ((num_keepers % num_recording_group != 0)); then
+    if [[ "${num_recording_group}" -lt 1 ]] || [[ "${num_recording_group}" -gt "${num_keepers}" ]]; then
         echo -e "${ERR}NUM_RECORDING_GROUP must be greater than 0, less than or equal to the number of keepers (${num_keepers}), exiting ...${NC}" >&2
         exit 1
     fi
@@ -232,7 +222,7 @@ update_visor_client_monitor_file_path() {
     visor_host=$(head -1 ${VISOR_HOSTS})
     echo -e "${INFO}Updating monitoring file path ...${NC}"
     jq ".chrono_visor.Monitoring.monitor.file = \"${MONITOR_DIR}/${VISOR_BIN_FILE_NAME}.${visor_host}.log\"" ${CONF_FILE} >tmp.json && mv tmp.json ${CONF_FILE}
-    jq ".chrono_client.Monitoring.monitor.file = \"${MONITOR_DIR}/${CLIENT_BIN_FILE_NAME}.log\"" ${CONF_FILE} >tmp.json && mv tmp.json ${CONF_FILE}
+    jq ".chrono_client.Monitoring.monitor.file = \"${MONITOR_DIR}/chrono_client.log\"" ${CONF_FILE} >tmp.json && mv tmp.json ${CONF_FILE}
 }
 
 generate_conf_for_each_keeper() {
@@ -364,8 +354,6 @@ prepare_hosts() {
         echo "${hosts}" | tail -${NUM_RECORDING_GROUP} >${GRAPHER_HOSTS}
         # use all nodes as Keepers by default
         echo "${hosts}" >${KEEPER_HOSTS}
-        # use all nodes as Clients by default
-        echo "${hosts}" >${CLIENT_HOSTS}
     fi
 
     check_recording_group_mapping
@@ -404,13 +392,11 @@ parallel_remote_launch_processes() {
     local hostname_suffix=""
     local simple_output_grep_keyword=""
 
-    if [[ "${local}" == "false" ]]; then
-        # use hostname suffix conf file only on Ares
-        hostname_suffix=".\$(hostname)"
-        if [[ "${verbose}" == "false" ]]; then
-            # grep only on Ares with simple output
-            simple_output_grep_keyword="ares-"
-        fi
+    # use hostname suffix conf file only on Ares
+    hostname_suffix=".\$(hostname)"
+    if [[ "${verbose}" == "false" ]]; then
+        # grep only on Ares with simple output
+        simple_output_grep_keyword="ares-"
     fi
 
     bin_path=${bin_dir}/${bin_filename}
@@ -421,10 +407,17 @@ parallel_remote_stop_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
+    local timer=0
     LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/ mpssh -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
     while [[ -n $(parallel_remote_check_processes ${hosts_file} ${bin_filename}) ]]; do
         echo -e "${DEBUG}Some processes are still running, waiting for 10 seconds ...${NC}"
         sleep 10
+        timer=$((timer + 10))
+        if [[ ${timer} -gt 300 ]]; then
+            echo -e "${ERR}Killing processes after 5 minutes ...${NC}" >&2
+            parallel_remote_kill_processes ${hosts_file} ${bin_filename}
+            exit 1
+        fi
     done
 }
 
@@ -444,7 +437,7 @@ parallel_remote_check_processes() {
 
 parallel_remote_check_all() {
     # check Visor
-    if [[ "${deploy}" == "true" ]]; then
+    if [[ "${install}" == "true" ]]; then
         echo -e "${DEBUG}Running ChronoVisor (only one is expected):${NC}"
     else
         echo -e "${DEBUG}Running ChronoVisor:${NC}"
@@ -460,31 +453,19 @@ parallel_remote_check_all() {
         parallel_remote_check_processes ${grapher_hosts_file} ${GRAPHER_BIN_FILE_NAME}
         parallel_remote_check_processes ${keeper_hosts_file} ${KEEPER_BIN_FILE_NAME}
     done
-
-    # check Client
-    if [[ "${deploy}" == "true" ]]; then
-        echo -e "${DEBUG}Running Client (may ended already):${NC}"
-    else
-        echo -e "${DEBUG}Running Client:${NC}"
-    fi
-    parallel_remote_check_processes ${CLIENT_HOSTS} ${CLIENT_BIN_FILE_NAME}
 }
 
-deploy() {
-    install
-
-    echo -e "${INFO}Deploying ...${NC}"
+start() {
+    echo -e "${INFO}Starting ...${NC}"
 
     local hostname_suffix=""
     local simple_output_grep_keyword=""
 
-    if [[ "${local}" == "false" ]]; then
-        # use hostname suffix conf file only on Ares
-        hostname_suffix=".\$(hostname)"
-        if [[ "${verbose}" == "false" ]]; then
-            # grep only on Ares with simple output
-            simple_output_grep_keyword="ares-"
-        fi
+    # use hostname suffix conf file only on Ares
+    hostname_suffix=".\$(hostname)"
+    if [[ "${verbose}" == "false" ]]; then
+        # grep only on Ares with simple output
+        simple_output_grep_keyword="ares-"
     fi
 
     # launch Visor
@@ -497,30 +478,24 @@ deploy() {
     for i in $(seq 1 ${NUM_RECORDING_GROUP}); do
         # launch Grapher
         local grapher_conf_file="${CONF_FILE}.${i}.grapher${hostname_suffix}"
-        echo -e "${DEBUG}Launching ChronoGraphers from ${grapher_hosts_file} using conf file ${grapher_conf_file} ...${NC}"
         GRAPHER_BIN="${GRAPHER_BIN_DIR}/${GRAPHER_BIN_FILE_NAME}"
         GRAPHER_ARGS="--config ${grapher_conf_file}"
         grapher_hosts_file="${GRAPHER_HOSTS}.${i}"
+        echo -e "${DEBUG}Launching ChronoGraphers from ${grapher_hosts_file} using conf file ${grapher_conf_file} ...${NC}"
         parallel_remote_launch_processes ${GRAPHER_BIN_DIR} ${LIB_DIR} ${grapher_hosts_file} ${GRAPHER_BIN_FILE_NAME} "${GRAPHER_ARGS}"
 
         # launch Keeper
         local keeper_conf_file="${CONF_FILE}.${i}.keeper${hostname_suffix}"
-        echo -e "${DEBUG}Launching ChronoKeepers from ${keeper_hosts_file} using conf file ${keeper_conf_file} ...${NC}"
         KEEPER_BIN="${KEEPER_BIN_DIR}/${KEEPER_BIN_FILE_NAME}"
         KEEPER_ARGS="--config ${keeper_conf_file}"
         keeper_hosts_file="${KEEPER_HOSTS}.${i}"
+        echo -e "${DEBUG}Launching ChronoKeepers from ${keeper_hosts_file} using conf file ${keeper_conf_file} ...${NC}"
         parallel_remote_launch_processes ${KEEPER_BIN_DIR} ${LIB_DIR} ${keeper_hosts_file} ${KEEPER_BIN_FILE_NAME} "${KEEPER_ARGS}"
     done
 
-    # launch Client
-    echo -e "${DEBUG}Launching Clients from ${CLIENT_HOSTS} using conf file ${CONF_FILE} ...${NC}"
-    CLIENT_BIN="${CLIENT_BIN_DIR}/${CLIENT_BIN_FILE_NAME}"
-    CLIENT_ARGS="--config ${CONF_FILE}"
-    parallel_remote_launch_processes ${CLIENT_BIN_DIR} ${LIB_DIR} ${CLIENT_HOSTS} ${CLIENT_BIN_FILE_NAME} "${CLIENT_ARGS}"
-
     parallel_remote_check_all
 
-    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Deploy done${NC}"
+    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Start done${NC}"
 }
 
 stop() {
@@ -533,10 +508,6 @@ stop() {
         echo -e "${DEBUG}JOB_ID is provided, prepare hosts file first${NC}"
         prepare_hosts
     fi
-
-    # stop Client
-    echo -e "${DEBUG}Stopping Client ...${NC}"
-    parallel_remote_stop_processes ${CLIENT_HOSTS} ${CLIENT_BIN_FILE_NAME}
 
     # stop Keeper
     echo -e "${DEBUG}Stopping ChronoKeeper ...${NC}"
@@ -577,10 +548,6 @@ kill() {
         prepare_hosts
     fi
 
-    # kill Client
-    echo -e "${DEBUG}Killing Client ...${NC}"
-    parallel_remote_kill_processes ${CLIENT_HOSTS} ${CLIENT_BIN_FILE_NAME}
-
     # kill Keeper
     echo -e "${DEBUG}Killing ChronoKeeper ...${NC}"
     parallel_remote_kill_processes ${KEEPER_HOSTS} ${KEEPER_BIN_FILE_NAME}
@@ -598,8 +565,8 @@ kill() {
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Kill done${NC}"
 }
 
-reset() {
-    echo -e "${INFO}Resetting ...${NC}"
+clean() {
+    echo -e "${INFO}Cleaning ...${NC}"
 
     # kill
     kill
@@ -607,11 +574,11 @@ reset() {
     # cleanup files
     remove_generated_files
 
-    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Reset done${NC}"
+    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Clean done${NC}"
 }
 
 parse_args() {
-    TEMP=$(getopt -o w:u:v:a:g:p:c:i:o:t:f:j:n:hdskre --long work_dir:output_dir:visor:,grapher:,keeper:,client:,visor_hosts:,grapher_hosts:,keeper_hosts:,client_hosts:,conf_file:,job_id:,num_recording_group:,help,deploy,stop,kill,reset,verbose -- "$@")
+    TEMP=$(getopt -o w:u:v:g:p:i:a:o:f:j:n:hdtsre --long work_dir:output_dir:visor:,grapher:,keeper:,visor_hosts:,grapher_hosts:,keeper_hosts:,conf_file:,job_id:,num_recording_group:,help,install,start,stop,clean,verbose -- "$@")
     if [ $? != 0 ]; then
         echo -e "${ERR}Terminating ...${NC}" >&2
         exit 1
@@ -629,24 +596,19 @@ parse_args() {
             OUTPUT_DIR="${WORK_DIR}/output"
             VISOR_BIN_FILE_NAME="chronovisor_server"
             KEEPER_BIN_FILE_NAME="chrono_keeper"
-            CLIENT_BIN_FILE_NAME="client_lib_multi_storytellers"
             VISOR_BIN="${WORK_DIR}/bin/${VISOR_BIN_FILE_NAME}"
             GRAPHER_BIN="${WORK_DIR}/bin/${GRAPHER_BIN_FILE_NAME}"
             KEEPER_BIN="${WORK_DIR}/bin/${KEEPER_BIN_FILE_NAME}"
-            CLIENT_BIN="${WORK_DIR}/bin/${CLIENT_BIN_FILE_NAME}"
             VISOR_BIN_DIR=$(dirname ${VISOR_BIN})
             GRAPHER_BIN_DIR=$(dirname ${GRAPHER_BIN})
             KEEPER_BIN_DIR=$(dirname ${KEEPER_BIN})
-            CLIENT_BIN_DIR=$(dirname ${CLIENT_BIN})
             CONF_FILE="${CONF_DIR}/default_conf.json"
             VISOR_ARGS="--config ${CONF_FILE}"
             GRAPHER_ARGS="--config ${CONF_FILE}"
             KEEPER_ARGS="--config ${CONF_FILE}"
-            CLIENT_ARGS="--config ${CONF_FILE}"
             VISOR_HOSTS="${CONF_DIR}/hosts_visor"
             GRAPHER_HOSTS="${CONF_DIR}/hosts_grapher"
             KEEPER_HOSTS="${CONF_DIR}/hosts_keeper"
-            CLIENT_HOSTS="${CONF_DIR}/hosts_client"
             [ -f "${GRAPHER_HOSTS}" ] && NUM_RECORDING_GROUP=$(wc -l <"${GRAPHER_HOSTS}") || NUM_RECORDING_GROUP=1
             mkdir -p ${MONITOR_DIR}
             mkdir -p ${OUTPUT_DIR}
@@ -675,12 +637,6 @@ parse_args() {
             KEEPER_BIN_DIR=$(dirname ${KEEPER_BIN})
             shift 2
             ;;
-        -c | --client)
-            CLIENT_BIN=$(realpath "$2")
-            CLIENT_BIN_FILE_NAME=$(basename ${CLIENT_BIN})
-            CLIENT_BIN_DIR=$(dirname ${CLIENT_BIN})
-            shift 2
-            ;;
         -i | --visor_hosts)
             VISOR_HOSTS=$(realpath "$2")
             shift 2
@@ -691,10 +647,6 @@ parse_args() {
             ;;
         -o | --keeper_hosts)
             KEEPER_HOSTS=$(realpath "$2")
-            shift 2
-            ;;
-        -t | --client_hosts)
-            CLIENT_HOSTS=$(realpath "$2")
             shift 2
             ;;
         -f | --conf_file)
@@ -714,26 +666,22 @@ parse_args() {
             usage
             shift 2
             ;;
-        -d | --deploy)
-            deploy=true
+        -d | --install)
+            install=true
+            shift
+            ;;
+        -t | --start)
+            start=true
             shift
             ;;
         -s | --stop)
             stop=true
             shift
             ;;
-        -k | --kill)
-            kill=true
+        -r | --clean)
+            clean=true
             shift
             ;;
-        -r | --reset)
-            reset=true
-            shift
-            ;;
-            #-l|--local)
-            #local=true
-            #HOSTNAME_HS_NET_SUFFIX=""
-            #shift ;;
         -e | --verbose)
             verbose=true
             shift
@@ -765,14 +713,14 @@ parse_args "$@"
 # Check if specified operation is allowed
 check_op_validity
 
-if ${deploy}; then
-    deploy
+if ${install}; then
+    install
+elif ${start}; then
+    start
 elif ${stop}; then
     stop
-elif ${kill}; then
-    kill
-elif ${reset}; then
-    reset
+elif ${clean}; then
+    clean
 fi
 
 echo -e "${INFO}Done${NC}"

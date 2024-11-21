@@ -165,17 +165,15 @@ void check_story_acquired(int tid, int ret)
     else if(ret == chronolog::CL_ERR_NOT_EXIST)
     {
         if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::THREAD_INITIALIZED ||
-           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
            static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
         {
             LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
-                     "trying to acquire a Story on a THREAD_INITIALIZED, STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
+                     "trying to acquire a Story on a THREAD_INITIALIZED or CHRONICLE_DESTROYED", tid);
         }
         else
         {
             LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
-                      "trying to acquire a story on the THREAD_INITIALIZED, STORY_DESTROYED or CHRONICLE_DESTROYED "
-                      "state", tid);
+                      "trying to acquire a story on the THREAD_INITIALIZED or CHRONICLE_DESTROYED state", tid);
         }
     }
     else

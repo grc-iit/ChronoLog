@@ -321,8 +321,7 @@ void check_chronicle_destroyed(int tid, int ret)
     }
     else if(ret == chronolog::CL_ERR_NOT_EXIST)
     {
-        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
-           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
         {
             LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
                      "trying to destroy chronicle on a state STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
@@ -377,8 +376,6 @@ void handle_return_value(int tid, int ret, ThreadState success_state)
         default:
             break;
     }
-    //std::cout << "Thread " << tid << " checked its state: "
-    //          << get_state_name(static_cast<ThreadState>(shared_state[tid])) << std::endl;
 }
 
 void thread_body(struct thread_arg*t)

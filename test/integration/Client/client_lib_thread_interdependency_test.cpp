@@ -70,7 +70,6 @@ void update_chronicle_threads_state(int tid, ThreadState new_state)
     }
 }
 
-
 void update_story_threads_state(int tid, ThreadState new_state)
 {
     for(size_t i = 0; i < shared_state.size(); ++i)
@@ -84,7 +83,6 @@ void update_story_threads_state(int tid, ThreadState new_state)
         }
     }
 }
-
 
 void check_thread_initialization(int tid, int ret)
 {
@@ -347,41 +345,10 @@ void check_thread_finalized(int tid, int ret)
             ThreadState::THREAD_FINALIZED));
 }
 
-void handle_return_value(int tid, int ret, ThreadState success_state)
-{
-    switch(success_state)
-    {
-        case ThreadState::THREAD_INITIALIZED:
-            check_thread_initialization(tid, ret);
-            break;
-        case ThreadState::CHRONICLE_CREATED:
-            check_chronicle_created(tid, ret);
-            break;
-        case ThreadState::STORY_ACQUIRED:
-            check_story_acquired(tid, ret);
-            break;
-        case ThreadState::STORY_RELEASED:
-            check_story_released(tid, ret);
-            break;
-        case ThreadState::STORY_DESTROYED:
-            check_story_destroyed(tid, ret);
-            break;
-        case ThreadState::CHRONICLE_DESTROYED:
-            check_chronicle_destroyed(tid, ret);
-            break;
-        case ThreadState::THREAD_FINALIZED:
-            check_thread_finalized(tid, ret);
-            break;
-        case ThreadState::UNKNOWN:
-        default:
-            break;
-    }
-}
-
 void thread_body(struct thread_arg*t)
 {
     // Thread Initialized
-    handle_return_value(t->tid, 0, ThreadState::THREAD_INITIALIZED);
+    check_thread_initialization(t->tid, 0);
 
 
     // Chronicle Variables
@@ -392,7 +359,7 @@ void thread_body(struct thread_arg*t)
     // Chronicle creation
     int ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
     LOG_INFO("[ClientLibThreadInterdependencyTest] Chronicle created: tid={}, Ret: {}", t->tid, ret);
-    handle_return_value(t->tid, ret, ThreadState::CHRONICLE_CREATED);
+    check_chronicle_created(t->tid, ret);
 
 
     // Story Variables
@@ -402,29 +369,29 @@ void thread_body(struct thread_arg*t)
     // Acquire story
     auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
     LOG_INFO("[ClientLibThreadInterdependencyTest] Story acquired: tid={}, Ret: {}", t->tid, acquire_ret.first);
-    handle_return_value(t->tid, acquire_ret.first, ThreadState::STORY_ACQUIRED);
+    check_story_acquired(t->tid, acquire_ret.first);
 
 
     // Release the story
     ret = client->ReleaseStory(chronicle_name, story_name);
     LOG_INFO("[ClientLibThreadInterdependencyTest] Story released: tid={}, Ret: {}", t->tid, ret);
-    handle_return_value(t->tid, ret, ThreadState::STORY_RELEASED);
+    check_story_released(t->tid, ret);
 
 
     // Destroy the story
     ret = client->DestroyStory(chronicle_name, story_name);
     LOG_INFO("[ClientLibThreadInterdependencyTest] Story destroyed: tid={}, Ret: {}", t->tid, ret);
-    handle_return_value(t->tid, ret, ThreadState::STORY_DESTROYED);
+    check_story_destroyed(t->tid, ret);
 
 
     // Destroy the chronicle
     ret = client->DestroyChronicle(chronicle_name);
     LOG_INFO("[ClientLibThreadInterdependencyTest] Chronicle destroyed: tid={}, Ret: {}", t->tid, ret);
-    handle_return_value(t->tid, ret, ThreadState::CHRONICLE_DESTROYED);
+    check_chronicle_destroyed(t->tid, ret);
 
 
     // Thread Finalized
-    handle_return_value(t->tid, 0, ThreadState::THREAD_FINALIZED);
+    check_thread_finalized(t->tid, 0);
 }
 
 

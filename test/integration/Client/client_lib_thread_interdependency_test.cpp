@@ -117,7 +117,7 @@ void check_chronicle_created(int tid, int ret)
     }
     else if(ret == chronolog::CL_ERR_CHRONICLE_EXISTS)
     {
-        if(static_cast<ThreadState>(shared_state[tid]) != ThreadState::UNKNOWN ||
+        if(static_cast<ThreadState>(shared_state[tid]) != ThreadState::UNKNOWN &&
            static_cast<ThreadState>(shared_state[tid]) != ThreadState::THREAD_INITIALIZED)
         {
             LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_CHRONICLE_EXISTS return "

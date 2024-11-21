@@ -12,7 +12,8 @@
 struct thread_arg
 {
     int tid;
-    std::string client_id;
+    std::string chronicle_name;
+    std::string story_name;
 };
 
 chronolog::Client*client;
@@ -432,14 +433,12 @@ int main(int argc, char**argv)
     int num_threads = 8;
     std::vector <struct thread_arg> t_args(num_threads);
     std::vector <std::thread> workers(num_threads);
-    std::string client_id = gen_random(8);
     shared_state.resize(num_threads, 0);
 
     // Create and start the worker threads
     for(int i = 0; i < num_threads; i++)
     {
         t_args[i].tid = i;  // Assign thread ID
-        t_args[i].client_id = client_id;  // Assign client ID
         std::thread t{thread_body, &t_args[i]};  // Start the thread
         workers[i] = std::move(t);  // Move thread to workers vector
     }

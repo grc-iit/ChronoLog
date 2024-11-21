@@ -6,56 +6,94 @@ set -e
 # Default values and color codes
 BUILD_TYPE=""
 BUILD_DIR="build"
-GREEN="\033[42;30m"
-RESET="\033[0m"
+INSTALL_PATH=""  # Installation path is optional and starts empty
 
-# Parse arguments
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -type) BUILD_TYPE="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
-    esac
-    shift
-done
+ERR='\033[7;37m\033[41m'
+DEBUG='\033[0;33m'
+NC='\033[0m' # No Color
 
-# Validate BUILD_TYPE
-if [[ -z "$BUILD_TYPE" || ! "$BUILD_TYPE" =~ ^(Debug|Release)$ ]]; then
-    echo "Usage: $0 -type <BuildType>"
-    echo "Example: $0 -type Debug or $0 -type Release"
+# Function to print usage information
+usage() {
+    echo "Usage: $0 -type <BuildType> [-install-path <Path>]"
+    echo "Example: $0 -type Debug"
+    echo "         $0 -type Release -install-path /custom/install/path"
     exit 1
-fi
+}
 
-# Move to the root directory of the project
-cd "$(dirname "$0")/.."
+# Function to parse arguments
+parse_arguments() {
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            -type) BUILD_TYPE="$2"; shift ;;
+            -install-path) INSTALL_PATH="$2"; shift ;;
+            *) echo "Unknown parameter passed: $1"; usage ;;
+        esac
+        shift
+    done
 
-# Check if Spack is installed
-if ! command -v spack &> /dev/null; then
-    echo "Spack is not installed or not in the PATH."
-    echo "Please install Spack and make it accessible in your PATH. Refer to the prerequisites section of the Wiki at https://github.com/grc-iit/ChronoLog/wiki"
-    exit 1
-fi
+    # Validate BUILD_TYPE
+    if [[ -z "$BUILD_TYPE" || ! "$BUILD_TYPE" =~ ^(Debug|Release)$ ]]; then
+        usage
+    fi
 
-# Activate Spack environment and install dependencies if not already installed
-spack env activate -p .
-if ! spack find --loaded | grep -q "ChronoLog"; then
-    spack install -v
-fi
+    # Optional: Validate INSTALL_PATH if specified
+    if [[ -n "$INSTALL_PATH" && ! -d "$(dirname "$INSTALL_PATH")" ]]; then
+        echo -e "${ERR}Invalid install path: ${INSTALL_PATH}. Parent directory does not exist.${NC}"
+        exit 1
+    fi
+}
 
-# Remove and recreate the build directory
-if [ -d "$BUILD_DIR" ]; then
-  echo "Build directory exists. Removing it..."
-  rm -rf "$BUILD_DIR"
-fi
+# Function to check for Spack and activate the environment
+check_spack() {
+    if ! command -v spack &> /dev/null; then
+        echo -e "${ERR}Spack is not installed or not in the PATH.${NC}"
+        echo "Please install Spack and make it accessible in your PATH. Refer to the prerequisites section of the Wiki at https://github.com/grc-iit/ChronoLog/wiki"
+        exit 1
+    fi
 
-mkdir "$BUILD_DIR"
-cd "$BUILD_DIR"
+    echo -e "${DEBUG}Activating Spack environment...${NC}"
+    spack env activate -p .
+    if ! spack find --loaded | grep -q "ChronoLog"; then
+        echo -e "${DEBUG}Installing ChronoLog dependencies with Spack...${NC}"
+        spack install -v
+    fi
+}
 
-# Print a message indicating that the build process is starting
-echo -e "${GREEN}Building ChronoLog in ${BUILD_TYPE} mode...${RESET}"
+# Function to clean and prepare the build directory
+prepare_build_directory() {
+    if [ -d "$BUILD_DIR" ]; then
+        echo -e "${DEBUG}Build directory exists. Removing it...${NC}"
+        rm -rf "$BUILD_DIR"
+    fi
+    mkdir "$BUILD_DIR"
+    cd "$BUILD_DIR"
+}
 
-# Run CMake configuration and build all targets
-cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..
-make all
+# Function to build the project
+build_project() {
+    echo -e "${DEBUG}Building ChronoLog in ${BUILD_TYPE} mode...${NC}"
 
-# Print a message indicating that the build process has completed
-echo -e "${GREEN}ChronoLog Built in ${BUILD_TYPE} mode${RESET}"
+    # Determine the appropriate cmake command based on INSTALL_PATH
+    if [[ -n "$INSTALL_PATH" ]]; then
+        echo -e "${DEBUG}Using installation path: ${INSTALL_PATH}${NC}"
+        cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" ..
+    else
+        echo -e "${DEBUG}No installation path specified, using default CMake settings.${NC}"
+        cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..
+    fi
+
+    make all
+    echo -e "${DEBUG}ChronoLog Built in ${BUILD_TYPE} mode${NC}"
+}
+
+# Main function
+main() {
+    parse_arguments "$@"
+    cd "$(dirname "$0")/.."
+    check_spack
+    prepare_build_directory
+    build_project
+}
+
+# Run the main function with all script arguments
+main "$@"

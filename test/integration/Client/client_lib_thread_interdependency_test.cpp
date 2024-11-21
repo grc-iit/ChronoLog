@@ -352,10 +352,6 @@ void thread_body(struct thread_arg*t)
     check_thread_initialization(t->tid, 0);
 
 
-    // Introduce random sleep to increase state mixture possibilities
-    std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 100));
-
-
     // Chronicle Variables
     std::string chronicle_name = (t->tid % 2 == 0) ? "CHRONICLE_2" : "CHRONICLE_1";//"CHRONICLE";
     std::map <std::string, std::string> chronicle_attrs;

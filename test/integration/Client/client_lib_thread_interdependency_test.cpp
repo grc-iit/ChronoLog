@@ -201,30 +201,18 @@ void check_story_released(int tid, int ret)
     }
     else if(ret == chronolog::CL_ERR_NOT_ACQUIRED)
     {
-        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED)
+        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_RELEASED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
+           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
         {
             LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_ACQUIRED return value "
-                     "when trying to release a Story on a STORY_RELEASED state", tid);
+                     "when trying to release a Story on a STORY_RELEASED,STORY_DESTROYED or CHRONICLE_DESTROYED state", tid);
         }
         else
         {
             LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_ACQUIRED return value "
-                      "when trying to release a story on the a state different from STORY_RELEASED.", tid);
-        }
-    }
-    else if(ret == chronolog::CL_ERR_NOT_EXIST)
-    {
-        if(static_cast<ThreadState>(shared_state[tid]) == ThreadState::STORY_DESTROYED ||
-           static_cast<ThreadState>(shared_state[tid]) == ThreadState::CHRONICLE_DESTROYED)
-        {
-            LOG_INFO("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
-                     "trying to release a Story on a STORY_DESTROYED or CHRONICLE_DESTROYED", tid);
-        }
-        else
-        {
-            LOG_ERROR("[ClientLibThreadInterdependencyTest] -Thread {}- received a CL_ERR_NOT_EXIST return value when "
-                      "trying to release a story on a state different from STORY_DESTROYED or CHRONICLE_DESTROYED."
-                      , tid);
+                      "when trying to release a story on the a state different from STORY_RELEASED, STORY_DESTROYED or"
+                      " CHRONICLE_DESTROYED", tid);
         }
     }
     else

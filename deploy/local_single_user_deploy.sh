@@ -287,9 +287,8 @@ build() {
 
     if [[ -n "$INSTALL_DIR" ]]; then
         ./build.sh -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
-        #cmake --type "${BUILD_TYPE}" -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" ..
     else
-        ./build.sh -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
+        ./build.sh -type "$BUILD_TYPE"
     fi
     echo -e "${INFO}ChronoLog Built.${NC}"
 }

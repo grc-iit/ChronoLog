@@ -412,7 +412,7 @@ usage() {
     echo "Binary Paths:"
     echo "  -v|--visor-bin      VISOR_BIN (default: work_dir/bin/chronovisor_server) [Modes: Start]"
     echo "  -g|--grapher-bin    GRAPHER_BIN (default: work_dir/bin/chrono_grapher) [Modes: Start]"
-    echo "  -k|--keeper-bin     KEEPER_BIN (default: work_dir/bin/chrono_keeper) [Modes: Start]"
+    echo "  -p|--keeper-bin     KEEPER_BIN (default: work_dir/bin/chrono_keeper) [Modes: Start]"
     echo ""
     echo "Configuration Settings:"
     echo "  -f|--conf-file      CONF_FILE Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"

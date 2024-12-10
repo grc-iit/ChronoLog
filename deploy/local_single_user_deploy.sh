@@ -356,27 +356,47 @@ stop() {
     local start_time=$(date +%s)
     local timeout=300  # 5 minutes in seconds
 
+    # First, attempt to stop all processes gracefully
     for process in "${processes[@]}"; do
         stop_process "${process}"
+        echo -e "${DEBUG}Stop signal sent to ${process}${NC}"
+    done
 
-        # Wait for the process to stop with a timeout
-        while pgrep -f "${process}" >/dev/null; do
-            echo -e "${DEBUG}Waiting for ${process} to stop...${NC}"
-            sleep 10
+    # Wait for processes to stop with a timeout
+    while true; do
+        local all_stopped=true
 
-            # Check if timeout is reached
-            local current_time=$(date +%s)
-            if (( current_time - start_time >= timeout )); then
-                echo -e "${ERROR}Stopping process timed out. Killing all processes.${NC}"
-                kill
-                return
+        for process in "${processes[@]}"; do
+            if pgrep -f "${process}" >/dev/null; then
+                all_stopped=false
+                echo -e "${DEBUG}Waiting for ${process} to stop...${NC}"
             fi
         done
-        echo -e "${DEBUG}${process} stop done${NC}"
+
+        if $all_stopped; then
+            echo -e "${INFO}All processes stopped gracefully.${NC}"
+            break
+        fi
+
+        sleep 10
+
+        # Check if timeout is reached
+        local current_time=$(date +%s)
+        if (( current_time - start_time >= timeout )); then
+            echo -e "${ERROR}Timeout reached while stopping processes. Forcing termination.${NC}"
+            for process in "${processes[@]}"; do
+                if pgrep -f "${process}" >/dev/null; then
+                    echo -e "${ERROR}Killing ${process}${NC}"
+                    pkill -f "${process}"
+                fi
+            done
+            break
+        fi
     done
 
     echo -e "${INFO}ChronoLog stopped.${NC}"
 }
+
 
 
 clean() {

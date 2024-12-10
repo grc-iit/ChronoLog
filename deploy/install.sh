@@ -17,16 +17,28 @@ check_spack() {
         exit 1
     fi
 
-    echo -e "${DEBUG}Activating the Spack environment...${NC}"
+    echo -e "${DEBUG}Activating Spack environment...${NC}"
     spack env activate -p .
 
-    echo -e "${DEBUG}Checking if ChronoLog is already installed in Spack...${NC}"
-    if ! spack find --loaded | grep -q "ChronoLog"; then
-        echo -e "${DEBUG}ChronoLog not found in Spack. Installing...${NC}"
-        spack install -v
-    else
-        echo -e "${DEBUG}ChronoLog is already installed.${NC}"
+    # Check if an environment is active
+    if spack env status | grep -q "No active environment"; then
+        echo -e "${DEBUG}No active Spack environment found. Exiting.${NC}"
+        exit 1
     fi
+
+    # Concretize the environment to check for dependencies
+    echo -e "${DEBUG}Checking dependencies...${NC}"
+    if ! spack concretize; then
+        echo -e "${DEBUG}Spack concretization failed. Exiting.${NC}"
+        exit 1
+    fi
+
+    # Check if all dependencies are installed
+    echo -e "${DEBUG}Ensuring all dependencies are installed...${NC}"
+    spack install -v
+
+    # Confirm that everything is ready
+    echo -e "${DEBUG}All dependencies are installed and ready.${NC}"
 }
 
 # Function to check and navigate to the build directory

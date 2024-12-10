@@ -281,6 +281,21 @@ check_work_dir() {
     fi
 }
 
+check_execution_stopped() {
+    echo -e "${DEBUG}Checking if ChronoLog processes are running...${NC}"
+    local active_processes=$(pgrep -la chrono)
+
+    if [[ -n "${active_processes}" ]]; then
+        echo -e "${ERR}ChronoLog processes are still running:${NC}"
+        echo "${active_processes}"
+        echo -e "${ERR}Please stop all ChronoLog processes before cleaning.${NC}"
+        exit 1
+    else
+        echo -e "${DEBUG}No active ChronoLog processes detected. Proceeding with cleaning.${NC}"
+    fi
+}
+
+
 # Main functions for install, reset, and usage__________________________________________________________________________
 build() {
     echo -e "${INFO}Building ChronoLog...${NC}"
@@ -367,6 +382,7 @@ stop() {
 clean() {
     echo -e "${INFO}Cleaning ChronoLog...${NC}"
     check_work_dir
+    check_execution_stopped
     echo -e "${DEBUG}Removing config files${NC}"
     rm -f ${CONF_DIR}/grapher_conf*.json
     rm -f ${CONF_DIR}/keeper_conf*.json

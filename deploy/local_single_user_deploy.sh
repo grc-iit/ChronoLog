@@ -220,7 +220,7 @@ copy_shared_libs() {
 }
 
 # Functions to launch and kill processes
-start_process() {
+start_service() {
     local bin="$1"
     local args="$2"
     local monitor_file="$3"
@@ -228,24 +228,42 @@ start_process() {
     LD_LIBRARY_PATH=${LIB_DIR} nohup ${bin} ${args} > ${MONITOR_DIR}/${monitor_file} 2>&1 &
 }
 
-kill_process() {
+kill_service() {
     local bin="$1"
     echo -e "${DEBUG}Killing $(basename ${bin}) ...${NC}"
     pkill -9 -f ${bin}
 }
 
-stop_process() {
+stop_service() {
     local bin="$1"
+    local timeout="$2"
+
+    # Stop all processes of the service in parallel
+    local start_time=$(date +%s)
     echo -e "${DEBUG}Stopping $(basename ${bin}) ...${NC}"
     pkill -f ${bin}
-}
 
-kill() {
-    echo -e "${DEBUG}Killing ...${NC}"
-    kill_process ${KEEPER_BIN}
-    kill_process ${GRAPHER_BIN}
-    kill_process ${VISOR_BIN}
-    echo -e "${DEBUG}Kill done${NC}"
+    # Wait for processes to stop with a timeout
+    while true; do
+        if pgrep -f "${bin}" >/dev/null; then
+            echo -e "${DEBUG}Waiting for ${bin} to stop...${NC}"
+        else
+            echo -e "${DEBUG}All service processes stopped gracefully.${NC}"
+            break
+        fi
+        sleep 10
+        # Check if timeout is reached
+        local current_time=$(date +%s)
+        if (( current_time - start_time >= timeout )); then
+            echo -e "${DEBUG}Timeout reached while stopping processes. Forcing termination.${NC}"
+            if pgrep -f "${bin}" >/dev/null; then
+                kill_service ${bin}
+                echo -e "${DEBUG}Killed: ${bin} ${NC}"
+            fi
+            break
+        fi
+    done
+    echo ""
 }
 
 check_build_directory() {
@@ -264,7 +282,6 @@ check_build_directory() {
         exit 1
     fi
 }
-
 
 check_installation() {
     check_dependencies
@@ -331,72 +348,30 @@ start() {
     generate_config_files ${NUM_KEEPERS} ${CONF_FILE} ${CONF_DIR} ${OUTPUT_DIR} ${NUM_GRAPHERS} ${MONITOR_DIR}
 
     echo -e "${INFO}Starting ChronoLog...${NC}"
-    start_process ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.launch.log"
+    start_service ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.launch.log"
     sleep 2
     num_graphers=${NUM_GRAPHERS}
     for (( i=1; i<=num_graphers; i++ ))
     do
-        start_process ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
+        start_service ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
     done
     sleep 2
     num_keepers=${NUM_KEEPERS}
     for (( i=1; i<=num_keepers; i++ ))
     do
-        start_process ${KEEPER_BIN} "--config ${CONF_DIR}/keeper_conf_$i.json" "keeper_$i.launch.log"
+        start_service ${KEEPER_BIN} "--config ${CONF_DIR}/keeper_conf_$i.json" "keeper_$i.launch.log"
     done
     echo -e "${INFO}ChronoLog Started.${NC}"
 }
 
-
 stop() {
     echo -e "${INFO}Stopping ChronoLog...${NC}"
     check_work_dir
-    declare -a processes=("${KEEPER_BIN}" "${GRAPHER_BIN}" "${VISOR_BIN}")
-
-    local start_time=$(date +%s)
-    local timeout=300  # 5 minutes in seconds
-
-    # First, attempt to stop all processes gracefully
-    for process in "${processes[@]}"; do
-        stop_process "${process}"
-        echo -e "${DEBUG}Stop signal sent to ${process}${NC}"
-    done
-
-    # Wait for processes to stop with a timeout
-    while true; do
-        local all_stopped=true
-
-        for process in "${processes[@]}"; do
-            if pgrep -f "${process}" >/dev/null; then
-                all_stopped=false
-                echo -e "${DEBUG}Waiting for ${process} to stop...${NC}"
-            fi
-        done
-
-        if $all_stopped; then
-            echo -e "${INFO}All processes stopped gracefully.${NC}"
-            break
-        fi
-
-        sleep 10
-
-        # Check if timeout is reached
-        local current_time=$(date +%s)
-        if (( current_time - start_time >= timeout )); then
-            echo -e "${ERROR}Timeout reached while stopping processes. Forcing termination.${NC}"
-            for process in "${processes[@]}"; do
-                if pgrep -f "${process}" >/dev/null; then
-                    echo -e "${ERROR}Killing ${process}${NC}"
-                    pkill -f "${process}"
-                fi
-            done
-            break
-        fi
-    done
-
+    stop_service ${KEEPER_BIN} 100
+    stop_service ${GRAPHER_BIN} 100
+    stop_service ${VISOR_BIN} 100
     echo -e "${INFO}ChronoLog stopped.${NC}"
 }
-
 
 
 clean() {

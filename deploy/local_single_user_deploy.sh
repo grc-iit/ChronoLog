@@ -219,7 +219,6 @@ copy_shared_libs() {
     echo -e "${DEBUG}Copy shared libraries done${NC}"
 }
 
-# Functions to launch and kill processes
 start_service() {
     local bin="$1"
     local args="$2"
@@ -312,7 +311,6 @@ check_execution_stopped() {
     fi
 }
 
-
 # Main functions for install, reset, and usage__________________________________________________________________________
 build() {
     echo -e "${INFO}Building ChronoLog...${NC}"
@@ -373,7 +371,6 @@ stop() {
     echo -e "${INFO}ChronoLog stopped.${NC}"
 }
 
-
 clean() {
     echo -e "${INFO}Cleaning ChronoLog...${NC}"
     check_work_dir
@@ -392,7 +389,6 @@ clean() {
     echo -e "${INFO}ChronoLog cleaning done. ${NC}"
 }
 
-# Usage function with new options
 usage() {
     echo "Usage: $0 [options]"
     echo ""
@@ -435,8 +431,6 @@ usage() {
     exit 1
 }
 
-
-# Parse arguments to set variables
 parse_args() {
     while [[ "$#" -gt 0 ]]; do
         case "$1" in

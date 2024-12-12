@@ -8,12 +8,12 @@
 #include "PlayerRegClient.h"
 #include "StoryChunkIngestionQueue.h"
 #include "StoryChunkExtractionQueue.h"
-//#include "StoryChunkExtractor.h"
 #include "PlayerDataStore.h"
 #include "PlayerStoreAdminService.h"
 #include "ConfigurationManager.h"
-//#include "CSVFileChunkExtractor.h"
 #include "cmd_arg_parse.h"
+
+#include "ArchiveReadingAgent.h"
 
 // we will be using a combination of the uint32_t representation of the service IP address
 // and uint16_t representation of the port number

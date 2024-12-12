@@ -15,6 +15,7 @@ target_include_directories(chrono_player PRIVATE
 target_sources(chrono_player PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ChronoPlayer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PlayerDataStore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ArchiveReadingAgent.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/StoryChunk.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/StoryPipeline.cpp
     ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/src/chrono_monitor.cpp)

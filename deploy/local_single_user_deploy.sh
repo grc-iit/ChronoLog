@@ -34,6 +34,8 @@ start=false
 stop=false
 clean=false
 
+EXEC_MODE_COUNT=0
+
 # Helper Methods _______________________________________________________________________________________________________
 check_dependencies() {
     local dependencies=("jq" "ldd" "nohup" "pkill" "readlink")
@@ -439,18 +441,23 @@ parse_args() {
                 shift ;;
             -b|--build)
                 build=true
+                ((EXEC_MODE_COUNT++))
                 shift ;;
             -i|--install)
                 install=true
+                ((EXEC_MODE_COUNT++))
                 shift ;;
             -d|--start)
                 start=true
+                ((EXEC_MODE_COUNT++))
                 shift ;;
             -s|--stop)
                 stop=true
+                ((EXEC_MODE_COUNT++))
                 shift ;;
             -c|--clean)
                 clean=true
+                ((EXEC_MODE_COUNT++))
                 shift ;;
             -t|--build-type)
                 BUILD_TYPE="$2"
@@ -502,6 +509,17 @@ parse_args() {
             *) echo -e "${ERR}Unknown option: $1${NC}"; usage ;;
         esac
     done
+
+    # Check if multiple execution modes are selected
+    if [[ $EXEC_MODE_COUNT -gt 1 ]]; then
+        echo -e "${ERR}Error: Only one execution mode can be selected at a time. Please choose one of build, install, start, stop, or clean.${NC}"
+        usage
+        exit 1
+    elif [[ $EXEC_MODE_COUNT -eq 0 ]]; then
+        echo -e "${ERR}Error: Please specify an execution mode (build, install, start, stop, or clean).${NC}"
+        usage
+        exit 1
+    fi
 }
 
 # Start execution of the script____________________________________________________________________________________

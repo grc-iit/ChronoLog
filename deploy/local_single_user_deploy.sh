@@ -523,7 +523,7 @@ elif ${clean}
 then
     clean
 else
-    echo -e "${ERR}Please select install, start, stop or clean mode${NC}"
+    echo -e "${ERR}Please select build, install, start, stop or clean mode${NC}"
     usage
 fi
 echo -e "${DEBUG}Done${NC}"

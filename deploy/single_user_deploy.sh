@@ -7,6 +7,8 @@ INFO='\033[7;49m\033[92m'
 DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
+BUILD_TYPE="Release"
+INSTALL_DIR="/home/$USER/chronolog/${BUILD_TYPE}"
 WORK_DIR=""
 LIB_DIR=""
 CONF_DIR=""
@@ -31,6 +33,7 @@ KEEPER_HOSTS=""
 NUM_RECORDING_GROUP=1
 HOSTNAME_HS_NET_SUFFIX="-40g"
 JOB_ID=""
+build=false
 install=false
 start=false
 stop=false
@@ -38,24 +41,64 @@ clean=false
 verbose=false
 
 usage() {
-    echo "Usage: $0 -d|--install Install ChronoLog binary, library, and conf files (default: false)
-                               -t|--start Start ChronoLog processes (default: false)
-                               -s|--stop Stop ChronoLog processes (default: false)
-                               -r|--clean Cleanup files from previous ChronoLog deployment (default: false)
-                               -w|--work_dir WORK_DIR (Mandatory)
-                               -u|--output_dir OUTPUT_DIR (default: work_dir/output)
-                               -v|--visor VISOR_BIN (default: work_dir/bin/chronovisor_server)
-                               -g|--grapher GRAPHER_BIN (default: work_dir/bin/chrono_grapher)
-                               -p|--keeper KEEPER_BIN (default: work_dir/bin/chrono_keeper)
-                               -i|--visor_hosts VISOR_HOSTS (default: work_dir/conf/hosts_visor)
-                               -a|--grapher_hosts GRAPHER_HOSTS (default: work_dir/conf/hosts_grapher)
-                               -o|--keeper_hosts KEEPER_HOSTS (default: work_dir/conf/hosts_keeper)
-                               -f|--conf_file CONF_FILE (default: work_dir/conf/default_conf.json)
-                               -j|--job_id JOB_ID (default: \"\", overwrites hosts files if set)
-                               -n|--num_recording_group NUM_RECORDING_GROUP (default: #hosts in GRAPHER_HOSTS if exists, 1 otherwise, overwrites hosts files if set)
-                               -e|--verbose Enable verbose output (default: false)
-                               -h|--help Print this page"
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Options:"
+    echo "  -h|--help           Display this help and exit"
+    echo ""
+    echo "Execution Modes (Select only ONE):"
+    echo "  -b|--build          Build ChronoLog (default: false)"
+    echo "  -i|--install        Install ChronoLog (default: false)"
+    echo "  -d|--start          Start ChronoLog Deployment (default: false)"
+    echo "  -s|--stop           Stop ChronoLog Deployment (default: false)"
+    echo "  -c|--clean          Clean ChronoLog logging artifacts and output of previous deployments (default: false)"
+    echo "  Note: Only one execution mode can be selected per run."
+    echo ""
+    echo "Build Options:"
+    echo "  -t|--build-type     Define type of build: Debug | Release (default: Release) [Modes: Build]"
+    echo "  -l|--install-dir    Define installation directory (default: /home/$USER/chronolog/BUILD_TYPE) [Modes: Build]"
+    echo ""
+    echo "Deployment Options:"
+    echo "  -r|--record-groups  Set the number of RecordingGroups or ChronoGrapher processes [Modes: Start]"
+    echo "  -j|--job-id         JOB_ID Set the job ID to get hosts from (default: \"\") [Modes: Start]"
+    echo "  -q|--visor-hosts    VISOR_HOSTS Set the hosts file for ChronoVisor (default: work_dir/conf/hosts_visor) [Modes: Start]"
+    echo "  -a|--grapher-hosts  GRAPHER_HOSTS Set the hosts file for ChronoGrapher (default: work_dir/conf/hosts_grapher) [Modes: Start]"
+    echo "  -o|--keeper-hosts   KEEPER_HOSTS Set the hosts file for ChronoKeeper (default: work_dir/conf/hosts_keeper) [Modes: Start]"
+    echo ""
+    echo "Directory Settings:"
+    echo "  -w|--work-dir       WORK_DIR Set the working directory (Mandatory) [Modes: Install, Start, Stop, Clean]"
+    echo "  -m|--monitor-dir    MONITOR_DIR (default: work_dir/monitor) [Modes: Start]"
+    echo "  -u|--output-dir     OUTPUT_DIR (default: work_dir/output) [Modes: Start]"
+    echo ""
+    echo "Binary Paths:"
+    echo "  -v|--visor-bin      VISOR_BIN (default: work_dir/bin/chronovisor_server) [Modes: Start]"
+    echo "  -g|--grapher-bin    GRAPHER_BIN (default: work_dir/bin/chrono_grapher) [Modes: Start]"
+    echo "  -p|--keeper-bin     KEEPER_BIN (default: work_dir/bin/chrono_keeper) [Modes: Start]"
+    echo ""
+    echo "Configuration Settings:"
+    echo "  -f|--conf-file      CONF_FILE Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"
+    echo ""
+    echo "Miscellaneous Options:"
+    echo "  -e|--verbose        Enable verbose output (default: false)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 --build --build-type Debug"
+    echo "  $0 --start --work-dir /path/to/workdir --conf-file /path/to/config.json"
+    echo ""
     exit 1
+}
+
+check_dependencies() {
+    local dependencies=("jq" "mpssh" "ssh" "ldd" "nohup" "pkill" "readlink")
+
+    echo -e "${DEBUG}Checking required dependencies...${NC}"
+    for dep in "${dependencies[@]}"; do
+        if ! command -v $dep &> /dev/null; then
+            echo -e "${ERR}Dependency $dep is not installed. Please install it and try again.${NC}"
+            exit 1
+        fi
+    done
+    echo -e "${DEBUG}All required dependencies are installed.${NC}"
 }
 
 check_file_existence() {
@@ -119,13 +162,14 @@ check_rpc_comm_conf() {
 
 check_op_validity() {
     count=0
+    [[ $build == true ]] && ((count++))
     [[ $install == true ]] && ((count++))
     [[ $start == true ]] && ((count++))
     [[ $stop == true ]] && ((count++))
     [[ $clean == true ]] && ((count++))
 
     if [[ $count -ne 1 ]]; then
-        echo -e "${ERR}Error: Please select exactly one operation in install (-d), start (-t), stop (-s), and clean (-r).${NC}" >&2
+        echo -e "${ERR}Error: Please select exactly one operation in build (-b), install (-i), start (-d), stop (-s), and clean (-c).${NC}" >&2
         usage
     fi
 }
@@ -135,6 +179,7 @@ check_recording_group_mapping() {
     local num_keepers
     local num_recording_group
 
+    touch ${KEEPER_HOSTS}
     num_keepers=$(wc -l <${KEEPER_HOSTS})
     num_recording_group=${NUM_RECORDING_GROUP}
     if [[ "${num_recording_group}" -lt 1 ]] || [[ "${num_recording_group}" -gt "${num_keepers}" ]]; then
@@ -338,6 +383,9 @@ prepare_hosts() {
             hosts="$(scontrol show hostnames ${hosts_regex})"
         else
             echo -e "${DEBUG}JOB_ID is not set, use what are already in hosts files from ${CONF_DIR}${NC}"
+            check_file_existence ${VISOR_HOSTS}
+            check_file_existence ${GRAPHER_HOSTS}
+            check_file_existence ${KEEPER_HOSTS}
         fi
     fi
 
@@ -363,8 +411,23 @@ prepare_hosts() {
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Prepare hosts file done${NC}"
 }
 
+build() {
+    echo -e "${INFO}Building ...${NC}"
+
+    # build ChronoLog
+    if [[ -n "$INSTALL_DIR" ]]; then
+        ./build.sh -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
+    else
+        ./build.sh -type "$BUILD_TYPE"
+    fi
+
+    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Build done${NC}"
+}
+
 install() {
     echo -e "${INFO}Installing ...${NC}"
+
+    check_dependencies
 
     copy_shared_libs
 
@@ -526,27 +589,8 @@ stop() {
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Stop done${NC}"
 }
 
-remove_generated_files() {
-    echo -e "${DEBUG}Removing generated log and conf files ...${NC}"
-    rm -f ${CONF_FILE}.*
-    rm -f ${KEEPER_HOSTS}*.*
-    rm -f ${GRAPHER_HOSTS}*.*
-    rm -f ${KEEPER_BIN}.*
-    rm -f ${GRAPHER_BIN}.*
-    rm -f ${MONITOR_DIR}/*.log
-    rm -f ${OUTPUT_DIR}/*
-}
-
 kill() {
     echo -e "${INFO}Killing ...${NC}"
-
-    if [[ -z ${JOB_ID} ]]; then
-        echo -e "${DEBUG}No JOB_ID provided, use hosts files in ${CONF_DIR}${NC}"
-        check_hosts_files
-    else
-        echo -e "${DEBUG}JOB_ID is provided, prepare hosts file first${NC}"
-        prepare_hosts
-    fi
 
     # kill Keeper
     echo -e "${DEBUG}Killing ChronoKeeper ...${NC}"
@@ -568,17 +612,41 @@ kill() {
 clean() {
     echo -e "${INFO}Cleaning ...${NC}"
 
-    # kill
-    kill
+    # check if ChronoVisor is still running
+    echo -e "${DEBUG}Checking if ChronoVisor is still running${NC}"
+    [[ -n $(parallel_remote_check_processes ${VISOR_HOSTS} ${VISOR_BIN_FILE_NAME}) ]] && echo -e "${ERR}ChronoVisor is still running, please use stop (-s) to stop it first, exiting ...${NC}" >&2 && exit 1
 
-    # cleanup files
-    remove_generated_files
+    # check if Grapher and Keeper are still running in group
+    echo -e "${DEBUG}Checking if ChronoGraphers and ChronoKeepers are still running${NC}"
+    for i in $(seq 1 ${NUM_RECORDING_GROUP}); do
+        echo -e "${DEBUG}Checking RecordingGroup ${i}:${NC}"
+        grapher_hosts_file="${GRAPHER_HOSTS}.${i}"
+        keeper_hosts_file="${KEEPER_HOSTS}.${i}"
+        [[ -n $(parallel_remote_check_processes ${grapher_hosts_file} ${GRAPHER_BIN_FILE_NAME}) ]] && echo -e "${ERR}ChronoGrapher is still running, please use stop (-s) to stop it first, exiting ...${NC}" >&2 && exit 1
+        [[ -n $(parallel_remote_check_processes ${keeper_hosts_file} ${KEEPER_BIN_FILE_NAME}) ]] && echo -e "${ERR}ChronoKeeper is still running, please use stop (-s) to stop it first, exiting ...${NC}" >&2 && exit 1
+    done
+
+    # clean generated conf and hosts files
+    echo -e "${DEBUG}Removing conf and hosts files ...${NC}"
+    rm -f ${KEEPER_HOSTS}*.*
+    rm -f ${GRAPHER_HOSTS}*.*
+    rm -f ${KEEPER_BIN}.*
+    rm -f ${GRAPHER_BIN}.*
+    rm -f ${MONITOR_DIR}/*.log
+
+    # clean log files
+    echo -e "${DEBUG}Removing log files ...${NC}"
+    rm -f ${CONF_FILE}.*
+
+    # clean generated output files
+    echo -e "${DEBUG}Removing output files ...${NC}"
+    rm -f ${OUTPUT_DIR}/*
 
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Clean done${NC}"
 }
 
 parse_args() {
-    TEMP=$(getopt -o w:u:v:g:p:i:a:o:f:j:n:hdtsre --long work_dir:output_dir:visor:,grapher:,keeper:,visor_hosts:,grapher_hosts:,keeper_hosts:,conf_file:,job_id:,num_recording_group:,help,install,start,stop,clean,verbose -- "$@")
+    TEMP=$(getopt -o t:l:w:m:u:v:g:p:q:a:o:f:j:r:hbidsce --long build-type:install-dir:work-dir:monitor-dir:output-dir:visor-bin:,grapher-bin:,keeper-bin:,visor-hosts:,grapher-hosts:,keeper-hosts:,conf-file:,job-id:,record-groups:,help,build,install,start,stop,clean,verbose -- "$@")
     if [ $? != 0 ]; then
         echo -e "${ERR}Terminating ...${NC}" >&2
         exit 1
@@ -588,7 +656,17 @@ parse_args() {
     eval set -- "$TEMP"
     while [[ $# -gt 0 ]]; do
         case "$1" in
-        -w | --work_dir)
+        -t | --build-type)
+            BUILD_TYPE="$2"
+            if [[ "$BUILD_TYPE" != "Debug" && "$BUILD_TYPE" != "Release" ]]; then
+                echo -e "${ERR}Invalid build type: $BUILD_TYPE. Must be 'Debug' or 'Release'.${NC}"
+                usage
+            fi
+            shift 2 ;;
+        -l | --install-dir)
+            INSTALL_DIR=$(realpath "$2")
+            shift 2 ;;
+        -w | --work-dir)
             WORK_DIR=$(realpath "$2")
             LIB_DIR="${WORK_DIR}/lib"
             CONF_DIR="${WORK_DIR}/conf"
@@ -612,80 +690,69 @@ parse_args() {
             [ -f "${GRAPHER_HOSTS}" ] && NUM_RECORDING_GROUP=$(wc -l <"${GRAPHER_HOSTS}") || NUM_RECORDING_GROUP=1
             mkdir -p ${MONITOR_DIR}
             mkdir -p ${OUTPUT_DIR}
-            shift 2
-            ;;
-        -u | --output_dir)
+            shift 2 ;;
+        -m | --monitor-dir)
+            MONITOR_DIR=$(realpath "$2")
+            shift 2 ;;
+        -u | --output-dir)
             OUTPUT_DIR=$(realpath "$2")
             mkdir -p ${OUTPUT_DIR}
-            shift 2
-            ;;
-        -v | --visor)
+            shift 2 ;;
+        -v | --visor-bin)
             VISOR_BIN=$(realpath "$2")
             VISOR_BIN_FILE_NAME=$(basename ${VISOR_BIN})
             VISOR_BIN_DIR=$(dirname ${VISOR_BIN})
-            shift 2
-            ;;
-        -g | --grapher)
+            shift 2 ;;
+        -g | --grapher-bin)
             GRAPHER_BIN=$(realpath "$2")
             GRAPHER_BIN_FILE_NAME=$(basename ${GRAPHER_BIN})
             GRAPHER_BIN_DIR=$(dirname ${GRAPHER_BIN})
-            shift 2
-            ;;
-        -p | --keeper)
+            shift 2 ;;
+        -p | --keeper-bin)
             KEEPER_BIN=$(realpath "$2")
             KEEPER_BIN_FILE_NAME=$(basename ${KEEPER_BIN})
             KEEPER_BIN_DIR=$(dirname ${KEEPER_BIN})
-            shift 2
-            ;;
-        -i | --visor_hosts)
+            shift 2 ;;
+        -q | --visor-hosts)
             VISOR_HOSTS=$(realpath "$2")
-            shift 2
-            ;;
-        -a | --grapher_hosts)
+            shift 2 ;;
+        -a | --grapher-hosts)
             GRAPHER_HOSTS=$(realpath "$2")
-            shift 2
-            ;;
-        -o | --keeper_hosts)
+            shift 2 ;;
+        -o | --keeper-hosts)
             KEEPER_HOSTS=$(realpath "$2")
-            shift 2
-            ;;
-        -f | --conf_file)
+            shift 2 ;;
+        -f | --conf-file)
             CONF_FILE=$(realpath "$2")
             CONF_DIR=$(dirname ${CONF_FILE})
-            shift 2
-            ;;
-        -j | --job_id)
+            shift 2 ;;
+        -j | --job-id)
             JOB_ID="$2"
-            shift 2
-            ;;
-        -n | --num_recording_group)
+            shift 2 ;;
+        -r | --record-groups)
             NUM_RECORDING_GROUP="$2"
-            shift 2
-            ;;
+            shift 2 ;;
         -h | --help)
             usage
-            shift 2
-            ;;
-        -d | --install)
+            shift 2 ;;
+        -b | --build)
+            build=true
+            shift ;;
+        -i | --install)
             install=true
-            shift
-            ;;
-        -t | --start)
+            shift ;;
+        -d | --start)
             start=true
-            shift
-            ;;
+            shift ;;
         -s | --stop)
             stop=true
-            shift
-            ;;
-        -r | --clean)
+            shift ;;
+        -c | --clean)
             clean=true
-            shift
-            ;;
+            shift ;;
         -e | --verbose)
             verbose=true
-            shift
-            ;;
+            shift ;;
         --)
             shift
             break
@@ -713,7 +780,9 @@ parse_args "$@"
 # Check if specified operation is allowed
 check_op_validity
 
-if ${install}; then
+if ${build}; then
+    build
+elif ${install}; then
     install
 elif ${start}; then
     start

@@ -381,6 +381,7 @@ public:
         std::cout << "VISOR_CONF: " << VISOR_CONF.to_String().c_str() << std::endl;
         std::cout << "KEEPER_CONF: " << KEEPER_CONF.to_String().c_str() << std::endl;
         std::cout << "GRAPHER_CONF: " << GRAPHER_CONF.to_String().c_str() << std::endl;
+        std::cout << "PLAYER_CONF: " << PLAYER_CONF.to_String().c_str() << std::endl;
         std::cout << "CLIENT_CONF: " << CLIENT_CONF.to_String().c_str() << std::endl;
         std::cout << "******** End of configuration output ********" << std::endl;
     }

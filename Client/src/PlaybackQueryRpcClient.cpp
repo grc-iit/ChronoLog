@@ -2,6 +2,7 @@
 #include <thallium.hpp>
 #include <thallium/serialization/serialize.hpp>
 #include <thallium/serialization/stl/string.hpp>
+#include <thallium/serialization/stl/map.hpp>
 
 #include "chrono_monitor.h"
 #include "chronolog_errcode.h"

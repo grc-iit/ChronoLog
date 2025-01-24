@@ -39,9 +39,10 @@ public:
     template <typename SerArchiveT>
     void serialize(SerArchiveT& serT)
     {
-        serT& ip_addr;
-        serT& port;
-        serT& provider_id;
+        serT & protocol;
+        serT & ip_addr;
+        serT & port;
+        serT & provider_id;
     }
 
     std::string& getIPasDottedString(std::string& a_string) const

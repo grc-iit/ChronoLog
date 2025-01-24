@@ -1,6 +1,10 @@
 
 #include <thallium.hpp>
+#include <thallium/serialization/serialize.hpp>
+#include <thallium/serialization/stl/string.hpp>
 
+#include "chrono_monitor.h"
+#include "chronolog_errcode.h"
 #include "ServiceId.h"
 #include "PlaybackQueryRpcClient.h"
 
@@ -48,9 +52,9 @@ int chl::PlaybackQueryRpcClient::is_playback_service_available()
 }
     
 int chl::PlaybackQueryRpcClient::send_story_playback_request(chl::ServiceId const& response_service_id, uint32_t query_id   
-            , chl::ChroniclName const &chronicle_name, chl::StoryName const &story_name, uint64_t start_time, uint64_t end_time)
+            , chl::ChronicleName const &chronicle_name, chl::StoryName const &story_name, uint64_t start_time, uint64_t end_time)
 {
-    int return_code = chl::ERR_UNKNOWN;
+    int return_code = chl::CL_ERR_UNKNOWN;
 
     try
     {

@@ -8,7 +8,7 @@ DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
 NUM_KEEPERS=1
-NUM_GRAPHERS=1
+NUM_RECORDING_GROUPS=1
 
 BUILD_TYPE="Release"
 
@@ -77,7 +77,7 @@ generate_config_files() {
     local default_conf=$2
     local conf_dir=$3
     local output_dir=$4
-    local num_graphers=$5
+    local num_recording_groups=$5
     local monitor_dir=$6
 
     mkdir -p "${monitor_dir}"
@@ -89,12 +89,12 @@ generate_config_files() {
     fi
 
     # Check if number of keepers and graphers are valid
-    if (( num_keepers <= 0 || num_graphers <= 0 )); then
+    if (( num_keepers <= 0 || num_recording_groups <= 0 )); then
         echo "Number of keepers and graphers must be greater than 0. Exiting..."
         exit 1
     fi
 
-    if (( num_keepers < num_graphers )); then
+    if (( num_keepers < num_recording_groups )); then
         echo "Number of keepers must be greater than or equal to the number of graphers. Exiting..."
         exit 1
     fi
@@ -109,7 +109,7 @@ generate_config_files() {
     # Generate grapher configuration files
     echo "Generating grapher configuration files ..."
     mkdir -p "${output_dir}"
-    for (( i=0; i<num_graphers; i++ )); do
+    for (( i=0; i<num_recording_groups; i++ )); do
         local new_port_grapher_drain=$((base_port_grapher_drain + i))
         local new_port_grapher_datastore=$((base_port_grapher_datastore + i))
 
@@ -138,7 +138,7 @@ generate_config_files() {
     for (( i=0; i<num_keepers; i++ )); do
         local new_port_keeper_record=$((base_port_keeper_record + i))
         local new_port_keeper_datastore=$((base_port_keeper_datastore + i))
-        local grapher_index=$((i % num_graphers + 1))
+        local grapher_index=$((i % num_recording_groups + 1))
         local new_port_keeper_drain=$((base_port_keeper_drain + grapher_index - 1))
 
         local keeper_index=$((i + 1))
@@ -373,13 +373,13 @@ start() {
     mkdir -p "${MONITOR_DIR}"
     mkdir -p "${OUTPUT_DIR}"
     check_installation
-    generate_config_files ${NUM_KEEPERS} ${CONF_FILE} ${CONF_DIR} ${OUTPUT_DIR} ${NUM_GRAPHERS} ${MONITOR_DIR}
+    generate_config_files ${NUM_KEEPERS} ${CONF_FILE} ${CONF_DIR} ${OUTPUT_DIR} ${NUM_RECORDING_GROUPS} ${MONITOR_DIR}
 
     echo -e "${INFO}Starting ChronoLog...${NC}"
     start_service ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.launch.log"
     sleep 2
-    num_graphers=${NUM_GRAPHERS}
-    for (( i=1; i<=num_graphers; i++ ))
+    num_record_group=${NUM_RECORDING_GROUPS}
+    for (( i=1; i<=num_record_group; i++ ))
     do
         start_service ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
     done
@@ -501,7 +501,7 @@ parse_args() {
                 NUM_KEEPERS="$2"
                 shift 2 ;;
             -r|--record-groups)
-                NUM_GRAPHERS="$2"
+                NUM_RECORDING_GROUPS="$2"
                 shift 2 ;;
             -w|--work-dir)
                 WORK_DIR="$2"

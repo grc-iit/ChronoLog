@@ -69,6 +69,7 @@ check_files() {
     [[ ! -f ${VISOR_BIN} ]] && echo -e "${ERR}Visor binary file does not exist, exiting ...${NC}" && exit 1
     [[ ! -f ${KEEPER_BIN} ]] && echo -e "${ERR}Keeper binary file does not exist, exiting ...${NC}" && exit 1
     [[ ! -f ${GRAPHER_BIN} ]] && echo -e "${ERR}Grapher binary file does not exist, exiting ...${NC}" && exit 1
+    [[ ! -f ${PLAYER_BIN} ]] && echo -e "${ERR}Player binary file does not exist, exiting ...${NC}" && exit 1
     [[ ! -f ${CONF_FILE} ]] && echo -e "${ERR}Configuration file does not exist, exiting ...${NC}" && exit 1
     echo -e "${DEBUG}All required files are in place.${NC}"
 }
@@ -406,11 +407,11 @@ start() {
     do
         start_service ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
     done
-#    sleep 2
-#    for (( i=1; i<=num_record_group; i++ ))
-#    do
-#        start_service ${PLAYER_BIN} "--config ${CONF_DIR}/player_conf_$i.json" "player_$i.launch.log"
-#    done
+    sleep 2
+    for (( i=1; i<=num_record_group; i++ ))
+    do
+        start_service ${PLAYER_BIN} "--config ${CONF_DIR}/player_conf_$i.json" "player_$i.launch.log"
+    done
     sleep 2
     num_keepers=${NUM_KEEPERS}
     for (( i=1; i<=num_keepers; i++ ))
@@ -425,6 +426,7 @@ stop() {
     check_work_dir
     stop_service ${KEEPER_BIN} 100
     stop_service ${GRAPHER_BIN} 100
+    stop_service ${PLAYER_BIN} 100
     stop_service ${VISOR_BIN} 100
     echo -e "${INFO}ChronoLog stopped.${NC}"
 }
@@ -435,6 +437,7 @@ clean() {
     check_execution_stopped
     echo -e "${DEBUG}Removing config files${NC}"
     rm -f ${CONF_DIR}/grapher_conf*.json
+    rm -f ${CONF_DIR}/player_conf*.json
     rm -f ${CONF_DIR}/keeper_conf*.json
     rm -f ${CONF_DIR}/visor_conf.json
 
@@ -478,6 +481,7 @@ usage() {
     echo "  -v|--visor-bin      VISOR_BIN (default: work_dir/bin/chronovisor_server) [Modes: Start]"
     echo "  -g|--grapher-bin    GRAPHER_BIN (default: work_dir/bin/chrono_grapher) [Modes: Start]"
     echo "  -p|--keeper-bin     KEEPER_BIN (default: work_dir/bin/chrono_keeper) [Modes: Start]"
+    echo "  -a|--player-bin     PLAYER_BIN (default: work_dir/bin/chrono_player) [Modes: Start]"
     echo ""
     echo "Configuration Settings:"
     echo "  -f|--conf-file      CONF_FILE Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"
@@ -539,6 +543,7 @@ parse_args() {
                 VISOR_BIN="${BIN_DIR}/chronovisor_server"
                 KEEPER_BIN="${BIN_DIR}/chrono_keeper"
                 GRAPHER_BIN="${BIN_DIR}/chrono_grapher"
+                PLAYER_BIN="${BIN_DIR}/chrono_player"
                 CONF_FILE="${CONF_DIR}/default_conf.json"
                 OUTPUT_DIR=${WORK_DIR}/output
                 MONITOR_DIR=${WORK_DIR}/monitor
@@ -557,6 +562,9 @@ parse_args() {
                 shift 2 ;;
             -p|--keeper-bin)
                 KEEPER_BIN=$(realpath "$2")
+                shift 2 ;;
+            -a|--player-bin)
+                PLAYER_BIN=$(realpath "$2")
                 shift 2 ;;
             -f|--conf-file)
                 CONF_FILE=$(realpath "$2")

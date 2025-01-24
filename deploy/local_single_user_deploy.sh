@@ -25,6 +25,7 @@ INSTALL_DIR=""
 VISOR_BIN="${BIN_DIR}/chronovisor_server"
 KEEPER_BIN="${BIN_DIR}/chrono_keeper"
 GRAPHER_BIN="${BIN_DIR}/chrono_grapher"
+PLAYER_BIN="${BIN_DIR}/chrono_player"
 CONF_FILE="${CONF_DIR}/default_conf.json"
 
 #Booleans
@@ -105,6 +106,7 @@ generate_config_files() {
     local base_port_keeper_datastore=$(jq -r '.chrono_keeper.KeeperDataStoreAdminService.rpc.service_base_port' "$default_conf")
     local base_port_grapher_drain=$(jq -r '.chrono_grapher.KeeperGrapherDrainService.rpc.service_base_port' "$default_conf")
     local base_port_grapher_datastore=$(jq -r '.chrono_grapher.DataStoreAdminService.rpc.service_base_port' "$default_conf")
+    local base_port_player_datastore=$(jq -r '.chrono_player.DataStoreAdminService.rpc.service_base_port' "$default_conf")
 
     # Generate grapher configuration files
     echo "Generating grapher configuration files ..."
@@ -131,6 +133,27 @@ generate_config_files() {
             .chrono_grapher.Extractors.story_files_dir = ($output_dir + "/")' "$default_conf" > "$grapher_output_file"
 
         echo "Generated $grapher_output_file with ports $new_port_grapher_drain and $new_port_grapher_datastore"
+    done
+
+    # Generate grapher configuration files
+    echo "Generating player configuration files ..."
+    for (( i=0; i<num_recording_groups; i++ )); do
+        local new_port_player_datastore=$((base_port_player_datastore + i))
+
+        local player_index=$((i + 1))
+        local player_output_file="${conf_dir}/player_conf_${player_index}.json"
+
+        player_monitoring_file=$(jq -r '.chrono_player.Monitoring.monitor.file' "$default_conf")
+        player_monitoring_file_name=$(basename "$player_monitoring_file")
+        jq --arg monitor_dir "$monitor_dir" \
+            --argjson new_port_player_datastore $new_port_player_datastore \
+            --argjson player_index "$player_index" \
+            --arg player_monitoring_file_name "$player_monitoring_file_name" \
+           '.chrono_player.RecordingGroup = $player_index |
+            .chrono_player.DataStoreAdminService.rpc.service_base_port = $new_port_player_datastore |
+            .chrono_player.Monitoring.monitor.file = ($monitor_dir + "/" + ($player_index | tostring) + "_" + $player_monitoring_file_name)' "$default_conf" > "$player_output_file"
+
+        echo "Generated $player_output_file with port $new_port_player_datastore"
     done
 
     # Assign keepers to graphers iteratively
@@ -383,6 +406,11 @@ start() {
     do
         start_service ${GRAPHER_BIN} "--config ${CONF_DIR}/grapher_conf_$i.json" "grapher_$i.launch.log"
     done
+#    sleep 2
+#    for (( i=1; i<=num_record_group; i++ ))
+#    do
+#        start_service ${PLAYER_BIN} "--config ${CONF_DIR}/player_conf_$i.json" "player_$i.launch.log"
+#    done
     sleep 2
     num_keepers=${NUM_KEEPERS}
     for (( i=1; i<=num_keepers; i++ ))

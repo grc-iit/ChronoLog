@@ -10,6 +10,8 @@
 #include "ServiceId.h"
 
 
+namespace tl = thallium;
+
 namespace chronolog
 {
 
@@ -28,19 +30,37 @@ struct StoryPlaybackQuery
     std::map<uint64_t,StoryChunk*> PlaybackResponse;
 };
 
-class ClientQueryService
+class ClientQueryService : public tl::provider <ClientQueryService>
 {
 public:
+    // Service should be created on the heap not the stack thus the constructor is private...
     static ClientQueryService *
-    CreateClientQueryService(thallium::engine & tl_engine, ServiceId const& client_query_service_id);
+    CreateClientQueryService(thallium::engine & tl_engine, ServiceId const& client_service_id)
+    {
+        try 
+        {
+           /* std::string service_addr_string= client_service_id.protocol + "://";
+            service_addr_string += client_service_id.getIPasDottedString(service_addr_string)
+                    + std::to_string(client_service_id.port);
+            margo_instance_id query_service_margo_id = margo_init(service_addr_string.c_str(), MARGO_SERVER_MODE, 1 , 1);
+
+            thallium::engine * tl_engine = new tl::engine(query_service_margo_id);
+            */ 
+            return new ClientQueryService(tl_engine, client_service_id);
+        }
+        catch(thallium::exception &)
+        {
+            return nullptr;
+        }
+    }
 
     ~ClientQueryService();
 
     // send the playback request to the ChronoPlayer PlaybackService and return queryId
-    uint32_t send_playback_query_request(ServiceId const& playback_service_id,
+    int send_playback_query_request(ServiceId const& playback_service_id,
                 ChronicleName const&, StoryName const&,chrono_time const&, chrono_time const&);    
 
-    int receive_story_chunk();
+    void receive_story_chunk(tl::request const&, tl::bulk &);
 
 private:
     ClientQueryService(thallium::engine & tl_engine, ServiceId const&);
@@ -48,7 +68,9 @@ private:
     ClientQueryService() = delete;
     ClientQueryService(ClientQueryService const&) = delete;
 
-    thallium::engine & clientEngine;
+    int deserializedWithCereal(char *buffer, size_t size, StoryChunk &story_chunk);
+    thallium::engine  queryServiceEngine;
+    ServiceId       queryServiceId;
     std::mutex queryServiceMutex;    
     std::atomic<int> queryIdIndex;
     std::map<uint32_t, StoryPlaybackQuery> activeQueryMap; // map of active queries by queryId

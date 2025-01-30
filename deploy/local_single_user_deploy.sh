@@ -136,7 +136,7 @@ generate_config_files() {
         echo "Generated $grapher_output_file with ports $new_port_grapher_drain and $new_port_grapher_datastore"
     done
 
-    # Generate grapher configuration files
+    # Generate player configuration files
     echo "Generating player configuration files ..."
     for (( i=0; i<num_recording_groups; i++ )); do
         local new_port_player_datastore=$((base_port_player_datastore + i))
@@ -424,9 +424,9 @@ start() {
 stop() {
     echo -e "${INFO}Stopping ChronoLog...${NC}"
     check_work_dir
+    stop_service ${PLAYER_BIN} 100
     stop_service ${KEEPER_BIN} 100
     stop_service ${GRAPHER_BIN} 100
-    stop_service ${PLAYER_BIN} 100
     stop_service ${VISOR_BIN} 100
     echo -e "${INFO}ChronoLog stopped.${NC}"
 }

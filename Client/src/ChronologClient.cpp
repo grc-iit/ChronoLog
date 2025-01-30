@@ -76,4 +76,10 @@ chronolog::Client::ShowStories(std::string const &chronicle_name, std::vector <s
     return chronologClientImpl->ShowStories(chronicle_name, stories);
 }
 
+std::vector<chronolog::Event> & chronolog::Client::StoryPlaybackQuery(std::vector<chronolog::Event> & query_response
+                    , std::string const& chronicle_name, std::string const& story_name, uint64_t start_time, uint64_t end_time)
+{
+    return chronologClientImpl->StoryPlaybackQuery(query_response, chronicle_name, story_name, start_time, end_time);
+}
+                    
 

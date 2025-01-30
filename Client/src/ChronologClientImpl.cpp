@@ -539,3 +539,14 @@ chronolog::ChronologClientImpl::ShowStories(std::string const &chronicle_name, s
     }
     return stories;
 }
+
+//////////////////////////////
+
+std::vector<chronolog::Event> & chronolog::ChronologClientImpl::StoryPlaybackQuery(std::vector<chronolog::Event> & query_response
+                    , std::string const& chronicle_name, std::string const& story_name, uint64_t start_time, uint64_t end_time)
+{
+
+
+    return query_response;
+}
+

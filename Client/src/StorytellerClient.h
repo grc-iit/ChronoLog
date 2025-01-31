@@ -37,12 +37,13 @@ public:
 class StorytellerClient
 {
 public:
-    StorytellerClient(ChronologTimer &chronolog_timer, thallium::engine &client_tl_engine, ClientId const &client_id
-                      , std::string const &rpc_protocol = std::string("ofi+sockets")): theTimer(chronolog_timer)
-                                                                                       , client_engine(client_tl_engine)
-                                                                                       , clientId(client_id)
-                                                                                       , rpc_protocol_string(
-                    rpc_protocol)
+    StorytellerClient(ChronologTimer &chronolog_timer, thallium::engine &client_tl_engine, ServiceId const& local_service_id
+           ,  ClientId const &client_id, std::string const &rpc_protocol = std::string("ofi+sockets"))
+            : theTimer(chronolog_timer)
+            , client_engine(client_tl_engine)
+            , localServiceId(local_service_id)
+            , clientId(client_id)
+            , rpc_protocol_string(rpc_protocol)
     {
         LOG_DEBUG("[StorytellerClient] Initialized with ClientID: {}", clientId);
     }
@@ -77,6 +78,7 @@ private:
 
     ChronologTimer &theTimer;
     thallium::engine &client_engine;
+    ServiceId localServiceId;
     ClientId clientId;
     std::string rpc_protocol_string;
     std::atomic <int> atomic_index;
@@ -108,7 +110,9 @@ public:
 
     virtual int log_event(std::string const &);
 
-    virtual int log_event(size_t size, void*data);
+   // virtual int log_event(size_t size, void*data);
+
+    virtual int playback_story(uint64_t start, uint64_t end, std::vector<Event> & playback_events);
 
     void addRecordingClient(KeeperRecordingClient*);
     void removeRecordingClient(KeeperIdCard const &);

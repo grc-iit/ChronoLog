@@ -51,13 +51,13 @@ chronolog::ChronologClientImpl::ChronologClientImpl(const ChronoLog::Configurati
 {
     defineClientIdentity();
 
-    chl::ServiceId readerServiceId( hostId, 5757, 57);
+    localServiceId = chl::ServiceId( hostId, 5757, 57);
     chl::ServiceId visorPortalServiceId(hostId, 5757, 57);
 
     tlEngine = new thallium::engine(confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF
                                     , THALLIUM_SERVER_MODE, true, 1);
 
-    storyReaderService= chl::ClientQueryService::CreateClientQueryService(*tlEngine, readerServiceId);
+    storyReaderService= chl::ClientQueryService::CreateClientQueryService(*tlEngine, localServiceId);
 
     std::string CLIENT_VISOR_NA_STRING =
             confManager.CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
@@ -83,6 +83,8 @@ chronolog::ChronologClientImpl::ChronologClientImpl(const chronolog::ClientPorta
 {
 
     defineClientIdentity();
+
+    localServiceId= ServiceId( hostId, 5757, 57);
 
     tlEngine = new thallium::engine(clientPortalServiceConf.proto_conf(), THALLIUM_CLIENT_MODE, true, 1);
 
@@ -186,7 +188,7 @@ int chronolog::ChronologClientImpl::Connect()
         clientId = connectResponseMsg.getClientId();
         if(storyteller == nullptr)
         {
-            storyteller = new StorytellerClient(clockProxy, *tlEngine, clientId, storytellerRpcProtocol);
+            storyteller = new StorytellerClient(clockProxy, *tlEngine, localServiceId, clientId, storytellerRpcProtocol);
         }
         //TODO: if we ever change the connection hashing algorithm we'd need to handle reconnection case with the new client_id 
     }
@@ -570,12 +572,4 @@ chronolog::ChronologClientImpl::ShowStories(std::string const &chronicle_name, s
 }
 
 //////////////////////////////
-
-std::vector<chronolog::Event> & chronolog::ChronologClientImpl::StoryPlaybackQuery(std::vector<chronolog::Event> & query_response
-                    , std::string const& chronicle_name, std::string const& story_name, uint64_t start_time, uint64_t end_time)
-{
-
-
-    return query_response;
-}
 

@@ -63,11 +63,8 @@ public:
 
     int EditChronicleAttr(std::string const &chronicle_name, const std::string &key, const std::string &value);
 
-    std::vector <std::string> &ShowChronicles(std::vector <std::string> &); //std::string &client_id);
+    std::vector <std::string> &ShowChronicles(std::vector <std::string> &);
     std::vector <std::string> &ShowStories(const std::string &chronicle_name, std::vector <std::string> &);
-
-    std::vector<Event> & StoryPlaybackQuery(std::vector<chronolog::Event> & query_response
-            , std::string const& chronicle_name, std::string const& story_name, uint64_t start_time, uint64_t end_time);
 
 private:
 
@@ -79,13 +76,12 @@ private:
     ClientId clientId;
     std::string storytellerRpcProtocol;
     ChronologTimer clockProxy;
+    ServiceId   localServiceId;
     thallium::engine*tlEngine;
     RpcVisorClient*rpcVisorClient;
     StorytellerClient*storyteller;
     ClientQueryService * storyReaderService;
     
-    // ClocksourceManager *pClocksourceManager_;
-
     ChronologClientImpl(const ChronoLog::ConfigurationManager &conf_manager);
     ChronologClientImpl(const chronolog::ClientPortalServiceConf &);
 

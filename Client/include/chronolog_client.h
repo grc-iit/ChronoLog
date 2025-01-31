@@ -5,14 +5,9 @@
 #include <vector>
 #include <map>
 
-#include "ConfigurationManager.h"  //TODO: not sure this is a good idea , but will keep it for now ...
+#include "ConfigurationManager.h" 
 
 #include "ClientConfiguration.h"
-
-//TODO: rename Client to be ChronologClient 
-//TODO: remove ConfigurationManager from chronolog_client include fiels , should only be in the implementation files 
-// if needed at all
-
 
 namespace chronolog
 {
@@ -110,6 +105,8 @@ public:
     virtual  ~StoryHandle();
 
     virtual int log_event(std::string const &) = 0;
+
+    virtual int playback_story(uint64_t start, uint64_t end, std::vector<Event> & playback_events) = 0;
 };
 
 class ChronologClientImpl;
@@ -149,9 +146,6 @@ public:
 
     std::vector <std::string> &ShowStories(std::string const &chronicle_name, std::vector <std::string> &);
 
-    std::vector<Event> & StoryPlaybackQuery(std::vector<Event> & query_response
-                    , std::string const& chronicle_name, std::string const& story_name, uint64_t start_time, uint64_t end_time);
-                    
 private:
     ChronologClientImpl*chronologClientImpl;
 };

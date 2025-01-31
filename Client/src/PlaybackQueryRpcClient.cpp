@@ -16,8 +16,10 @@ namespace tl = thallium;
 namespace chl = chronolog;
 
  // constructor is private to make sure thalium rpc objects are created on the heap, not stack
-chl::PlaybackQueryRpcClient::PlaybackQueryRpcClient(tl::engine &tl_engine, chl::ServiceId const& playback_service_id)
+chl::PlaybackQueryRpcClient::PlaybackQueryRpcClient(tl::engine &tl_engine, ServiceId const& local_query_service_id
+                , chl::ServiceId const& playback_service_id)
     : local_engine(tl_engine)
+    , localQueryServiceId(local_query_service_id)
     , playback_service_id(playback_service_id)
 {
     std::string service_addr_string= playback_service_id.protocol + "://";
@@ -52,15 +54,20 @@ int chl::PlaybackQueryRpcClient::is_playback_service_available()
     return chl::CL_ERR_UNKNOWN;
 }
     
-int chl::PlaybackQueryRpcClient::send_story_playback_request(chl::ServiceId const& response_service_id, uint32_t query_id   
-            , chl::ChronicleName const &chronicle_name, chl::StoryName const &story_name, uint64_t start_time, uint64_t end_time)
+int chl::PlaybackQueryRpcClient::send_story_playback_request(chl::ChronicleName const &chronicle_name, chl::StoryName const &story_name, uint64_t start_time, uint64_t end_time)
 {
     int return_code = chl::CL_ERR_UNKNOWN;
 
+    //TODO: polish query_id generation
+    // we should ensure that there's  atomic query_is generation per client process
+    // making the generation of id a reponsibility of ClientQueryService would make the most sense
+    // using the mock id for now
+    uint32_t query_id = 1;
+    
     try
     {
 
-        playback_service_available.on(playback_service_handle)(response_service_id, query_id
+        playback_service_available.on(playback_service_handle)(localQueryServiceId, query_id
                             , chronicle_name,story_name,start_time,end_time);
 
         return chl::CL_SUCCESS;

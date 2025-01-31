@@ -85,18 +85,36 @@ int chronolog::StoryWritingHandle <KeeperChoicePolicy>::log_event(std::string co
     }
 
     // INNA: make send event returm 0 in case of tl RPC failure ....
+    
     keeperRecordingClient->send_event_msg(log_event);
 
-    // Kun: do we have any reason to have a different errno definition than what we already have in errcode.h?
+    //INNA: we probably want to expose the timestamp as the return value here
+    // 0 indicates a failure to log as invalid timestamp
     return 1;
 }
 /////////////////////
-
+/*
 template <class KeeperChoicePolicy>
 int chronolog::StoryWritingHandle <KeeperChoicePolicy>::log_event(size_t, void*)
 {
     return 0;  // not implemented yet ; to be implemented with tl bulk transfer ... 
 }
+*/
+
+template <class KeeperChoicePolicy>
+int chronolog::StoryWritingHandle<KeeperChoicePolicy>::playback_story(uint64_t start_time, uint64_t end_time
+        , std::vector<chronolog::Event>& playback_events)
+{
+    playback_events.clear();
+
+    if(nullptr == playbackQueryClient)
+    { return chl::CL_ERR_NO_PLAYERS; }
+
+    playbackQueryClient->send_story_playback_request(chronicle, story, start_time, end_time);
+
+return chl::CL_SUCCESS;
+}
+
 //////////////////////////////////////////
 
 
@@ -219,7 +237,7 @@ chl::PlaybackQueryRpcClient * chronolog::StorytellerClient::addPlaybackQueryClie
     try
     {
         playbackRpcClient = chronolog::PlaybackQueryRpcClient::CreatePlaybackQueryRpcClient(
-                client_engine, player_card); //, keeper_service_na_string);
+                client_engine, localServiceId, player_card); //, keeper_service_na_string);
 
         auto insert_return = playbackQueryClientMap.insert(
                 std::pair <std::pair <uint32_t, uint16_t>, chl::PlaybackQueryRpcClient*>(

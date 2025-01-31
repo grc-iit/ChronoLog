@@ -8,7 +8,7 @@
 
 #include <thallium.hpp>
 
-#include "ArchiveReadingRequest.h"
+#include "ArchiveReadingRequestQueue.h"
 #include "StoryChunkIngestionQueue.h"
 #include "HDF5ArchiveReadingAgent.h"
 
@@ -75,8 +75,8 @@ private:
     ArchiveReadingRequestQueue & theReadingRequestQueue;
     StoryChunkIngestionQueue & theIngestionQueue;
 
-    ReadingAgentState agentState;
     std::mutex agentStateMutex;
+    ReadingAgentState agentState;
     std::vector <thallium::managed <thallium::xstream>> archiveReadingStreams;
     std::vector <thallium::managed <thallium::thread>> archiveReadingThreads;
 

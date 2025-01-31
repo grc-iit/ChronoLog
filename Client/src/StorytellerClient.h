@@ -21,6 +21,7 @@ public:
 };
 
 class KeeperRecordingClient;
+class PlaybackQueryRpcClient;
 
 class RoundRobinKeeperChoice
 {
@@ -49,13 +50,14 @@ public:
     ~StorytellerClient();
 
     int addKeeperRecordingClient(KeeperIdCard const &);
-
     int removeKeeperRecordingClient(KeeperIdCard const &);
+    PlaybackQueryRpcClient * addPlaybackQueryClient(ServiceId const &);
+    void removePlaybackQueryClient(ServiceId const &);
 
     StoryHandle*findStoryWritingHandle(ChronicleName const &, StoryName const &);
 
     StoryHandle*initializeStoryWritingHandle(ChronicleName const &, StoryName const &, StoryId const &
-                                             , std::vector <KeeperIdCard> const &);
+                                             , std::vector <KeeperIdCard> const &, ServiceId const&);
 
     void removeAcquiredStoryHandle(ChronicleName const &, StoryName const &);
 
@@ -84,6 +86,7 @@ private:
 
     std::map <std::pair <uint32_t, uint16_t>, KeeperRecordingClient*> recordingClientMap;
     std::map <std::pair <std::string, std::string>, StoryHandle*> acquiredStoryHandles;
+    std::map <std::pair <uint32_t, uint16_t>, PlaybackQueryRpcClient*> playbackQueryClientMap;
 
 };
 
@@ -96,6 +99,7 @@ public:
     StoryWritingHandle(StorytellerClient &client, ChronicleName const &a_chronicle, StoryName const &a_story
                        , StoryId const &story_id): theClient(client), chronicle(a_chronicle), story(a_story), storyId(
             story_id), keeperChoicePolicy(new KeeperChoicePolicy)
+            , playbackQueryClient(nullptr)
     {
         LOG_DEBUG("[StoryWritingHandle] Initialized for Chronicle: {}, Story: {}", a_chronicle, a_story);
     }
@@ -107,8 +111,10 @@ public:
     virtual int log_event(size_t size, void*data);
 
     void addRecordingClient(KeeperRecordingClient*);
-
     void removeRecordingClient(KeeperIdCard const &);
+
+    void attachPlaybackQueryClient(PlaybackQueryRpcClient*);
+    void detachPlaybackQueryClient();
 
 private:
 
@@ -117,8 +123,9 @@ private:
     StoryName story;
     StoryId storyId;
     KeeperChoicePolicy*keeperChoicePolicy;
+    PlaybackQueryRpcClient * playbackQueryClient;
     std::vector <KeeperRecordingClient*> storyKeepers;
-
+    
 };
 
 }//namespace

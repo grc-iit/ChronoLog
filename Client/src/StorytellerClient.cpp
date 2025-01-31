@@ -7,10 +7,12 @@
 #include "../chrono_common/chronolog_types.h"
 #include "StorytellerClient.h"
 #include "KeeperRecordingClient.h"
+#include "PlaybackQueryRpcClient.h"
 
 namespace tl = thallium;
 
 namespace chl = chronolog;
+
 /////////////////////
 
 uint64_t chronolog::ChronologTimer::getTimestamp()
@@ -55,6 +57,18 @@ chronolog::StoryWritingHandle <KeeperChoicePolicy>::removeRecordingClient(chrono
     }
 }
 
+template <class KeeperChoicePolicy>
+void chronolog::StoryWritingHandle <KeeperChoicePolicy>::attachPlaybackQueryClient(PlaybackQueryRpcClient* playbackClient)
+{
+    playbackQueryClient = playbackClient;
+}
+
+template <class KeeperChoicePolicy>
+void chronolog::StoryWritingHandle <KeeperChoicePolicy>::detachPlaybackQueryClient()
+{
+    playbackQueryClient = nullptr;
+}
+
 //////////////////
 template <class KeeperChoicePolicy>
 int chronolog::StoryWritingHandle <KeeperChoicePolicy>::log_event(std::string const &event_record)
@@ -91,6 +105,7 @@ chronolog::StorytellerClient::~StorytellerClient()
     LOG_DEBUG("[StorytellerClient] Destructor called.");
     {
         std::lock_guard <std::mutex> lock(acquiredStoryMapMutex);
+        //TODO: INNA: investigate why the folowing lines were commented out in the previous version
         /*
         for( auto story_record_iter : acquiredStoryHandles)
         {
@@ -105,6 +120,12 @@ chronolog::StorytellerClient::~StorytellerClient()
         delete keeper_client.second;
     }
     recordingClientMap.clear();
+    //delete playback clients
+    for(auto playback_client: playbackQueryClientMap)
+    {
+        delete playback_client.second;
+    }
+    playbackQueryClientMap.clear();
 }
 
 int chronolog::StorytellerClient::get_event_index()
@@ -185,6 +206,53 @@ int chronolog::StorytellerClient::removeKeeperRecordingClient(chronolog::KeeperI
     return 1;
 }
 
+chl::PlaybackQueryRpcClient * chronolog::StorytellerClient::addPlaybackQueryClient(chl::ServiceId const& player_card)
+{
+    LOG_DEBUG("[StorytellerClient] adding PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+
+    chl::PlaybackQueryRpcClient * playbackRpcClient = nullptr;
+
+    //INNA: Check if playbackQueryClient already exists for htis service endpoint
+
+    std::lock_guard <std::mutex> lock(recordingClientMapMutex);  
+
+    try
+    {
+        playbackRpcClient = chronolog::PlaybackQueryRpcClient::CreatePlaybackQueryRpcClient(
+                client_engine, player_card); //, keeper_service_na_string);
+
+        auto insert_return = playbackQueryClientMap.insert(
+                std::pair <std::pair <uint32_t, uint16_t>, chl::PlaybackQueryRpcClient*>(
+                        player_card.get_service_endpoint(), playbackRpcClient));
+
+        if(false != insert_return.second)
+        {
+            LOG_DEBUG("[StorytellerClient] created PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+            return playbackRpcClient;
+        }
+        else
+        {
+            delete playbackRpcClient; 
+            playbackRpcClient = nullptr;
+            LOG_DEBUG("[StorytellerClient] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
+        }
+
+    }
+    catch(tl::exception const &ex)
+    {
+        playbackRpcClient = nullptr;
+        LOG_DEBUG("[StorytellerClient] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
+    }
+    return playbackRpcClient;
+}
+
+void chronolog::StorytellerClient::removePlaybackQueryClient(chl::ServiceId const& player_card)
+{
+
+    LOG_DEBUG("[StorytellerClient] removing PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+}
+
+
 ///////////////////////////
 chronolog::StoryHandle*
 chronolog::StorytellerClient::findStoryWritingHandle(ChronicleName const &chronicle, StoryName const &story)
@@ -211,7 +279,8 @@ chronolog::StorytellerClient::findStoryWritingHandle(ChronicleName const &chroni
 chronolog::StoryHandle*
 chronolog::StorytellerClient::initializeStoryWritingHandle(ChronicleName const &chronicle, StoryName const &story
                                                            , StoryId const &story_id
-                                                           , std::vector <KeeperIdCard> const &vectorOfKeepers)
+                                                           , std::vector <KeeperIdCard> const &vectorOfKeepers
+                        , chl::ServiceId const & player_card)
 //INNA: TODO :KeeperChoicePolicy will have to be communicated here as well ....
 {
     std::lock_guard <std::mutex> lock(acquiredStoryMapMutex);
@@ -245,6 +314,13 @@ chronolog::StorytellerClient::initializeStoryWritingHandle(ChronicleName const &
         keeper_client_iter = recordingClientMap.find(
                 std::pair <uint32_t, uint16_t>(keeper_id_card.getIPaddr(), keeper_id_card.getPort()));
         storyWritingHandle->addRecordingClient((*keeper_client_iter).second);
+    }
+
+    auto playbackQueryClient = addPlaybackQueryClient(player_card);
+
+    if(nullptr != playbackQueryClient)
+    {
+        storyWritingHandle->attachPlaybackQueryClient(playbackQueryClient);
     }
 
     auto insert_return = acquiredStoryHandles.insert(

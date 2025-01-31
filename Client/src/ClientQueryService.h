@@ -39,13 +39,6 @@ public:
     {
         try 
         {
-           /* std::string service_addr_string= client_service_id.protocol + "://";
-            service_addr_string += client_service_id.getIPasDottedString(service_addr_string)
-                    + std::to_string(client_service_id.port);
-            margo_instance_id query_service_margo_id = margo_init(service_addr_string.c_str(), MARGO_SERVER_MODE, 1 , 1);
-
-            thallium::engine * tl_engine = new tl::engine(query_service_margo_id);
-            */ 
             return new ClientQueryService(tl_engine, client_service_id);
         }
         catch(thallium::exception &)

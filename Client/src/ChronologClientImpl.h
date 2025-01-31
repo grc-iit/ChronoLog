@@ -31,8 +31,10 @@ public:
     static std::mutex chronologClientMutex;
     static ChronologClientImpl*chronologClientImplInstance;
 
-    static ChronologClientImpl*GetClientImplInstance(ChronoLog::ConfigurationManager const &);
-    static ChronologClientImpl*GetClientImplInstance(chronolog::ClientPortalServiceConf const &);
+    static ChronologClientImpl*
+    GetClientImplInstance(ChronoLog::ConfigurationManager const &);
+    static ChronologClientImpl*
+    GetClientImplInstance(chronolog::ClientPortalServiceConf const &);
 
     // the classs is non-copyable
     ChronologClientImpl(ChronologClientImpl const &) = delete;
@@ -48,13 +50,13 @@ public:
     int CreateChronicle(std::string const &chronicle_name, const std::map <std::string, std::string> &attrs
                         , int &flags);
 
-    int DestroyChronicle(std::string const &chronicle_name); //, int &flags);
+    int DestroyChronicle(std::string const &chronicle_name); 
 
     std::pair <int, StoryHandle*> AcquireStory(std::string const &chronicle_name, std::string const &story_name
                                                , const std::map <std::string, std::string> &attrs
                                                , int &flags);
 
-    int ReleaseStory(std::string const &chronicle_name, std::string const &story_name); //, int &flags);
+    int ReleaseStory(std::string const &chronicle_name, std::string const &story_name); 
     int DestroyStory(std::string const &chronicle_name, std::string const &story_name);
 
     int GetChronicleAttr(std::string const &chronicle_name, const std::string &key, std::string &value);
@@ -80,15 +82,15 @@ private:
     thallium::engine*tlEngine;
     RpcVisorClient*rpcVisorClient;
     StorytellerClient*storyteller;
-    ClientQueryService * queryService;
+    ClientQueryService * storyReaderService;
     
     // ClocksourceManager *pClocksourceManager_;
 
     ChronologClientImpl(const ChronoLog::ConfigurationManager &conf_manager);
     ChronologClientImpl(const chronolog::ClientPortalServiceConf &);
 
-    ChronologClientImpl(std::string const &protocol, const std::string &visor_ip, int visor_port
-                        , uint16_t service_provider);
+    ChronologClientImpl( ServiceId const& visorPortalServiceId = ServiceId()
+            , ServiceId const& clientReaderServiceId = ServiceId());
 
     void defineClientIdentity();
 

@@ -63,7 +63,8 @@ int main(int argc, char**argv)
 
     tl::abt scope;
 
-    agent_ptr = new chronolog::HDF5ArchiveReadingAgent("/home/kfeng/CLionProjects/hdf5_archive_reader_test_data");
+    std::string archive_path = confManager.GRAPHER_CONF.EXTRACTOR_CONF.story_files_dir;
+    agent_ptr = new chronolog::HDF5ArchiveReadingAgent(archive_path);
 
     agent_ptr->initialize();
 

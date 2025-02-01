@@ -76,17 +76,13 @@ private:
     ClientId clientId;
     std::string storytellerRpcProtocol;
     ChronologTimer clockProxy;
-    ServiceId   localServiceId;
     thallium::engine*tlEngine;
     RpcVisorClient*rpcVisorClient;
     StorytellerClient*storyteller;
     ClientQueryService * storyReaderService;
     
     ChronologClientImpl(const ChronoLog::ConfigurationManager &conf_manager);
-    ChronologClientImpl(const chronolog::ClientPortalServiceConf &);
-
-    ChronologClientImpl( ServiceId const& visorPortalServiceId = ServiceId()
-            , ServiceId const& clientReaderServiceId = ServiceId());
+    ChronologClientImpl( ClientQueryServiceConf const& , ClientPortalServiceConf const&);
 
     void defineClientIdentity();
 

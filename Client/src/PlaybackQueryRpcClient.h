@@ -7,6 +7,8 @@
 #include "chronolog_types.h"
 #include "chrono_monitor.h"
 
+#include "ClientQueryService.h"
+
 namespace tl= thallium;
 
 namespace chronolog
@@ -18,11 +20,11 @@ public:
 
     // Service should be created on the heap not the stack thus the constructor is private...
     static PlaybackQueryRpcClient*
-    CreatePlaybackQueryRpcClient(tl::engine &tl_engine, ServiceId const& local_query_service_id, ServiceId const& playback_service_id)
+    CreatePlaybackQueryRpcClient( ClientQueryService & localQueryService, ServiceId const& playback_service_id)
     {
         try
         {
-            return new PlaybackQueryRpcClient(tl_engine,local_query_service_id, playback_service_id);
+            return new PlaybackQueryRpcClient( localQueryService, playback_service_id);
         }
         catch(tl::exception const &ex)
         {
@@ -44,15 +46,14 @@ private:
     PlaybackQueryRpcClient(PlaybackQueryRpcClient const &) = delete;
     PlaybackQueryRpcClient &operator=(PlaybackQueryRpcClient const &) = delete;
 
-    tl::engine & local_engine;          // local tl::engine 
-    ServiceId   localQueryServiceId;    // ServiceId of local ClientQueryService
+    ClientQueryService & theClientQueryService; // ClientQueryService instance
     ServiceId   playback_service_id;    // ServiceId of remote PlaybackService
     tl::provider_handle playback_service_handle;  // tl::provider_handle for remote PlaybackService
     tl::remote_procedure playback_service_available;
     tl::remote_procedure story_playback_request;
 
     // constructor is private to make sure thalium rpc objects are created on the heap, not stack
-    PlaybackQueryRpcClient(tl::engine &tl_engine, ServiceId const& local_query_service_id, ServiceId const& playback_service_id);
+    PlaybackQueryRpcClient(ClientQueryService &, ServiceId const& playback_service_id);
 
 };
 

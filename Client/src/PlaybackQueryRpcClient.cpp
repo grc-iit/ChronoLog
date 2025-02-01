@@ -8,7 +8,7 @@
 #include "chronolog_errcode.h"
 #include "ServiceId.h"
 #include "PlaybackQueryRpcClient.h"
-
+#include "ClientQueryService.h"
 
 
 namespace tl = thallium;
@@ -16,20 +16,19 @@ namespace tl = thallium;
 namespace chl = chronolog;
 
  // constructor is private to make sure thalium rpc objects are created on the heap, not stack
-chl::PlaybackQueryRpcClient::PlaybackQueryRpcClient(tl::engine &tl_engine, ServiceId const& local_query_service_id
+chl::PlaybackQueryRpcClient::PlaybackQueryRpcClient(chl::ClientQueryService & clientQueryService
                 , chl::ServiceId const& playback_service_id)
-    : local_engine(tl_engine)
-    , localQueryServiceId(local_query_service_id)
+    : theClientQueryService(clientQueryService)
     , playback_service_id(playback_service_id)
 {
     std::string service_addr_string= playback_service_id.protocol + "://";
     service_addr_string += playback_service_id.getIPasDottedString(service_addr_string) 
                     + std::to_string(playback_service_id.port);
 
-    playback_service_handle = tl::provider_handle(local_engine.lookup(service_addr_string), playback_service_id.provider_id);
+    playback_service_handle = tl::provider_handle(theClientQueryService.get_engine().lookup(service_addr_string), playback_service_id.provider_id);
 
-    playback_service_available = local_engine.define("playback_service_available");
-    story_playback_request = local_engine.define("story_playback_request");
+    playback_service_available = theClientQueryService.get_engine().define("playback_service_available");
+    story_playback_request = theClientQueryService.get_engine().define("story_playback_request");
 }
 
 chl::PlaybackQueryRpcClient::~PlaybackQueryRpcClient()
@@ -58,17 +57,11 @@ int chl::PlaybackQueryRpcClient::send_story_playback_request(chl::ChronicleName 
 {
     int return_code = chl::CL_ERR_UNKNOWN;
 
-    //TODO: polish query_id generation
-    // we should ensure that there's  atomic query_is generation per client process
-    // making the generation of id a reponsibility of ClientQueryService would make the most sense
-    // using the mock id for now
-    uint32_t query_id = 1;
+    uint32_t query_id = theClientQueryService.start_new_query( chronicle_name,story_name,start_time,end_time);
     
     try
     {
-
-        playback_service_available.on(playback_service_handle)(localQueryServiceId, query_id
-                            , chronicle_name,story_name,start_time,end_time);
+        story_playback_request.on(playback_service_handle)( theClientQueryService.get_service_id(), query_id, chronicle_name,story_name,start_time,end_time);
 
         return chl::CL_SUCCESS;
 

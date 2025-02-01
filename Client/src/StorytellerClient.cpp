@@ -174,7 +174,7 @@ int chronolog::StorytellerClient::addKeeperRecordingClient(chronolog::KeeperIdCa
                 rpc_protocol_string + "://" + keeper_id_card.getIPasDottedString(a_string) + ":" +
                 std::to_string(keeper_id_card.getPort());
         chronolog::KeeperRecordingClient*keeperRecordingClient = chronolog::KeeperRecordingClient::CreateKeeperRecordingClient(
-                client_engine, keeper_id_card, keeper_service_na_string);
+                theClientQueryService.get_service_engine(), keeper_id_card, keeper_service_na_string);
 
         auto insert_return = recordingClientMap.insert(
                 std::pair <std::pair <uint32_t, uint16_t>, chronolog::KeeperRecordingClient*>(
@@ -223,53 +223,6 @@ int chronolog::StorytellerClient::removeKeeperRecordingClient(chronolog::KeeperI
     LOG_DEBUG("[StorytellerClient] Removed KeeperRecordingClient for KeeperIdCard: {}", ss.str());
     return 1;
 }
-
-chl::PlaybackQueryRpcClient * chronolog::StorytellerClient::addPlaybackQueryClient(chl::ServiceId const& player_card)
-{
-    LOG_DEBUG("[StorytellerClient] adding PlaybackQueryRpcClient for {}", chl::to_string(player_card));
-
-    chl::PlaybackQueryRpcClient * playbackRpcClient = nullptr;
-
-    //INNA: Check if playbackQueryClient already exists for htis service endpoint
-
-    std::lock_guard <std::mutex> lock(recordingClientMapMutex);  
-
-    try
-    {
-        playbackRpcClient = chronolog::PlaybackQueryRpcClient::CreatePlaybackQueryRpcClient(
-                client_engine, localServiceId, player_card); //, keeper_service_na_string);
-
-        auto insert_return = playbackQueryClientMap.insert(
-                std::pair <std::pair <uint32_t, uint16_t>, chl::PlaybackQueryRpcClient*>(
-                        player_card.get_service_endpoint(), playbackRpcClient));
-
-        if(false != insert_return.second)
-        {
-            LOG_DEBUG("[StorytellerClient] created PlaybackQueryRpcClient for {}", chl::to_string(player_card));
-            return playbackRpcClient;
-        }
-        else
-        {
-            delete playbackRpcClient; 
-            playbackRpcClient = nullptr;
-            LOG_DEBUG("[StorytellerClient] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
-        }
-
-    }
-    catch(tl::exception const &ex)
-    {
-        playbackRpcClient = nullptr;
-        LOG_DEBUG("[StorytellerClient] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
-    }
-    return playbackRpcClient;
-}
-
-void chronolog::StorytellerClient::removePlaybackQueryClient(chl::ServiceId const& player_card)
-{
-
-    LOG_DEBUG("[StorytellerClient] removing PlaybackQueryRpcClient for {}", chl::to_string(player_card));
-}
-
 
 ///////////////////////////
 chronolog::StoryHandle*
@@ -334,7 +287,8 @@ chronolog::StorytellerClient::initializeStoryWritingHandle(ChronicleName const &
         storyWritingHandle->addRecordingClient((*keeper_client_iter).second);
     }
 
-    auto playbackQueryClient = addPlaybackQueryClient(player_card);
+    // find existing or create a new one playbackQueryRpcClient
+    auto playbackQueryClient = theClientQueryService.addPlaybackQueryClient(player_card);
 
     if(nullptr != playbackQueryClient)
     {

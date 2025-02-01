@@ -37,12 +37,74 @@ chl::ClientQueryService::~ClientQueryService()
 }
 
 
-    // send the playback request to the ChronoPlayer PlaybackService and return queryId
-int chl::ClientQueryService::send_playback_query_request(chl::ServiceId const& playback_service_id,
-                chl::ChronicleName const&, chl::StoryName const&, chl::chrono_time const&, chl::chrono_time const&)
+// record the newly issued query details and return queryId
+uint32_t chl::ClientQueryService::start_new_query(chl::ChronicleName const& chronicle, chl::StoryName const& story, 
+        chl::chrono_time const& start_time, chl::chrono_time const& end_time)
 {
+    std::lock_guard <std::mutex> lock(queryServiceMutex);
 
-    return chl::CL_ERR_UNKNOWN;
+    uint32_t query_id = queryIdIndex++; 
+
+    activeQueryMap.insert(std::pair<uint32_t, chl::StoryPlaybackQuery>
+                ( query_id, chl::StoryPlaybackQuery( query_id, chronicle, story, start_time, end_time)));
+
+    return query_id;
+}
+
+// find or create PlaybackServiceRpcClient associated with the remote Playback Service
+chl::PlaybackQueryRpcClient * chronolog::ClientQueryService::addPlaybackQueryClient(chl::ServiceId const& player_card)
+{
+    LOG_DEBUG("[ClientQueryService] adding PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+
+
+    auto find_iter = playbackRpcClientMap.find(player_card.get_service_endpoint());
+
+    if(find_iter != playbackRpcClientMap.end())
+    {
+        LOG_DEBUG("[ClientQueryService] found PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+        return (*find_iter).second;
+    }
+
+    chl::PlaybackQueryRpcClient * playbackRpcClient = nullptr;
+    LOG_DEBUG("[ClientQueryService] adding PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+    
+    std::lock_guard <std::mutex> lock(queryServiceMutex);
+
+    try
+    {
+        playbackRpcClient = chronolog::PlaybackQueryRpcClient::CreatePlaybackQueryRpcClient(*this, player_card); 
+
+        auto insert_return = playbackRpcClientMap.insert(
+                std::pair <chl::service_endpoint, chl::PlaybackQueryRpcClient*>(
+                        player_card.get_service_endpoint(), playbackRpcClient));
+
+        if(false != insert_return.second)
+        {
+            LOG_DEBUG("[ClientQueryService] created PlaybackQueryRpcClient for {}", chl::to_string(player_card));
+            return playbackRpcClient;
+        }
+        else
+        {
+            delete playbackRpcClient; 
+            playbackRpcClient = nullptr;
+            LOG_DEBUG("[ClientQueryService] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
+        }
+
+    }
+    catch(tl::exception const &ex)
+    {
+        playbackRpcClient = nullptr;
+        LOG_DEBUG("[ClientQueryService] Failed to create PlaybackQueryRpcClient}", chl::to_string(player_card));
+    }
+    return playbackRpcClient;
+}
+
+// we are notified of the remote PlaybackService stopping, remove associated PlaybackQueryRpcClient
+void chronolog::ClientQueryService::removePlaybackQueryClient(chl::ServiceId const& player_card)
+{
+    std::lock_guard <std::mutex> lock(queryServiceMutex);
+    //TODO : we need to check that there no active queries associated with this PlaybackQueryRpcClient
+    // to safely remove it
 }
 
 // build transfer of the Response StoryChunks

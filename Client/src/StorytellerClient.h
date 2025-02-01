@@ -11,6 +11,8 @@
 #include "chronolog_types.h"
 #include "chronolog_client.h"
 
+#include "ClientQueryService.h"
+
 namespace chronolog
 {
 
@@ -37,13 +39,12 @@ public:
 class StorytellerClient
 {
 public:
-    StorytellerClient(ChronologTimer &chronolog_timer, thallium::engine &client_tl_engine, ServiceId const& local_service_id
+    StorytellerClient(ChronologTimer &chronolog_timer, ClientQueryService & clientQueryService
            ,  ClientId const &client_id, std::string const &rpc_protocol = std::string("ofi+sockets"))
-            : theTimer(chronolog_timer)
-            , client_engine(client_tl_engine)
-            , localServiceId(local_service_id)
-            , clientId(client_id)
-            , rpc_protocol_string(rpc_protocol)
+        : theTimer(chronolog_timer)
+        , theClientQueryService(clientQueryService)
+        , clientId(client_id)
+        , rpc_protocol_string(rpc_protocol)
     {
         LOG_DEBUG("[StorytellerClient] Initialized with ClientID: {}", clientId);
     }
@@ -52,8 +53,6 @@ public:
 
     int addKeeperRecordingClient(KeeperIdCard const &);
     int removeKeeperRecordingClient(KeeperIdCard const &);
-    PlaybackQueryRpcClient * addPlaybackQueryClient(ServiceId const &);
-    void removePlaybackQueryClient(ServiceId const &);
 
     StoryHandle*findStoryWritingHandle(ChronicleName const &, StoryName const &);
 
@@ -70,6 +69,8 @@ public:
 
     int get_event_index();
 
+    ServiceId const& get_local_service_id() const
+    { return theClientQueryService.get_service_id(); }
 
 private:
     StorytellerClient(StorytellerClient const &) = delete;
@@ -77,8 +78,7 @@ private:
     StorytellerClient &operator=(StorytellerClient const &) = delete;
 
     ChronologTimer &theTimer;
-    thallium::engine &client_engine;
-    ServiceId localServiceId;
+    ClientQueryService & theClientQueryService;
     ClientId clientId;
     std::string rpc_protocol_string;
     std::atomic <int> atomic_index;

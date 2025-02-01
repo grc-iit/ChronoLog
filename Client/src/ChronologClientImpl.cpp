@@ -188,7 +188,7 @@ int chronolog::ChronologClientImpl::Connect()
         clientId = connectResponseMsg.getClientId();
         if(storyteller == nullptr)
         {
-            storyteller = new StorytellerClient(clockProxy, *tlEngine, localServiceId, clientId, storytellerRpcProtocol);
+            storyteller = new StorytellerClient(clockProxy, *storyReaderService, clientId, storytellerRpcProtocol);
         }
         //TODO: if we ever change the connection hashing algorithm we'd need to handle reconnection case with the new client_id 
     }

@@ -5,15 +5,14 @@ set -e
 
 # Default values and color codes
 BUILD_TYPE=""
-BUILD_DIR="build"
 INSTALL_PATH=""  # Installation path is optional and starts empty
 REPO_ROOT="$(realpath "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..")"
 
 ERR='\033[7;37m\033[41m'
+INFO='\033[7;49m\033[92m'
 DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
-# Function to print usage information
 usage() {
     echo "Usage: $0 -type <BuildType> [-install-path <Path>]"
     echo "Example: $0 -type Debug"
@@ -21,7 +20,6 @@ usage() {
     exit 1
 }
 
-# Function to parse arguments
 parse_arguments() {
     while [[ "$#" -gt 0 ]]; do
         case $1 in
@@ -61,8 +59,6 @@ activate_spack_environment() {
     fi
 }
 
-
-# Function to check for Spack
 check_spack() {
     # Check if an environment is active
     if spack env status | grep -q "No active environment"; then
@@ -77,50 +73,43 @@ check_spack() {
         exit 1
     fi
 
-    # Check if all dependencies are installed
+    # Ensuring dependencies installation
     echo -e "${DEBUG}Ensuring all dependencies are installed...${NC}"
     spack install -v
-
-    # Confirm that everything is ready
     echo -e "${INFO}All dependencies are installed and ready.${NC}"
 }
 
-# Function to clean and prepare the build directory
 prepare_build_directory() {
-    if [ -d "$BUILD_DIR" ]; then
+    if [ -d "$REPO_ROOT/build" ]; then
         echo -e "${DEBUG}Build directory exists. Removing it...${NC}"
-        rm -rf "$BUILD_DIR"
+        rm -rf "$REPO_ROOT/build"
     fi
-    mkdir "$BUILD_DIR"
-    cd "$BUILD_DIR"
+    mkdir "$REPO_ROOT/build"
+    cd "$REPO_ROOT/build"
 }
 
-# Function to build the project
 build_project() {
-    echo -e "${DEBUG}Building ChronoLog in ${BUILD_TYPE} mode...${NC}"
-
-    # Determine the appropriate cmake command based on INSTALL_PATH
+    echo -e "${INFO}Building ChronoLog in ${BUILD_TYPE} mode.${NC}"
     if [[ -n "$INSTALL_PATH" ]]; then
         echo -e "${DEBUG}Using installation path: ${INSTALL_PATH}${NC}"
         cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DINSTALL_DIR="${INSTALL_PATH}" ..
     else
-        echo -e "${DEBUG}No installation path specified, using default CMake settings.${NC}"
+        echo -e "${DEBUG}No installation path specified, using default CMake settings [~/home/$USER/chronolog].${NC}"
         cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..
     fi
-
     make all
     echo -e "${DEBUG}ChronoLog Built in ${BUILD_TYPE} mode${NC}"
 }
 
 # Main function
 main() {
+    echo -e "${INFO}Building ChronoLog...${NC}"
     parse_arguments "$@"
     cd ${REPO_ROOT}
     activate_spack_environment
     check_spack
     prepare_build_directory
     build_project
+    echo -e "${INFO}ChronoLog Built.${NC}"
 }
-
-# Run the main function with all script arguments
 main "$@"

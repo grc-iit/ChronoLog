@@ -92,7 +92,7 @@ build_project() {
     # Determine the appropriate cmake command based on INSTALL_PATH
     if [[ -n "$INSTALL_PATH" ]]; then
         echo -e "${DEBUG}Using installation path: ${INSTALL_PATH}${NC}"
-        cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" ..
+        cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DINSTALL_DIR="${INSTALL_PATH}" ..
     else
         echo -e "${DEBUG}No installation path specified, using default CMake settings.${NC}"
         cmake -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..

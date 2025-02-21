@@ -7,6 +7,7 @@ set -e
 BUILD_TYPE=""
 BUILD_DIR="build"
 INSTALL_PATH=""  # Installation path is optional and starts empty
+REPO_ROOT="$(realpath "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..")"
 
 ERR='\033[7;37m\033[41m'
 DEBUG='\033[0;33m'
@@ -43,17 +44,26 @@ parse_arguments() {
     fi
 }
 
-# Function to check for Spack and activate the environment
-check_spack() {
+activate_spack_environment() {
+    # Verify Spack is available after sourcing
     if ! command -v spack &> /dev/null; then
-        echo -e "${ERR}Spack is not installed or not in the PATH.${NC}"
-        echo "Please install Spack and make it accessible in your PATH. Refer to the prerequisites section of the Wiki at https://github.com/grc-iit/ChronoLog/wiki"
+        echo -e "${ERR}Spack is not properly loaded into the environment.${NC}"
         exit 1
     fi
 
-    echo -e "${DEBUG}Activating Spack environment...${NC}"
-    spack env activate -p .
+    # Activate the Spack environment
+    echo -e "${DEBUG}Activating Spack environment in '${REPO_ROOT}'...${NC}"
+    if spack env activate -p "${REPO_ROOT}"; then
+        echo -e "${INFO}Spack environment activated successfully.${NC}"
+    else
+        echo -e "${ERR}Failed to activate Spack environment. Ensure it is properly configured.${NC}"
+        exit 1
+    fi
+}
 
+
+# Function to check for Spack
+check_spack() {
     # Check if an environment is active
     if spack env status | grep -q "No active environment"; then
         echo -e "${DEBUG}No active Spack environment found. Exiting.${NC}"
@@ -72,7 +82,7 @@ check_spack() {
     spack install -v
 
     # Confirm that everything is ready
-    echo -e "${DEBUG}All dependencies are installed and ready.${NC}"
+    echo -e "${INFO}All dependencies are installed and ready.${NC}"
 }
 
 # Function to clean and prepare the build directory
@@ -105,7 +115,8 @@ build_project() {
 # Main function
 main() {
     parse_arguments "$@"
-    cd "$(dirname "$0")/.."
+    cd ${REPO_ROOT}
+    activate_spack_environment
     check_spack
     prepare_build_directory
     build_project

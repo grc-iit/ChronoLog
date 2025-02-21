@@ -20,6 +20,7 @@ BIN_DIR=""
 MONITOR_DIR=""
 OUTPUT_DIR=""
 INSTALL_DIR=""
+REPO_ROOT="$(realpath "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..")"
 
 # Files
 VISOR_BIN="${BIN_DIR}/chronovisor_server"
@@ -339,22 +340,15 @@ check_execution_stopped() {
 
 # Activate Spack Environment
 activate_spack_environment() {
-    # Dynamically determine the script's directory
-    local script_dir
-    script_dir="$(cd "$(dirname "$0")" && pwd)"
-
-    # Assume Spack is at the repository root
-    local repo_root="${script_dir}/.."
-
-    # Check if Spack is available
+    # Verify Spack is available after sourcing
     if ! command -v spack &> /dev/null; then
-        echo -e "${ERR}Spack command not found. Please ensure Spack is installed and available in your PATH.${NC}"
+        echo -e "${ERR}Spack is not properly loaded into the environment.${NC}"
         exit 1
     fi
 
-    # Try activating the Spack environment
-    echo -e "${INFO}Activating Spack environment in '${repo_root}'...${NC}"
-    if spack env activate -p "${repo_root}"; then
+    # Activate the Spack environment
+    echo -e "${INFO}Activating Spack environment in '${REPO_ROOT}'...${NC}"
+    if spack env activate -p "${REPO_ROOT}"; then
         echo -e "${DEBUG}Spack environment activated successfully.${NC}"
     else
         echo -e "${ERR}Failed to activate Spack environment. Ensure it is properly configured.${NC}"
@@ -366,11 +360,10 @@ activate_spack_environment() {
 # Main functions for install, reset, and usage__________________________________________________________________________
 build() {
     echo -e "${INFO}Building ChronoLog...${NC}"
-
     if [[ -n "$INSTALL_DIR" ]]; then
-        ./build.sh -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
+        "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
     else
-        ./build.sh -type "$BUILD_TYPE"
+        "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE"
     fi
     echo -e "${INFO}ChronoLog Built.${NC}"
 }
@@ -380,11 +373,11 @@ install() {
     check_work_dir
     check_build_directory
     activate_spack_environment
-
-    if [[ -x ./install.sh ]]; then
-        ./install.sh
+    install_script="${REPO_ROOT}/deploy/install.sh"
+    if [[ -x "$install_script" ]]; then
+        "$install_script"
     else
-        echo -e "${RED}Error: ./install.sh is not executable or not found.${NC}"
+        echo -e "${RED}Error: $install_script is not executable or not found.${NC}"
         exit 1
     fi
     copy_shared_libs

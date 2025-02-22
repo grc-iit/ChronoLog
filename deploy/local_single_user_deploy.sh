@@ -98,7 +98,7 @@ generate_config_files() {
     # Check if default configuration file exists
     if [ ! -f "$default_conf" ]; then
         echo "Default configuration file $default_conf not found."
-        return 1
+        exit 1
     fi
 
     # Check if number of keepers and graphers are valid
@@ -118,7 +118,8 @@ generate_config_files() {
     local base_port_keeper_datastore=$(jq -r '.chrono_keeper.KeeperDataStoreAdminService.rpc.service_base_port' "$default_conf")
     local base_port_grapher_drain=$(jq -r '.chrono_grapher.KeeperGrapherDrainService.rpc.service_base_port' "$default_conf")
     local base_port_grapher_datastore=$(jq -r '.chrono_grapher.DataStoreAdminService.rpc.service_base_port' "$default_conf")
-    local base_port_player_datastore=$(jq -r '.chrono_player.DataStoreAdminService.rpc.service_base_port' "$default_conf")
+    local base_port_player_datastore=$(jq -r '.chrono_player.PlayerStoreAdminService.rpc.service_base_port' "$default_conf")
+    local base_port_player_playback=$(jq -r '.chrono_player.PlaybackQueryService.rpc.service_base_port' "$default_conf")
 
     # Generate grapher configuration files
     echo "Generating grapher configuration files ..."
@@ -151,6 +152,7 @@ generate_config_files() {
     echo "Generating player configuration files ..."
     for (( i=0; i<num_recording_groups; i++ )); do
         local new_port_player_datastore=$((base_port_player_datastore + i))
+        local new_port_player_playback=$((base_port_player_playback + i))
 
         local player_index=$((i + 1))
         local player_output_file="${conf_dir}/player_conf_${player_index}.json"
@@ -159,10 +161,12 @@ generate_config_files() {
         player_monitoring_file_name=$(basename "$player_monitoring_file")
         jq --arg monitor_dir "$monitor_dir" \
             --argjson new_port_player_datastore $new_port_player_datastore \
+            --argjson new_port_player_playback $new_port_player_playback \
             --argjson player_index "$player_index" \
             --arg player_monitoring_file_name "$player_monitoring_file_name" \
            '.chrono_player.RecordingGroup = $player_index |
-            .chrono_player.DataStoreAdminService.rpc.service_base_port = $new_port_player_datastore |
+            .chrono_player.PlayerStoreAdminService.rpc.service_base_port = $new_port_player_datastore |
+            .chrono_player.PlaybackQueryService.rpc.service_base_port = $new_port_player_playback |
             .chrono_player.Monitoring.monitor.file = ($monitor_dir + "/" + ($player_index | tostring) + "_" + $player_monitoring_file_name)' "$default_conf" > "$player_output_file"
 
         echo "Generated $player_output_file with port $new_port_player_datastore"

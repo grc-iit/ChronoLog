@@ -7,9 +7,9 @@ INFO='\033[7;49m\033[92m'
 DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Default values
 NUM_KEEPERS=1
 NUM_RECORDING_GROUPS=1
-
 BUILD_TYPE="Release"
 
 # Directories
@@ -39,40 +39,50 @@ clean=false
 EXEC_MODE_COUNT=0
 
 # Helper Methods _______________________________________________________________________________________________________
-check_dependencies() {
-    local dependencies=("jq" "ldd" "nohup" "pkill" "readlink")
-
-    echo -e "${DEBUG}Checking required dependencies...${NC}"
-    for dep in "${dependencies[@]}"; do
-        if ! command -v $dep &> /dev/null; then
-            echo -e "${ERR}Dependency $dep is not installed. Please install it and try again.${NC}"
-            exit 1
-        fi
-    done
-    echo -e "${DEBUG}All required dependencies are installed.${NC}"
+start_service() {
+    local bin="$1"
+    local args="$2"
+    local monitor_file="$3"
+    echo -e "${DEBUG}Launching $bin $args ...${NC}"
+    LD_LIBRARY_PATH=${LIB_DIR} nohup ${bin} ${args} > ${MONITOR_DIR}/${monitor_file} 2>&1 &
 }
 
-check_directories() {
-    echo -e "${DEBUG}Checking required directories...${NC}"
-    local directories=("${WORK_DIR}" "${LIB_DIR}" "${CONF_DIR}" "${BIN_DIR}")
-
-    for dir in "${directories[@]}"; do
-        if [[ ! -d ${dir} ]]; then
-            echo -e "${ERR}Directory ${dir} does not exist. Please create it and try again.${NC}"
-            exit 1
-        fi
-    done
-    echo -e "${DEBUG}All required directories are in place.${NC}"
+kill_service() {
+    local bin="$1"
+    echo -e "${DEBUG}Killing $(basename ${bin}) ...${NC}"
+    pkill -9 -f ${bin}
 }
 
-check_files() {
-    echo -e "${DEBUG}Checking required files...${NC}"
-    [[ ! -f ${VISOR_BIN} ]] && echo -e "${ERR}Visor binary file does not exist, exiting ...${NC}" && exit 1
-    [[ ! -f ${KEEPER_BIN} ]] && echo -e "${ERR}Keeper binary file does not exist, exiting ...${NC}" && exit 1
-    [[ ! -f ${GRAPHER_BIN} ]] && echo -e "${ERR}Grapher binary file does not exist, exiting ...${NC}" && exit 1
-    [[ ! -f ${PLAYER_BIN} ]] && echo -e "${ERR}Player binary file does not exist, exiting ...${NC}" && exit 1
-    [[ ! -f ${CONF_FILE} ]] && echo -e "${ERR}Configuration file does not exist, exiting ...${NC}" && exit 1
-    echo -e "${DEBUG}All required files are in place.${NC}"
+stop_service() {
+    local bin="$1"
+    local timeout="$2"
+
+    # Stop all processes of the service in parallel
+    local start_time=$(date +%s)
+    echo -e "${DEBUG}Stopping $(basename ${bin}) ...${NC}"
+    pkill -f ${bin}
+
+    # Wait for processes to stop with a timeout
+    while true; do
+        if pgrep -f "${bin}" >/dev/null; then
+            echo -e "${DEBUG}Waiting for ${bin} to stop...${NC}"
+        else
+            echo -e "${DEBUG}All service processes stopped gracefully.${NC}"
+            break
+        fi
+        sleep 10
+        # Check if timeout is reached
+        local current_time=$(date +%s)
+        if (( current_time - start_time >= timeout )); then
+            echo -e "${DEBUG}Timeout reached while stopping processes. Forcing termination.${NC}"
+            if pgrep -f "${bin}" >/dev/null; then
+                kill_service ${bin}
+                echo -e "${DEBUG}Killed: ${bin} ${NC}"
+            fi
+            break
+        fi
+    done
+    echo ""
 }
 
 generate_config_files() {
@@ -200,96 +210,39 @@ generate_config_files() {
     echo "Generate configuration files for all recording groups done"
 }
 
-extract_shared_libraries() {
-    local executable="$1"
-    ldd_output=$(ldd ${executable} 2>/dev/null | grep '=>' | awk '{print $3}' | grep -v 'not' | grep -v '^/lib')
-    echo "${ldd_output}"
-}
-
-copy_shared_libs_recursive() {
-    local lib_path="$1"
-    local dest_path="$2"
-    local linked_to_lib_path
-
-    linked_to_lib_path="$(readlink -f ${lib_path})"
-    final_dest_lib_copies=false
-    echo -e "${DEBUG}Copying ${lib_path} recursively ...${NC}"
-    while [ "$final_dest_lib_copies" != true ]
-    do
-        cp -P "$lib_path" "$dest_path/"
-        if [ "$lib_path" == "$linked_to_lib_path" ]
-        then
-            final_dest_lib_copies=true
-        fi
-        lib_path="$linked_to_lib_path"
-        linked_to_lib_path="$(readlink -f ${lib_path})"
-    done
-}
-
-copy_shared_libs() {
-    echo -e "${DEBUG}Copying shared libraries ...${NC}"
-    mkdir -p ${LIB_DIR}
-
-    all_shared_libs=""
-    for bin_file in "${BIN_DIR}"/*; do
-        echo -e "${DEBUG}Extracting shared libraries from ${bin_file} ...${NC}";
-        all_shared_libs=$(echo -e "${all_shared_libs}\n$(extract_shared_libraries ${bin_file})" | sort | uniq)
-    done
-
-    for lib in ${all_shared_libs}; do
-        if [[ -n ${lib} ]]
-        then
-            copy_shared_libs_recursive ${lib} ${LIB_DIR}
+check_dependencies() {
+    local dependencies=("jq" "ldd" "nohup" "pkill" "readlink")
+    echo -e "${DEBUG}Checking required dependencies...${NC}"
+    for dep in "${dependencies[@]}"; do
+        if ! command -v $dep &> /dev/null; then
+            echo -e "${ERR}Dependency $dep is not installed. Please install it and try again.${NC}"
+            exit 1
         fi
     done
-
-    echo -e "${DEBUG}Copy shared libraries done${NC}"
+    echo -e "${DEBUG}All required dependencies are installed.${NC}"
 }
 
-start_service() {
-    local bin="$1"
-    local args="$2"
-    local monitor_file="$3"
-    echo -e "${DEBUG}Launching $bin $args ...${NC}"
-    LD_LIBRARY_PATH=${LIB_DIR} nohup ${bin} ${args} > ${MONITOR_DIR}/${monitor_file} 2>&1 &
-}
+check_directories() {
+    echo -e "${DEBUG}Checking required directories...${NC}"
+    local directories=("${WORK_DIR}" "${LIB_DIR}" "${CONF_DIR}" "${BIN_DIR}")
 
-kill_service() {
-    local bin="$1"
-    echo -e "${DEBUG}Killing $(basename ${bin}) ...${NC}"
-    pkill -9 -f ${bin}
-}
-
-stop_service() {
-    local bin="$1"
-    local timeout="$2"
-
-    # Stop all processes of the service in parallel
-    local start_time=$(date +%s)
-    echo -e "${DEBUG}Stopping $(basename ${bin}) ...${NC}"
-    pkill -f ${bin}
-
-    # Wait for processes to stop with a timeout
-    while true; do
-        if pgrep -f "${bin}" >/dev/null; then
-            echo -e "${DEBUG}Waiting for ${bin} to stop...${NC}"
-        else
-            echo -e "${DEBUG}All service processes stopped gracefully.${NC}"
-            break
-        fi
-        sleep 10
-        # Check if timeout is reached
-        local current_time=$(date +%s)
-        if (( current_time - start_time >= timeout )); then
-            echo -e "${DEBUG}Timeout reached while stopping processes. Forcing termination.${NC}"
-            if pgrep -f "${bin}" >/dev/null; then
-                kill_service ${bin}
-                echo -e "${DEBUG}Killed: ${bin} ${NC}"
-            fi
-            break
+    for dir in "${directories[@]}"; do
+        if [[ ! -d ${dir} ]]; then
+            echo -e "${ERR}Directory ${dir} does not exist. Please create it and try again.${NC}"
+            exit 1
         fi
     done
-    echo ""
+    echo -e "${DEBUG}All required directories are in place.${NC}"
+}
+
+check_files() {
+    echo -e "${DEBUG}Checking required files...${NC}"
+    [[ ! -f ${VISOR_BIN} ]] && echo -e "${ERR}Visor binary file does not exist, exiting ...${NC}" && exit 1
+    [[ ! -f ${KEEPER_BIN} ]] && echo -e "${ERR}Keeper binary file does not exist, exiting ...${NC}" && exit 1
+    [[ ! -f ${GRAPHER_BIN} ]] && echo -e "${ERR}Grapher binary file does not exist, exiting ...${NC}" && exit 1
+    [[ ! -f ${PLAYER_BIN} ]] && echo -e "${ERR}Player binary file does not exist, exiting ...${NC}" && exit 1
+    [[ ! -f ${CONF_FILE} ]] && echo -e "${ERR}Configuration file does not exist, exiting ...${NC}" && exit 1
+    echo -e "${DEBUG}All required files are in place.${NC}"
 }
 
 check_build_directory() {
@@ -338,50 +291,25 @@ check_execution_stopped() {
     fi
 }
 
-# Activate Spack Environment
-activate_spack_environment() {
-    # Verify Spack is available after sourcing
-    if ! command -v spack &> /dev/null; then
-        echo -e "${ERR}Spack is not properly loaded into the environment.${NC}"
-        exit 1
-    fi
-
-    # Activate the Spack environment
-    echo -e "${INFO}Activating Spack environment in '${REPO_ROOT}'...${NC}"
-    if spack env activate -p "${REPO_ROOT}"; then
-        echo -e "${DEBUG}Spack environment activated successfully.${NC}"
-    else
-        echo -e "${ERR}Failed to activate Spack environment. Ensure it is properly configured.${NC}"
-        exit 1
-    fi
-}
-
-
-# Main functions for install, reset, and usage__________________________________________________________________________
+# Main functions __________________________________________________________________________________________________________
 build() {
-    echo -e "${INFO}Building ChronoLog...${NC}"
     if [[ -n "$INSTALL_DIR" ]]; then
         "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
     else
         "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE"
     fi
-    echo -e "${INFO}ChronoLog Built.${NC}"
 }
 
 install() {
-    echo -e "${INFO}Installing ChronoLog...${NC}"
     check_work_dir
     check_build_directory
-    activate_spack_environment
     install_script="${REPO_ROOT}/deploy/install.sh"
     if [[ -x "$install_script" ]]; then
-        "$install_script"
+        "$install_script" --lib-dir "${LIB_DIR}" --bin-dir "${BIN_DIR}"
     else
         echo -e "${RED}Error: $install_script is not executable or not found.${NC}"
         exit 1
     fi
-    copy_shared_libs
-    echo -e "${INFO}ChronoLog Installed.${NC}"
 }
 
 start() {
@@ -391,7 +319,6 @@ start() {
     mkdir -p "${OUTPUT_DIR}"
     check_installation
     generate_config_files ${NUM_KEEPERS} ${CONF_FILE} ${CONF_DIR} ${OUTPUT_DIR} ${NUM_RECORDING_GROUPS} ${MONITOR_DIR}
-
     echo -e "${INFO}Starting ChronoLog...${NC}"
     start_service ${VISOR_BIN} "--config ${CONF_DIR}/visor_conf.json" "visor.launch.log"
     sleep 2
@@ -601,4 +528,3 @@ else
     echo -e "${ERR}Please select build, install, start, stop or clean mode${NC}"
     usage
 fi
-echo -e "${DEBUG}Done${NC}"

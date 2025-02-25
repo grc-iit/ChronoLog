@@ -13,13 +13,12 @@ NUM_RECORDING_GROUPS=1
 BUILD_TYPE="Release"
 
 # Directories
-WORK_DIR=""
+INSTALL_DIR=""
 LIB_DIR=""
 CONF_DIR=""
 BIN_DIR=""
 MONITOR_DIR=""
 OUTPUT_DIR=""
-INSTALL_DIR=""
 REPO_ROOT="$(realpath "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..")"
 
 # Files
@@ -228,7 +227,7 @@ check_dependencies() {
 
 check_directories() {
     echo -e "${DEBUG}Checking required directories...${NC}"
-    local directories=("${WORK_DIR}" "${LIB_DIR}" "${CONF_DIR}" "${BIN_DIR}")
+    local directories=("${INSTALL_DIR}" "${LIB_DIR}" "${CONF_DIR}" "${BIN_DIR}")
 
     for dir in "${directories[@]}"; do
         if [[ ! -d ${dir} ]]; then
@@ -272,15 +271,6 @@ check_installation() {
     check_files
 }
 
-check_work_dir() {
-    # Check if WORK_DIR is set
-    if [[ -z "${WORK_DIR}" ]]; then
-        echo -e "${ERR}WORK_DIR is mandatory on this mode. Please provide it using the -w or --work-dir option.${NC}"
-        usage
-        exit 1
-    fi
-}
-
 check_execution_stopped() {
     echo -e "${DEBUG}Checking if ChronoLog processes are running...${NC}"
     local active_processes=$(pgrep -la chrono)
@@ -305,7 +295,6 @@ build() {
 }
 
 install() {
-    check_work_dir
     check_build_directory
     install_script="${REPO_ROOT}/deploy/install.sh"
     if [[ -x "$install_script" ]]; then
@@ -318,7 +307,6 @@ install() {
 
 start() {
     echo -e "${INFO}Preparing to start ChronoLog...${NC}"
-    check_work_dir
     mkdir -p "${MONITOR_DIR}"
     mkdir -p "${OUTPUT_DIR}"
     check_installation
@@ -347,7 +335,6 @@ start() {
 
 stop() {
     echo -e "${INFO}Stopping ChronoLog...${NC}"
-    check_work_dir
     stop_service ${PLAYER_BIN} 100
     stop_service ${KEEPER_BIN} 100
     stop_service ${GRAPHER_BIN} 100
@@ -357,7 +344,6 @@ stop() {
 
 clean() {
     echo -e "${INFO}Cleaning ChronoLog...${NC}"
-    check_work_dir
     check_execution_stopped
     echo -e "${DEBUG}Removing config files${NC}"
     rm -f ${CONF_DIR}/grapher_conf*.json
@@ -390,14 +376,13 @@ usage() {
     echo ""
     echo "Build Options:"
     echo "  -t|--build-type <Debug|Release>  Define type of build (default: Release) [Modes: Build]"
-    echo "  -l|--install-dir <path>          Define installation directory (default: /home/$USER/chronolog/BUILD_TYPE) [Modes: Build]"
     echo ""
     echo "Deployment Options:"
     echo "  -k|--keepers <number>            Set the total number of keeper processes. They will be assigned iteratively to the recording groups (default: 1)[Modes: Start]"
     echo "  -r|--record-groups <number>      Set the number of recording groups or grapher processes (default: 1)[Modes: Start]"
     echo ""
     echo "Directory Settings:"
-    echo "  -w|--work-dir <path>             Set the working directory (Mandatory) [Modes: Install, Start, Stop, Clean]"
+    echo "  -w|--install-dir <path>          Set the installation directory (Mandatory)"
     echo "  -m|--monitor-dir <path>          Set the monitor directory (default: work_dir/monitor) [Modes: Start]"
     echo "  -u|--output-dir <path>           Set the output directory (default: work_dir/output) [Modes: Start]"
     echo ""
@@ -412,10 +397,10 @@ usage() {
     echo ""
     echo "Examples:"
     echo "  $0 --build --build-type Debug"
-    echo "  $0 --install --work-dir /path/to/workdir"
-    echo "  $0 --start --work-dir /path/to/workdir"
-    echo "  $0 -d -k 5 -r 2 --work-dir /path/to/workdir"
-    echo "  $0 -s --work-dir /path/to/workdir"
+    echo "  $0 --install --install-dir /path/to/installdir"
+    echo "  $0 --start --install-dir /path/to/installdir"
+    echo "  $0 -d -k 5 -r 2 --install-dir /path/to/installdir"
+    echo "  $0 -s --install-dir /path/to/installdir"
     echo ""
     exit 1
 }
@@ -464,17 +449,17 @@ parse_args() {
                 NUM_RECORDING_GROUPS="$2"
                 shift 2 ;;
             -w|--work-dir)
-                WORK_DIR="$2"
-                LIB_DIR="${WORK_DIR}/lib"
-                CONF_DIR="${WORK_DIR}/conf"
-                BIN_DIR="${WORK_DIR}/bin"
+                INSTALL_DIR="$2"
+                LIB_DIR="${INSTALL_DIR}/lib"
+                CONF_DIR="${INSTALL_DIR}/conf"
+                BIN_DIR="${INSTALL_DIR}/bin"
                 VISOR_BIN="${BIN_DIR}/chronovisor_server"
                 KEEPER_BIN="${BIN_DIR}/chrono_keeper"
                 GRAPHER_BIN="${BIN_DIR}/chrono_grapher"
                 PLAYER_BIN="${BIN_DIR}/chrono_player"
                 CONF_FILE="${CONF_DIR}/default_conf.json"
-                OUTPUT_DIR=${WORK_DIR}/output
-                MONITOR_DIR=${WORK_DIR}/monitor
+                OUTPUT_DIR=${INSTALL_DIR}/output
+                MONITOR_DIR=${INSTALL_DIR}/monitor
                 shift 2 ;;
             -u|--output-dir)
                 OUTPUT_DIR=$(realpath "$2")
@@ -509,6 +494,13 @@ parse_args() {
         exit 1
     elif [[ $EXEC_MODE_COUNT -eq 0 ]]; then
         echo -e "${ERR}Error: Please specify an execution mode (build, install, start, stop, or clean).${NC}"
+        usage
+        exit 1
+    fi
+
+    # Check if INSTALL_DIR is set
+    if [[ -z "${INSTALL_DIR}" ]]; then
+        echo -e "${ERR}INSTALL_DIR is mandatory. Please provide it using the -w or --work-dir option.${NC}"
         usage
         exit 1
     fi

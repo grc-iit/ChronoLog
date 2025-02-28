@@ -7,6 +7,7 @@ INFO='\033[7;49m\033[92m'
 DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
+USER=$(whoami)
 BUILD_TYPE="Release"
 INSTALL_DIR="/home/$USER/chronolog/${BUILD_TYPE}"
 SYS_LIB_DIR="/lib/x86_64-linux-gnu/"
@@ -37,7 +38,7 @@ GRAPHER_HOSTS=""
 KEEPER_HOSTS=""
 PLAYER_HOSTS=""
 NUM_RECORDING_GROUP=1
-HOSTNAME_HS_NET_SUFFIX="-40g"
+HOSTNAME_HS_NET_SUFFIX=""
 JOB_ID=""
 build=false
 install=false
@@ -247,6 +248,12 @@ copy_shared_libs() {
     done
 
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Copy shared libraries done${NC}"
+}
+
+detect_hs_net_suffix() {
+    if [[ $(hostname) == *ares* ]]; then
+        HOSTNAME_HS_NET_SUFFIX="-40g"
+    fi
 }
 
 get_host_ip() {
@@ -867,6 +874,9 @@ parse_args "$@"
 
 # Check if specified operation is allowed
 check_op_validity
+
+# Ares-specific settings
+detect_hs_net_suffix
 
 if ${build}; then
     build

@@ -48,13 +48,13 @@ start_service() {
 }
 
 kill_service() {
-    local bin="$1"
+    local bin=$(basename "$1")
     echo -e "${DEBUG}Killing $(basename ${bin}) ...${NC}"
     pkill -9 -f ${bin}
 }
 
 stop_service() {
-    local bin="$1"
+    local bin=$(basename "$1") 
     local timeout="$2"
 
     # Stop all processes of the service in parallel
@@ -84,6 +84,8 @@ stop_service() {
     done
     echo ""
 }
+
+
 
 generate_config_files() {
     local num_keepers=$1
@@ -476,7 +478,7 @@ parse_args() {
                 NUM_RECORDING_GROUPS="$2"
                 shift 2 ;;
             -w|--work-dir)
-                WORK_DIR="$2"
+                WORK_DIR="${2%/}"
                 LIB_DIR="${WORK_DIR}/lib"
                 CONF_DIR="${WORK_DIR}/conf"
                 BIN_DIR="${WORK_DIR}/bin"

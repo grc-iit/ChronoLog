@@ -411,7 +411,6 @@ usage() {
     echo "  -f|--conf-file <path>            Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"
     echo ""
     echo "Examples:"
-<<<<<<< HEAD
     echo "  1) Builds ChronoLog in Debug mode:"
     echo "     $0 --build --build-type Debug --install-dir /path/to/installdir"
     echo ""
@@ -429,13 +428,6 @@ usage() {
     echo "  5) Stops the ChronoLog deployment, referencing the binaries and config from"
     echo "     the specified installation directory."
     echo "     $0 -s --install-dir /path/to/installdir"
-=======
-    echo "  $0 --build --build-type Debug"
-    echo "  $0 --install --work-dir /path/to/workdir"
-    echo "  $0 --start --work-dir /path/to/workdir"
-    echo "  $0 -d -k 5 -r 2 --work-dir /path/to/workdir"
-    echo "  $0 -s --work-dir /path/to/workdir"
->>>>>>> parent of bdcdb27c (feat: combine install dir and work dir on install dir. Mandatory for all modes)
     echo ""
     exit 1
 }

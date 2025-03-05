@@ -51,7 +51,7 @@ activate_spack_environment() {
 
     # Activate the Spack environment
     echo -e "${DEBUG}Activating Spack environment in '${REPO_ROOT}'...${NC}"
-    if spack env activate -p "${REPO_ROOT}"; then
+    if eval $(spack env activate --sh "${REPO_ROOT}"); then
         echo -e "${INFO}Spack environment activated successfully.${NC}"
     else
         echo -e "${ERR}Failed to activate Spack environment. Ensure it is properly configured.${NC}"

@@ -10,17 +10,3 @@ spack:
   - hdf5@1.14.1-2 +cxx +threadsafe
   - py-pybind11@2.11.1
   view: true
-  compilers:
-  - compiler:
-      spec: gcc@=11.4.0
-      paths:
-        cc: /usr/bin/gcc
-        cxx: /usr/bin/g++
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
-      flags: {}
-      operating_system: ubuntu22.04
-      target: x86_64
-      modules: []
-      environment: {}
-      extra_rpaths: []

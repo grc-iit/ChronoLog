@@ -7,19 +7,31 @@ INFO='\033[7;49m\033[92m'
 DEBUG='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Basics
 USER=$(whoami)
+
+# Default values
 BUILD_TYPE="Release"
-INSTALL_DIR="/home/$USER/chronolog/${BUILD_TYPE}"
+NUM_RECORDING_GROUP=1
+
+# Directories
+INSTALL_DIR=""
+REPO_ROOT=""
 SYS_LIB_DIR="/lib/x86_64-linux-gnu/"
 WORK_DIR=""
 LIB_DIR=""
 CONF_DIR=""
+BIN_DIR=""
 MONITOR_DIR=""
 OUTPUT_DIR=""
+
+# Binary names
 VISOR_BIN_FILE_NAME="chronovisor_server"
 GRAPHER_BIN_FILE_NAME="chrono_grapher"
 KEEPER_BIN_FILE_NAME="chrono_keeper"
 PLAYER_BIN_FILE_NAME="chrono_player"
+
+# Binary paths (default to empty)
 VISOR_BIN=""
 GRAPHER_BIN=""
 KEEPER_BIN=""
@@ -28,23 +40,32 @@ VISOR_BIN_DIR=""
 GRAPHER_BIN_DIR=""
 KEEPER_BIN_DIR=""
 PLAYER_BIN_DIR=""
+
+# Configuration file and component-specific conf arguments
 CONF_FILE=""
 VISOR_ARGS="--config ${CONF_FILE}"
 GRAPHER_ARGS="--config ${CONF_FILE}"
 KEEPER_ARGS="--config ${CONF_FILE}"
 PLAYER_ARGS="--config ${CONF_FILE}"
+
+# Hosts files
 VISOR_HOSTS=""
 GRAPHER_HOSTS=""
 KEEPER_HOSTS=""
 PLAYER_HOSTS=""
-NUM_RECORDING_GROUP=1
+
+# Cluster specific settings
 HOSTNAME_HS_NET_SUFFIX=""
 JOB_ID=""
+
+# Operation flags
 build=false
 install=false
 start=false
 stop=false
 clean=false
+
+# Verbose flag
 verbose=false
 
 usage() {
@@ -62,36 +83,56 @@ usage() {
     echo "  Note: Only one execution mode can be selected per run."
     echo ""
     echo "Build Options:"
-    echo "  -t|--build-type     Define type of build: Debug | Release (default: Release) [Modes: Build]"
-    echo "  -l|--install-dir    Define installation directory (default: /home/$USER/chronolog/BUILD_TYPE) [Modes: Build]"
+    echo "  -t|--build-type <Debug|Release>  Define type of build (default: Release) [Modes: Build]"
+    echo "  -l|--install-dir <path>          Define installation directory (default: /home/$USER/chronolog/BUILD_TYPE) [Modes: Build]"
     echo ""
     echo "Deployment Options:"
-    echo "  -r|--record-groups  Set the number of RecordingGroups or ChronoGrapher processes [Modes: Start]"
-    echo "  -j|--job-id         JOB_ID Set the job ID to get hosts from (default: \"\") [Modes: Start]"
-    echo "  -q|--visor-hosts    VISOR_HOSTS Set the hosts file for ChronoVisor (default: work_dir/conf/hosts_visor) [Modes: Start]"
-    echo "  -k|--grapher-hosts  GRAPHER_HOSTS Set the hosts file for ChronoGrapher (default: work_dir/conf/hosts_grapher) [Modes: Start]"
-    echo "  -o|--keeper-hosts   KEEPER_HOSTS Set the hosts file for ChronoKeeper (default: work_dir/conf/hosts_keeper) [Modes: Start]"
+    echo "  -r|--record-groups <number>      Set the number of RecordingGroups or ChronoGrapher processes [Modes: Start]"
+    echo "  -j|--job-id <number>             Set the Slurm job ID to get hosts from (default: \"\") [Modes: Start]"
+    echo "  -q|--visor-hosts <path>          Set the hosts file for ChronoVisor (default: work_dir/conf/hosts_visor) [Modes: Start]"
+    echo "  -k|--grapher-hosts <path>        Set the hosts file for ChronoGrapher (default: work_dir/conf/hosts_grapher) [Modes: Start]"
+    echo "  -o|--keeper-hosts <path>         Set the hosts file for ChronoKeeper (default: work_dir/conf/hosts_keeper) [Modes: Start]"
     echo ""
     echo "Directory Settings:"
-    echo "  -w|--work-dir       WORK_DIR Set the working directory (Mandatory) [Modes: Install, Start, Stop, Clean]"
-    echo "  -m|--monitor-dir    MONITOR_DIR (default: work_dir/monitor) [Modes: Start]"
-    echo "  -u|--output-dir     OUTPUT_DIR (default: work_dir/output) [Modes: Start]"
+    echo "  -w|--work-dir <path>             Set the working directory (Mandatory) [Modes: Install, Start, Stop, Clean]"
+    echo "  -m|--monitor-dir <path>          Set the monitoring directory (default: work_dir/monitor) [Modes: Start]"
+    echo "  -u|--output-dir <path>           Set the output directory (default: work_dir/output) [Modes: Start]"
     echo ""
     echo "Binary Paths:"
-    echo "  -v|--visor-bin      VISOR_BIN (default: work_dir/bin/chronovisor_server) [Modes: Start]"
-    echo "  -g|--grapher-bin    GRAPHER_BIN (default: work_dir/bin/chrono_grapher) [Modes: Start]"
-    echo "  -p|--keeper-bin     KEEPER_BIN (default: work_dir/bin/chrono_keeper) [Modes: Start]"
-    echo "  -a|--player-bin     PLAYER_BIN (default: work_dir/bin/chrono_player) [Modes: Start]"
+    echo "  -v|--visor-bin <path>            Path to the ChronoVisor binary (default: work_dir/bin/chronovisor_server) [Modes: Start]"
+    echo "  -g|--grapher-bin <path>          Path to the ChronoGrapher binary (default: work_dir/bin/chrono_grapher) [Modes: Start]"
+    echo "  -p|--keeper-bin <path>           Path to the ChronoKeeper binary (default: work_dir/bin/chrono_keeper) [Modes: Start]"
+    echo "  -a|--player-bin <path>           Path to the ChronoPlayer binary (default: work_dir/bin/chrono_player) [Modes: Start]"
     echo ""
     echo "Configuration Settings:"
-    echo "  -f|--conf-file      CONF_FILE Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"
+    echo "  -f|--conf-file <path>            Path to the configuration file (default: work_dir/conf/default_conf.json) [Modes: Start]"
     echo ""
     echo "Miscellaneous Options:"
-    echo "  -e|--verbose        Enable verbose output (default: false)"
+    echo "  -e|--verbose                     Enable verbose output (default: false)"
     echo ""
-    echo "Examples:"
-    echo "  $0 --build --build-type Debug"
-    echo "  $0 --start --work-dir /path/to/workdir --conf-file /path/to/config.json"
+    echo "Examples (Assume installing a Debug build to ~/chronolog_install):"
+    echo "  1) Builds ChronoLog in Release mode:"
+    echo "     $0 --build --build-type Debug --install-dir ~/chronolog_install"
+    echo ""
+    echo "  2) Installs ChronoLog to the specified installation directory (~/chronolog_install/Debug):"
+    echo "     $0 --install --work-dir ~/chronolog_install/Debug"
+    echo ""
+    echo "  3) Starts a ChronoLog deployment using the default configurations and paths,"
+    echo "     pulling the binaries, hosts, and configuration files from the specified work directory (~/chronolog_install/Debug):"
+    echo "     $0 --start --work-dir ~/chronolog_install/Debug"
+    echo ""
+    echo "  4) Starts a ChronoLog deployment using allocated nodes from Slurm job"
+    echo "     job_id from the specified work directory (~/chronolog_install/Debug),"
+    echo "     ChronoVisor will run on the first node, ChronoGrapher on the last node, and ChronoKeeper on all the nodes:"
+    echo "     $0 --start --work-dir ~/chronolog_install/Debug --job-id <job_id>"
+    echo ""
+    echo "  5) Starts a ChronoLog deployment using allocated nodes from Slurm job job_id,"
+    echo "     with 2 ChronoGrapher processes from the specified work directory (~/chronolog_install/Debug):"
+    echo "     $0 --start --work-dir ~/chronolog_install/Debug --job-id <job_id> --record-groups 2"
+    echo ""
+    echo "  6) Stops a ChronoLog deployment using the default configurations and paths"
+    echo "     from the specified work directory (~/chronolog_install/Debug):"
+    echo "     $0 --stop --work-dir ~/chronolog_install/Debug"
     echo ""
     exit 1
 }
@@ -471,39 +512,54 @@ prepare_hosts() {
     [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Prepare hosts file done${NC}"
 }
 
-build() {
-    echo -e "${INFO}Building ...${NC}"
+check_build_directory() {
+    local deploy_dir=$(realpath "$(dirname "$0")")  # Get the absolute path of the script's directory
+    local build_dir="${deploy_dir}/../build"       # Navigate to x/build from x/deploy
 
+    build_dir=$(realpath "${build_dir}" 2>/dev/null || echo "")
+
+    echo -e "${DEBUG}Checking for the existence of the build directory: ${build_dir}${NC}"
+
+    if [ -d "${build_dir}" ]; then
+        echo -e "${DEBUG}Build directory found: ${build_dir}${NC}"
+    else
+        echo -e "${ERR}Build directory not found at: ${build_dir}${NC}"
+        echo "Please ensure the build process has been completed successfully before proceeding."
+        exit 1
+    fi
+}
+
+check_work_dir() {
+    # Check if WORK_DIR is set
+    if [[ -z "${WORK_DIR}" ]]; then
+        echo -e "${ERR}WORK_DIR is mandatory on this mode. Please provide it using the -w or --work-dir option.${NC}"
+        usage
+        exit 1
+    fi
+}
+
+# Main functions
+build() {
     # build ChronoLog
     if [[ -n "$INSTALL_DIR" ]]; then
-        ./build.sh -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
+        "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE" -install-path "$INSTALL_DIR"
     else
-        ./build.sh -type "$BUILD_TYPE"
+        "${REPO_ROOT}/deploy/build.sh" -type "$BUILD_TYPE"
     fi
-
-    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Build done${NC}"
 }
 
 install() {
-    echo -e "${INFO}Installing ...${NC}"
+    check_work_dir
 
-    check_dependencies
+    check_build_directory
 
-    copy_shared_libs
-
-    prepare_hosts
-
-    check_bin_files
-
-    update_visor_ip
-
-    update_visor_client_monitor_file_path
-
-    generate_conf_for_each_recording_group
-
-    check_rpc_comm_conf
-
-    [[ "${verbose}" == "true" ]] && echo -e "${DEBUG}Install done${NC}"
+    install_script="${REPO_ROOT}/deploy/install.sh"
+    if [[ -x "$install_script" ]]; then
+        "$install_script" --lib-dir "${LIB_DIR}" --bin-dir "${BIN_DIR}"
+    else
+        echo -e "${RED}Error: $install_script is not executable or not found.${NC}"
+        exit 1
+    fi
 }
 
 parallel_remote_launch_processes() {
@@ -523,7 +579,7 @@ parallel_remote_launch_processes() {
     fi
 
     bin_path=${bin_dir}/${bin_filename}
-    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -f ${hosts_file} "cd ${bin_dir}; LD_LIBRARY_PATH=${lib_dir} nohup ${bin_path} ${args} > ${MONITOR_DIR}/${bin_filename}${hostname_suffix}.launch.log 2>&1 &" | grep "${simple_output_grep_keyword}" 2>&1
+    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -s -f ${hosts_file} "cd ${bin_dir}; LD_LIBRARY_PATH=${lib_dir} nohup ${bin_path} ${args} > ${MONITOR_DIR}/${bin_filename}${hostname_suffix}.launch.log 2>&1 &" | grep "${simple_output_grep_keyword}" 2>&1
 }
 
 parallel_remote_stop_processes() {
@@ -531,7 +587,7 @@ parallel_remote_stop_processes() {
     local bin_filename=$2
 
     local timer=0
-    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -s -f ${hosts_file} "pkill --signal 15 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
     while [[ -n $(parallel_remote_check_processes ${hosts_file} ${bin_filename}) ]]; do
         echo -e "${DEBUG}Some processes are still running, waiting for 10 seconds ...${NC}"
         sleep 10
@@ -548,14 +604,14 @@ parallel_remote_kill_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
-    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -f ${hosts_file} "pkill --signal 9 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -s -f ${hosts_file} "pkill --signal 9 -ef ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
 }
 
 parallel_remote_check_processes() {
     local hosts_file=$1
     local bin_filename=$2
 
-    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -f ${hosts_file} "pgrep -fla ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
+    LD_LIBRARY_PATH="${SYS_LIB_DIR}" mpssh -s -f ${hosts_file} "pgrep -fla ${bin_filename}" | grep -e "->" | grep -v ssh 2>&1
 }
 
 parallel_remote_check_all() {
@@ -585,6 +641,16 @@ start() {
 
     local hostname_suffix=""
     local simple_output_grep_keyword=""
+
+    prepare_hosts
+
+    update_visor_ip
+
+    update_visor_client_monitor_file_path
+
+    generate_conf_for_each_recording_group
+
+    check_rpc_comm_conf
 
     # use hostname suffix conf file only on Ares
     hostname_suffix=".\$(hostname)"
@@ -634,6 +700,8 @@ start() {
 }
 
 stop() {
+    check_work_dir
+
     echo -e "${INFO}Stopping ...${NC}"
 
     if [[ -z ${JOB_ID} ]]; then
@@ -668,6 +736,8 @@ stop() {
 }
 
 kill() {
+    check_work_dir
+
     echo -e "${INFO}Killing ...${NC}"
 
     # kill Player
@@ -755,6 +825,7 @@ parse_args() {
             WORK_DIR=$(realpath "$2")
             LIB_DIR="${WORK_DIR}/lib"
             CONF_DIR="${WORK_DIR}/conf"
+            BIN_DIR="${WORK_DIR}/bin"
             MONITOR_DIR="${WORK_DIR}/monitor"
             OUTPUT_DIR="${WORK_DIR}/output"
             VISOR_BIN_FILE_NAME="chronovisor_server"
@@ -861,16 +932,16 @@ parse_args() {
 
     # Shift the arguments so that the non-option arguments are left
     shift $((OPTIND - 1))
-
-    # Check if WORK_DIR is set
-    if [[ -z "${WORK_DIR}" ]]; then
-        echo -e "${ERR}WORK_DIR is mandatory. Please provide it using the -w or --work-dir option.${NC}"
-        usage
-        exit 1
-    fi
 }
 
+# Parse arguments
 parse_args "$@"
+
+# Check dependencies
+check_dependencies
+
+# Set REPO_ROOT
+REPO_ROOT="$(realpath "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/..")"
 
 # Check if specified operation is allowed
 check_op_validity

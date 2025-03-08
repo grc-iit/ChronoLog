@@ -208,7 +208,7 @@ check_rpc_comm_conf() {
     # to assure Keeper, Grapher and Player use the same protocol for dataStoreAdminService
     keeper_data_store_admin_protocol=$(jq '.chrono_keeper.KeeperDataStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
     grapher_data_store_admin_protocol=$(jq '.chrono_grapher.DataStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
-    player_data_store_admin_protocol=$(jq '.chrono_player.DataStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
+    player_data_store_admin_protocol=$(jq '.chrono_player.PlayerStoreAdminService.rpc.protocol_conf' "${CONF_FILE}")
     [[ "${keeper_data_store_admin_protocol}" != "${grapher_data_store_admin_protocol}" ]] && echo -e "${ERR}mismatched protocol for DataStoreAdminService in Keeper and Grapher conf in ${CONF_FILE}, exiting ...${NC}" >&2 && exit 1
     [[ "${keeper_data_store_admin_protocol}" != "${player_data_store_admin_protocol}" ]] && echo -e "${ERR}mismatched protocol for DataStoreAdminService in Keeper and Player conf in ${CONF_FILE}, exiting ...${NC}" >&2 && exit 1
     [[ "${grapher_data_store_admin_protocol}" != "${player_data_store_admin_protocol}" ]] && echo -e "${ERR}mismatched protocol for DataStoreAdminService in Grapher and Player conf in ${CONF_FILE}, exiting ...${NC}" >&2 && exit 1
@@ -632,11 +632,13 @@ parallel_remote_check_all() {
         player_hosts_file="${PLAYER_HOSTS}.${i}"
         parallel_remote_check_processes ${grapher_hosts_file} ${GRAPHER_BIN_FILE_NAME}
         parallel_remote_check_processes ${keeper_hosts_file} ${KEEPER_BIN_FILE_NAME}
-        parallel_remote_check_processes ${keeper_hosts_file} ${PLAYER_BIN_FILE_NAME}
+        parallel_remote_check_processes ${player_hosts_file} ${PLAYER_BIN_FILE_NAME}
     done
 }
 
 start() {
+    check_work_dir
+
     echo -e "${INFO}Starting ...${NC}"
 
     local hostname_suffix=""
@@ -684,7 +686,7 @@ start() {
         parallel_remote_launch_processes ${KEEPER_BIN_DIR} ${LIB_DIR} ${keeper_hosts_file} ${KEEPER_BIN_FILE_NAME} "${KEEPER_ARGS}" &
 
         # launch Player
-        local player_conf_file="${CONF_FILE}.${i}"
+        local player_conf_file="${CONF_FILE}.${i}.player${hostname_suffix}"
         PLAYER_BIN="${PLAYER_BIN_DIR}/${PLAYER_BIN_FILE_NAME}"
         PLAYER_ARGS="--config ${player_conf_file}"
         player_hosts_file="${PLAYER_HOSTS}.${i}"
@@ -784,6 +786,7 @@ clean() {
     echo -e "${DEBUG}Removing conf and hosts files ...${NC}"
     rm -f ${KEEPER_HOSTS}*.*
     rm -f ${GRAPHER_HOSTS}*.*
+    rm -f ${PLAYER_HOSTS}*.*
     rm -f ${KEEPER_BIN}.*
     rm -f ${GRAPHER_BIN}.*
     rm -f ${PLAYER_BIN}.*
@@ -822,7 +825,8 @@ parse_args() {
             INSTALL_DIR=$(realpath "$2")
             shift 2 ;;
         -w | --work-dir)
-            WORK_DIR=$(realpath "$2")
+            mkdir -p $2
+            WORK_DIR=$(realpath "${2%/}")
             LIB_DIR="${WORK_DIR}/lib"
             CONF_DIR="${WORK_DIR}/conf"
             BIN_DIR="${WORK_DIR}/bin"

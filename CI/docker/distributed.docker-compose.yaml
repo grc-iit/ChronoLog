@@ -1,5 +1,5 @@
 x-common: &x-common
-  image: chronolog_grc
+  image: gnosisrc/chronolog:latest
   init: true
   networks:
     - chronolog_net

@@ -169,37 +169,37 @@ volumes:
 EOF
 
 # Launch the dynamically generated docker-compose file
-sudo docker compose -f dynamic-compose.yaml up -d
+docker compose -f dynamic-compose.yaml up -d
 
 # Update Chronolog repo
-sudo docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && git reset --hard origin/develop && git pull"
+docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && git reset --hard origin/develop && git pull"
 
 # Prepare hosts file
-sudo docker exec -it chronolog-c1 bash -c "rm -rf ~/chronolog_install/Release/conf/hosts_*"
-sudo docker exec -it chronolog-c1 bash -c "echo c1 > ~/chronolog_install/Release/conf/hosts_visor"
-for i in $(seq 2 $(($NUM_KEEPERS+1))); do
-    sudo docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_keeper"
+docker exec -it chronolog-c1 bash -c "rm -rf ~/chronolog_install/Release/conf/hosts_*"
+docker exec -it chronolog-c1 bash -c "echo c1 > ~/chronolog_install/Release/conf/hosts_visor"
+for i in $(seq 2 $(($NUM_KEEPERS + 1))); do
+    docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_keeper"
 done
-for i in $(seq $(($NUM_KEEPERS+2)) $(($NUM_KEEPERS+$NUM_GRAPHERS+1))); do
-    sudo docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_grapher"
+for i in $(seq $(($NUM_KEEPERS + 2)) $(($NUM_KEEPERS + $NUM_GRAPHERS + 1))); do
+    docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_grapher"
 done
-for i in $(seq $(($NUM_KEEPERS+$NUM_GRAPHERS+2)) $(($NUM_KEEPERS+$NUM_GRAPHERS+$NUM_PLAYERS+1))); do
-    sudo docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_player"
+for i in $(seq $(($NUM_KEEPERS + $NUM_GRAPHERS + 2)) $(($NUM_KEEPERS + $NUM_GRAPHERS + $NUM_PLAYERS + 1))); do
+    docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_player"
 done
 for i in $(seq 1 $NUM_CONTAINERS); do
-    sudo docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_clients"
+    docker exec -it chronolog-c1 bash -c "echo c$i >> ~/chronolog_install/Release/conf/hosts_clients"
 done
 
 # Force concretize and install dependencies in case of changes
-sudo docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && source ~/spack/share/spack/setup-env.sh && spack env activate . && cd deploy && spack concretize --force"
+docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && source ~/spack/share/spack/setup-env.sh && spack env activate . && cd deploy && spack concretize --force"
 
 # Rebuild ChronoLog
-sudo docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && source ~/spack/share/spack/setup-env.sh && spack env activate . && cd deploy && ./single_user_deploy.sh -b -l ~/chronolog_install"
+docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && source ~/spack/share/spack/setup-env.sh && spack env activate . && cd deploy && ./single_user_deploy.sh -b -l ~/chronolog_install"
 
 # Reinstall ChronoLog
-sudo docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo/deploy && source ~/spack/share/spack/setup-env.sh && ./single_user_deploy.sh -i -w ~/chronolog_install/Release"
+docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo/deploy && source ~/spack/share/spack/setup-env.sh && ./single_user_deploy.sh -i -w ~/chronolog_install/Release"
 
 # Deploy ChronoLog
-sudo docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo/deploy && ./single_user_deploy.sh -d -w ~/chronolog_install/Release"
+docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo/deploy && ./single_user_deploy.sh -d -w ~/chronolog_install/Release"
 
 echo "Deployed $NUM_CONTAINERS ChronoLog containers (1 for ChronoVisor, $NUM_KEEPERS for ChronoKeeper, $NUM_GRAPHERS for ChronoGrapher, and $NUM_PLAYERS for ChronoPlayer)"

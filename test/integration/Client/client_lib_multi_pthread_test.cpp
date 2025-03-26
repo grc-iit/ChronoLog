@@ -2,7 +2,7 @@
 #include <cassert>
 #include <common.h>
 #include <thread>
-#include <cmd_arg_parse.h>
+#include "cmd_arg_parse.h"
 #include "chrono_monitor.h"
 
 #define STORY_NAME_LEN 32

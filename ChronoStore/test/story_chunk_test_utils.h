@@ -6,7 +6,7 @@
 #define CHRONOLOG_STORY_CHUNK_TEST_UTILS_H
 
 #include <random>
-#include <StoryChunk.h>
+#include "StoryChunk.h"
 
 #define CHRONICLE_NAME "Ares_Monitoring"
 #define STORY_NAME "CPU_Utilization"

@@ -13,17 +13,18 @@ message("build target : chrono_keeper")
 add_executable(chrono_keeper)
 target_include_directories(chrono_keeper PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/chrono_common
+    ${CMAKE_SOURCE_DIR}/chrono_common/include
+    ${CMAKE_SOURCE_DIR}/chrono_common/src
     ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/include)
 
 target_sources(chrono_keeper PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/ChronoKeeperInstance.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/StoryPipeline.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/KeeperDataStore.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/CSVFileChunkExtractor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/StoryChunkExtractorRDMA.cpp
-    ${CMAKE_SOURCE_DIR}/chrono_common/StoryChunkExtractor.cpp
-    ${CMAKE_SOURCE_DIR}/chrono_common/StoryChunk.cpp
+    src/ChronoKeeperInstance.cpp
+    src/StoryPipeline.cpp
+    src/KeeperDataStore.cpp
+    src/CSVFileChunkExtractor.cpp
+    src/StoryChunkExtractorRDMA.cpp
+    ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunkExtractor.cpp
+    ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunk.cpp
     ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/src/chrono_monitor.cpp)
 
 target_link_libraries(chrono_keeper chronolog_client thallium)

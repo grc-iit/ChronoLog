@@ -1,6 +1,3 @@
-//
-// Created by kfeng on 1/14/25.
-//
 #include <csignal>
 #include "HDF5ArchiveReadingAgent.h"
 #include "ConfigurationManager.h"

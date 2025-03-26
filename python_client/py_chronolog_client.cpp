@@ -35,6 +35,15 @@ public:
             event_string      /* Argument(s) */
         );
     }
+
+    int playback_story(uint64_t start, uint64_t end, std::vector<chronolog::Event> & playback_events) override {
+        PYBIND11_OVERRIDE_PURE(
+            int, /* Return type */
+            StoryHandle,      /* Parent class */
+            playback_story,          /* Name of function in C++ (must match Python name) */
+            start, end, playback_events      /* Argument(s) */
+        );
+    }
 };
 
 void BindChronologStoryHandle(pybind11::module &m)

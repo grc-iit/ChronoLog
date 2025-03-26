@@ -6,7 +6,7 @@
 #include <map>
 #include <event.h>
 #include <json-c/json.h>
-#include <StoryChunk.h>
+#include "StoryChunk.h"
 #include <hdf5.h>
 
 class StoryWriter

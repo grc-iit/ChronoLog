@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-#include "ConfigurationManager.h" 
+#include "ConfigurationManager.h"
 
 #include "ClientConfiguration.h"
 

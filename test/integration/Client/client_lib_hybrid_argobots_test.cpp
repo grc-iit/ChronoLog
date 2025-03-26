@@ -5,7 +5,7 @@
 #include <atomic>
 #include <abt.h>
 #include <mpi.h>
-#include <cmd_arg_parse.h>
+#include "cmd_arg_parse.h"
 #include "chrono_monitor.h"
 
 chronolog::Client*client;

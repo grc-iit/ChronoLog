@@ -4,12 +4,13 @@
 #include <iostream>
 #include <map>
 #include <json-c/json.h>
-#include "StoryChunk.h"
-#include <event.h>
-#include <datasetreader.h>
-#include <datasetminmax.h>
-#include <chrono_monitor.h>
 #include <hdf5.h>
+
+#include "StoryChunk.h"
+#include "event.h"
+#include "datasetreader.h"
+#include "datasetminmax.h"
+#include "chrono_monitor.h"
 
 class StoryReader
 {

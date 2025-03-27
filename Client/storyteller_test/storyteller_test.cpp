@@ -2,11 +2,11 @@
 #include <ctime>
 #include <chrono>
 #include <unistd.h>
-#include "chrono_monitor.h"
 
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium.hpp>
 
+#include "chrono_monitor.h"
 #include "chronolog_types.h"
 #include "chronolog_client.h"
 

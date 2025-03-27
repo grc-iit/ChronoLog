@@ -5,11 +5,12 @@
 #include <hdf5.h>
 #include <string>
 #include <vector>
-#include <storyreader.h>
-#include <event.h>
-#include <chunkattr.h>
-#include <datasetreader.h>
-#include <datasetminmax.h>
+
+#include "storyreader.h"
+#include "event.h"
+#include "chunkattr.h"
+#include "datasetreader.h"
+#include "datasetminmax.h"
 
 #define DATASET_RANK 1 // Dataset dimension
 #define ATTRIBUTE_CHUNKMETADATA "ChunkMetadata"

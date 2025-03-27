@@ -6,10 +6,11 @@
 #include <random>
 #include <filesystem>
 #include <hdf5.h>
-#include <StoryWriter.h>
-#include <StoryReader.h>
-#include <chrono_monitor.h>
-#include <story_chunk_test_utils.h>
+
+#include "StoryWriter.h"
+#include "StoryReader.h"
+#include "chrono_monitor.h"
+#include "story_chunk_test_utils.h"
 #include "chronolog_types.h"
 
 #define STORY "S1"

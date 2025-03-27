@@ -7,13 +7,14 @@
 #include <vector>
 #include <filesystem>
 #include <json-c/json.h>
-#include <StoryReader.h>
-#include <event.h>
-#include <chunkattr.h>
-#include <datasetreader.h>
-#include <datasetminmax.h>
-#include <chrono_monitor.h>
-#include <chronolog_errcode.h>
+
+#include "StoryReader.h"
+#include "event.h"
+#include "chunkattr.h"
+#include "datasetreader.h"
+#include "datasetminmax.h"
+#include "chrono_monitor.h"
+#include "chronolog_errcode.h"
 
 #define DEBUG 0 // Set to 1 ito print H5 error messages to console
 

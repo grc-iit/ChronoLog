@@ -4,10 +4,11 @@
 #include <iostream>
 #include <vector>
 #include <map>
-#include <event.h>
 #include <json-c/json.h>
-#include "StoryChunk.h"
 #include <hdf5.h>
+
+#include "event.h"
+#include "StoryChunk.h"
 
 class StoryWriter
 {

@@ -1,7 +1,8 @@
 #include <iostream>
 #include <event.h>
-#include <datasetreader.h>
-#include <datasetminmax.h>
+
+#include "datasetreader.h"
+#include "datasetminmax.h"
 
 #ifndef READ_H
 #define READ_H

@@ -1,4 +1,5 @@
 #include <csignal>
+
 #include "HDF5ArchiveReadingAgent.h"
 #include "ConfigurationManager.h"
 #include "cmd_arg_parse.h"

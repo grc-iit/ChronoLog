@@ -1,7 +1,3 @@
-#include <chronolog_client.h>
-#include "cmd_arg_parse.h"
-#include "chrono_monitor.h"
-#include <common.h>
 #include <thread>
 #include <chrono>
 #include <vector>
@@ -11,6 +7,11 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+
+#include "chronolog_client.h"
+#include "common.h"
+#include "cmd_arg_parse.h"
+#include "chrono_monitor.h"
 
 #define STORY_NAME_LEN 5
 #define DEFAULT_NUM_THREADS 4

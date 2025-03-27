@@ -7,8 +7,9 @@
 #include <thallium.hpp>
 #include <array>
 #include <thallium/serialization/stl/vector.hpp>
-#include "../../ChronoAPI/ChronoLog/include/common.h"
 #include <mpi.h>
+
+#include "common.h"
 #include "chrono_monitor.h"
 
 #define WARM_UP_REPS 3

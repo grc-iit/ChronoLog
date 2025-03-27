@@ -7,9 +7,10 @@
 #include <string>
 #include <cstring>
 #include <vector>
-#include <event.h>
-#include <chunkattr.h>
-#include <storywriter.h>
+
+#include "event.h"
+#include "chunkattr.h"
+#include "storywriter.h"
 
 #define DATASET_RANK 1 // Dataset dimension
 #define ATTRIBUTE_CHUNKMETADATA "ChunkMetadata"

@@ -4,11 +4,11 @@
 
 #include <chrono>
 #include <unordered_map>
+#include <cassert>
 
 #include "ConfigurationManager.h"
 #include "chronolog_client.h"
 #include "common.h"
-#include <cassert>
 #include "cmd_arg_parse.h"
 #include "chrono_monitor.h"
 

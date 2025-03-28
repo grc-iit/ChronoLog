@@ -8,9 +8,9 @@ message("Building CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}")
 message("build target : hdf5_archive_reader_test")
 
 add_executable(hdf5_archive_reader_test
-    HDF5ArchiveReadingAgentTest.cpp
-    src/HDF5ArchiveReadingAgent.cpp
-    ${CMAKE_SOURCE_DIR}/chrono_common/StoryChunk.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/HDF5ArchiveReadingAgentTest.cpp
+    ${CMAKE_SOURCE_DIR}/ChronoPlayer/src/HDF5ArchiveReadingAgent.cpp
+    ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunk.cpp)
 
 target_include_directories(hdf5_archive_reader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/ChronoPlayer/include

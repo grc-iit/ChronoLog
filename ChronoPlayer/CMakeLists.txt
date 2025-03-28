@@ -40,3 +40,7 @@ install(
 install(
     FILES ${CMAKE_SOURCE_DIR}/default_conf.json.in DESTINATION ${CHRONOLOG_INSTALL_CONF_DIR} RENAME default_conf.json
 )
+
+if(CHRONOLOG_BUILD_TESTING)
+    add_subdirectory(test)
+endif()

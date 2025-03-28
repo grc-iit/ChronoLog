@@ -11,9 +11,9 @@ message("build target : chronolog_client")
 
 add_library(chronolog_client
     ${CMAKE_CURRENT_SOURCE_DIR}/include/chronolog_client.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ChronologClientImpl.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/KeeperRecordingClient.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/StorytellerClient.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChronologClientImpl.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/KeeperRecordingClient.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/StorytellerClient.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/StorytellerClient.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlaybackQueryRpcClient.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ClientQueryService.cpp
@@ -55,5 +55,7 @@ install(
     FILES ${PUBLIC_HEADER_FILES} DESTINATION include 
 )
 
-add_subdirectory(storyteller_test)
+if(CHRONOLOG_BUILD_TESTING)
+    add_subdirectory(storyteller_test)
+endif()
 add_subdirectory(ChronoAdmin)

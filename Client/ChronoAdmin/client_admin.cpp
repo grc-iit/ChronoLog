@@ -1,4 +1,3 @@
-#include <common.h>
 #include <cassert>
 #include <unistd.h>
 #include <pwd.h>
@@ -9,6 +8,7 @@
 #include <margo.h>
 #include <mpi.h>
 
+#include "common.h"
 #include "chrono_monitor.h"
 #include "chronolog_client.h"
 #include "cmd_arg_parse.h"

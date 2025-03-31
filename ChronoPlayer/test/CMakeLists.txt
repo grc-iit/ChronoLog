@@ -15,8 +15,7 @@ add_executable(hdf5_archive_reader_test
 target_include_directories(hdf5_archive_reader_test PRIVATE
     ${CMAKE_SOURCE_DIR}/ChronoPlayer/include
     ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/chrono_common/src
-    ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/include)
+    ${CMAKE_SOURCE_DIR}/chrono_common/src)
 
 target_link_directories(hdf5_archive_reader_test PRIVATE ${HDF5_LIBRARY_DIRS})
 

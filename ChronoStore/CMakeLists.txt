@@ -13,7 +13,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/chrono_common/include
     ${CMAKE_SOURCE_DIR}/chrono_common/src
-    ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/include
     ${CMAKE_SOURCE_DIR}/ChronoKeeper/include
     ${HDF5_INCLUDE_DIRS}         # HDF5 include directories
     ${JSON-C_INCLUDE_DIRS}       # JSON-C include directories

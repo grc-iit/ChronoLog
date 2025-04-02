@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
+find_package(Thallium REQUIRED)
+find_package(spdlog REQUIRED)
 find_package(MPI REQUIRED)
 
 #message("ClientAdmin CMakeLists - CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}")

@@ -1,9 +1,6 @@
 #ifndef CHRONOLOG_SERVER_ERRCODE_H
 #define CHRONOLOG_SERVER_ERRCODE_H
 
-#include <string>
-#include <ostream>
-
 #include "../../../Client/include/client_errcode.h"
 
 namespace chronolog {

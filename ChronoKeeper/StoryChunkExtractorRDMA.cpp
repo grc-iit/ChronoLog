@@ -68,7 +68,7 @@ int chronolog::StoryChunkExtractorRDMA::processStoryChunk(StoryChunk*story_chunk
         {
             LOG_ERROR("[StoryChunkExtractorRDMA] Failed to drain a story chunk to Grapher, StoryID: {}, "
                       "StartTime: {}, Error Code: {}", story_chunk->getStoryId(), story_chunk->getStartTime(), result);
-            return chronolog::CL_ERR_STORY_CHUNK_EXTRACTION;
+            return chronolog::to_int(chronolog::ServerErrorCode::StoryChunkExtractionError);
         }
     }
     catch(tl::exception const &ex)

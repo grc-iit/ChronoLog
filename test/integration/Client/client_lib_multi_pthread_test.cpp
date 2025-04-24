@@ -47,31 +47,31 @@ void thread_body(struct thread_arg*t)
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - AcquireStory result for {}:{} - {}", t->tid, chronicle_name
              , story_name, acquire_ret.first);
 
-    assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST);
+    assert(acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::Success) || acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::NotExist));
     ret = client->DestroyStory(chronicle_name, story_name);//, flags);
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - DestroyStory result for {}:{} - {}", t->tid, chronicle_name
              , story_name, ret);
 
-    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) || ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist));
     ret = client->Disconnect(); //t->client_id, flags);
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - Disconnect result: {}", t->tid, ret);
 
-    assert(ret == chronolog::CL_ERR_ACQUIRED || ret == chronolog::CL_SUCCESS);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) || ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
     ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - ReleaseStory result for {}:{} - {}", t->tid, chronicle_name
              , story_name, ret);
 
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
     ret = client->DestroyStory(chronicle_name, story_name);//, flags);
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - DestroyStory result for {}:{} - {}", t->tid, chronicle_name
              , story_name, ret);
 
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) ||
+           ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
 
     ret = client->DestroyChronicle(chronicle_name);//, flags);
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) ||
+           ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - DestroyChronicle result for {}: {}", t->tid, chronicle_name
              , ret);
     LOG_INFO("[ClientLibMultiPThreadTest] Thread (ID: {}) - Execution completed.", t->tid);

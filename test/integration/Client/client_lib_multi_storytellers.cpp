@@ -51,11 +51,11 @@ void thread_body(struct thread_arg*t)
               , chronicle_name, story_name, acquire_ret.first);
 
     // Assertion for successful story acquisition or expected errors
-    assert(acquire_ret.first == chronolog::CL_SUCCESS || acquire_ret.first == chronolog::CL_ERR_NOT_EXIST ||
-           acquire_ret.first == chronolog::CL_ERR_NO_KEEPERS);
+    assert(acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::Success) || acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::NotExist) ||
+           acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::NoKeepers));
 
     // If story acquisition is successful, log events to the story
-    if(chronolog::CL_SUCCESS == acquire_ret.first)
+    if(chronolog::to_int(chronolog::ClientErrorCode::Success) == acquire_ret.first)
     {
         auto story_handle = acquire_ret.second;
         for(int i = 0; i < 100; ++i)
@@ -71,7 +71,7 @@ void thread_body(struct thread_arg*t)
                   , chronicle_name, story_name, ret);
 
         // Assertion for successful story release or expected errors
-        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_CONNECTION);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
     }
 
     // Destroy the story
@@ -80,16 +80,16 @@ void thread_body(struct thread_arg*t)
               , chronicle_name, story_name, ret);
 
     // Assertion for successful story destruction or expected errors
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) ||
+           ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
 
     // Destroy the chronicle
     ret = client->DestroyChronicle(chronicle_name);
     LOG_DEBUG("[ClientLibMultiStorytellers] Chronicle destroyed: tid={}, ChronicleName={}", t->tid, chronicle_name);
 
     // Assertion for successful chronicle destruction or expected errors
-    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED ||
-           ret == chronolog::CL_ERR_NO_CONNECTION);
+    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired) ||
+           ret == chronolog::to_int(chronolog::ClientErrorCode::NoConnection));
 }
 
 
@@ -124,7 +124,7 @@ int main(int argc, char**argv)
     uint64_t offset;
     int ret = client->Connect();
 
-    if(chronolog::CL_SUCCESS != ret)
+    if(chronolog::to_int(chronolog::ClientErrorCode::Success) != ret)
     {
         LOG_ERROR("[ClientLibMultiStorytellers] Failed to connect to ChronoVisor");
         delete client;

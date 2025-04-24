@@ -27,14 +27,14 @@ void thread_function(void*t)
     int flags = 0;
 
     int ret = client->Connect(); // Connect to server using client_id and flags
-    if(ret == chronolog::CL_SUCCESS)
+    if(ret == chronolog::to_int(chronolog::ClientErrorCode::Success))
     {
         LOG_INFO("[ClientLibHybridArgobotsTest] Successfully connected to server for thread ID: {}"
                  , ((thread_arg*)t)->tid);
     }
 
     ret = client->Disconnect(); // Disconnect from server using client_id and flags
-    if(ret == chronolog::CL_SUCCESS)
+    if(ret == chronolog::to_int(chronolog::ClientErrorCode::Success))
     {
         LOG_INFO("[ClientLibHybridArgobotsTest] Successfully disconnected from server for thread ID: {}"
                  , ((thread_arg*)t)->tid);

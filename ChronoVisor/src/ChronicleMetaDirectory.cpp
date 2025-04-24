@@ -24,9 +24,9 @@ ChronicleMetaDirectory::~ChronicleMetaDirectory()
  * Create a Chronicle
  * @param name: name of the Chronicle
  * @param attrs: attributes associated with the Chronicle
- * @return CL_SUCCESS if succeed to create the Chronicle \n
- *         CL_ERR_CHRONICLE_EXISTS if a Chronicle with the same name already exists \n
- *         CL_ERR_UNKNOWN otherwise
+ * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if succeed to create the Chronicle \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::ChronicleExists) if a Chronicle with the same name already exists \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Unknown) otherwise
  */
 int ChronicleMetaDirectory::create_chronicle(const std::string &name
                                              , const std::map <std::string, std::string> &attrs)
@@ -45,7 +45,7 @@ int ChronicleMetaDirectory::create_chronicle(const std::string &name
     if(chronicleMapRecord != chronicleMap_->end())
     {
         LOG_WARNING("[ChronicleMetaDirectory] A Chronicle with the same ChronicleName={} already exists", name.c_str());
-        return chronolog::CL_ERR_CHRONICLE_EXISTS;
+        return chronolog::to_int(chronolog::ClientErrorCode::ChronicleExists);
     }
     auto*pChronicle = new Chronicle();
     pChronicle->setName(name);
@@ -54,12 +54,12 @@ int ChronicleMetaDirectory::create_chronicle(const std::string &name
     if(res.second)
     {
         LOG_DEBUG("[ChronicleMetaDirectory] ChronicleName={} is created", name.c_str());
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     else
     {
         LOG_ERROR("[ChronicleMetaDirectory] Fail to create ChronicleName={}", name.c_str());
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -68,10 +68,10 @@ int ChronicleMetaDirectory::create_chronicle(const std::string &name
  * No need to check its Stories. Users are required to release all Stories before releasing a Chronicle
  * @param name: name of the Chronicle
  * @param flags: flags
- * @return CL_SUCCESS if succeed to destroy the Chronicle \n
- *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
- *         CL_ERR_ACQUIRED if the Chronicle is acquired by others and cannot be destroyed \n
- *         CL_ERR_UNKNOWN otherwise
+ * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if succeed to destroy the Chronicle \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::NotExist) if the Chronicle does not exist \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Acquired) if the Chronicle is acquired by others and cannot be destroyed \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Unknown) otherwise
  */
 int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
 {
@@ -86,13 +86,13 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
         /* Check if Chronicle is acquired by checking if each of its Story is acquired, fail if true */
         Chronicle*pChronicle = chronicleMapRecord->second;
         auto storyMap = pChronicle->getStoryMap();
-        int ret = chronolog::CL_SUCCESS;
+        int ret = chronolog::to_int(chronolog::ClientErrorCode::Success);
         for(auto storyMapRecord: storyMap)
         {
             Story*pStory = storyMapRecord.second;
             if(!pStory->getAcquirerMap().empty())
             {
-                ret = chronolog::CL_ERR_ACQUIRED;
+                ret = chronolog::to_int(chronolog::ClientErrorCode::Acquired);
                 for(const auto &acquirerMapRecord: pStory->getAcquirerMap())
                 {
                     LOG_DEBUG("[ChronicleMetaDirectory] StoryID={} in Chronicle Name={} is still acquired by ClientID={}"
@@ -100,7 +100,7 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
                 }
             }
         }
-        if(ret != chronolog::CL_SUCCESS)
+        if(ret != chronolog::to_int(chronolog::ClientErrorCode::Success))
         {
             return ret;
         }
@@ -108,7 +108,7 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
         {
             LOG_ERROR("[ChronicleMetaDirectory] Something is wrong, no Story is being acquired, but ChronicleName={}'s AcquisitionCount is not 0"
                  , name.c_str());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         /* No Stories in Chronicle is acquired, ready to destroy */
         delete pChronicle;
@@ -116,18 +116,18 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
         if(nErased == 1)
         {
             LOG_DEBUG("[ChronicleMetaDirectory] ChronicleName={} is destroyed", name.c_str());
-            return chronolog::CL_SUCCESS;
+            return chronolog::to_int(chronolog::ClientErrorCode::Success);
         }
         else
         {
             LOG_ERROR("[ChronicleMetaDirectory] Fail to destroy ChronicleName={}", name.c_str());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
     else
     {
         LOG_WARNING("[ChronicleMetaDirectory] ChronicleName={} does not exist", name.c_str());
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 }
 
@@ -137,10 +137,10 @@ int ChronicleMetaDirectory::destroy_chronicle(const std::string &name)
  * @param chronicle_name: name of the Chronicle that the Story belongs to
  * @param story_name: name of the Story
  * @param flags: flags
- * @return CL_SUCCESS if succeed to destroy the Story \n
- *         CL_ERR_ACQUIRED if the Story is acquired by others and cannot be destroyed \n
- *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
- *         CL_ERR_UNKNOWN otherwise
+ * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if succeed to destroy the Story \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Acquired) if the Story is acquired by others and cannot be destroyed \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::NotExist) if the Chronicle does not exist \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Unknown) otherwise
  */
 int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, const std::string &story_name)
 {
@@ -159,7 +159,7 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, con
         if(sid == 0)
         {
             LOG_WARNING("[ChronicleMetaDirectory] StoryID={} StoryName={} does not exist", sid, story_name.c_str());
-            return chronolog::CL_ERR_NOT_EXIST;
+            return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
         }
         /* Then check if Story is acquired, fail if true */
         Story*pStory = pChronicle->getStoryMap().at(sid);
@@ -170,11 +170,11 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, con
                 LOG_DEBUG("[ChronicleMetaDirectory] StoryID={} in ChronicleName={} is still acquired by client_id={}"
                      , pStory->getSid(), chronicle_name.c_str(), acquirerMapRecord.first);
             }
-            return chronolog::CL_ERR_ACQUIRED;
+            return chronolog::to_int(chronolog::ClientErrorCode::Acquired);
         }
         /* Ask the Chronicle to destroy the Story */
         CL_Status res = pChronicle->removeStory(chronicle_name, story_name);
-        if(res != chronolog::CL_SUCCESS)
+        if(res != chronolog::to_int(chronolog::ClientErrorCode::Success))
         {
             LOG_ERROR("[ChronicleMetaDirectory] Fail to remove StoryName={} in ChronicleName={}", story_name.c_str()
                  , chronicle_name.c_str());
@@ -184,7 +184,7 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, con
     else
     {
         LOG_WARNING("[ChronicleMetaDirectory] ChronicleName={} does not exist", chronicle_name.c_str());
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 }
 
@@ -195,9 +195,9 @@ int ChronicleMetaDirectory::destroy_story(std::string const &chronicle_name, con
  * @param story_name: name of the Story
  * @param flags: flags
  * @param story_id to populate with the story_id assigned to the story
- * @return CL_SUCCESS if succeed to destroy the Story \n
- *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
- *         CL_ERR_UNKNOWN otherwise
+ * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if succeed to destroy the Story \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::NotExist) if the Chronicle does not exist \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Unknown) otherwise
  */
 int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const std::string &chronicle_name
                                           , const std::string &story_name
@@ -215,12 +215,12 @@ int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const 
     if(chronicleMapRecord == chronicleMap_->end())
     {
         LOG_WARNING("[ChronicleMetaDirectory] ChronicleName={} does not exist", chronicle_name.c_str());
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
     Chronicle*pChronicle = chronicleMapRecord->second;
     /* Then check if Story already_acquired_by_this_client, fail if false */
     auto ret = pChronicle->addStory(story_name, attrs);
-    if(ret.first != chronolog::CL_SUCCESS)
+    if(ret.first != chronolog::to_int(chronolog::ClientErrorCode::Success))
     {
         return ret.first;
     }
@@ -233,7 +233,7 @@ int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const 
         LOG_DEBUG("[ChronicleMetaDirectory] StoryName={} has already been acquired by ClientID={}", story_name.c_str()
              , client_id);
         /* All checks passed, manipulate metadata */
-        return chronolog::CL_ERR_ACQUIRED;
+        return chronolog::to_int(chronolog::ClientErrorCode::Acquired);
     }
 
     /* All checks passed, manipulate metadata */
@@ -245,7 +245,7 @@ int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const 
     pStory->addAcquirerClient(client_id, clientRegistryManager_->get_client_info(client_id));
     /* Add this Story to acquiredStoryMap for this client */
     clientRegistryManager_->add_story_acquisition(client_id, story_id, pStory);
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**
@@ -255,9 +255,9 @@ int ChronicleMetaDirectory::acquire_story(chl::ClientId const &client_id, const 
  * @param story_name: name of the Story
  * @param flags: flags
  * @param story_id to populate with the story_id assigned to the story
- * @return CL_SUCCESS if succeed to destroy the Story \n
- *         CL_ERR_NOT_EXIST if the Chronicle does not exist \n
- *         CL_ERR_UNKNOWN otherwise
+ * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if succeed to destroy the Story \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::NotExist) if the Chronicle does not exist \n
+ *         chronolog::to_int(chronolog::ClientErrorCode::Unknown) otherwise
  */
 //TO_DO return acquisition_count after the story has been released
 int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const std::string &chronicle_name
@@ -269,7 +269,7 @@ int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const 
     /* First check if Chronicle exists, fail if false */
     uint64_t cid;
     cid = CityHash64(chronicle_name.c_str(), chronicle_name.length());
-    int ret = chronolog::CL_ERR_NOT_EXIST;
+    int ret = chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     auto chronicleRecord = chronicleMap_->find(cid);
     if(chronicleRecord != chronicleMap_->end())
     {
@@ -278,7 +278,7 @@ int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const 
         uint64_t sid = pChronicle->getStoryId(story_name);
         if(sid == 0)
         {
-            return chronolog::CL_ERR_NOT_EXIST;
+            return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
         }
         Story*pStory = pChronicle->getStoryMap().find(sid)->second;
         /* Check if this client actually acquired this Story before, fail if false */
@@ -294,7 +294,7 @@ int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const 
             pStory->removeAcquirerClient(client_id);
             /* Remove this Story from acquiredStoryMap for this client */
             ret = clientRegistryManager_->remove_story_acquisition(client_id, sid);
-            if(ret != chronolog::CL_SUCCESS)
+            if(ret != chronolog::to_int(chronolog::ClientErrorCode::Success))
             {
                 return ret;
             }
@@ -303,7 +303,7 @@ int ChronicleMetaDirectory::release_story(chl::ClientId const &client_id, const 
         {
             LOG_DEBUG("[ChronicleMetaDirectory] StoryName={} is not acquired by ClientID={}, cannot release"
                  , story_name.c_str(), client_id);
-            ret = chronolog::CL_ERR_NOT_ACQUIRED;
+            ret = chronolog::to_int(chronolog::ClientErrorCode::NotAcquired);
         }
     }
     return ret;
@@ -327,25 +327,25 @@ int ChronicleMetaDirectory::get_chronicle_attr(std::string const &name, const st
             if(propertyRecord != pChronicle->getPropertyList().end())
             {
                 value = propertyRecord->second;
-                return chronolog::CL_SUCCESS;
+                return chronolog::to_int(chronolog::ClientErrorCode::Success);
             }
             else
             {
                 LOG_WARNING("[ChronicleMetaDirectory] Property Key={} does not exist in ChronicleName={}", key.c_str()
                      , name.c_str());
-                return chronolog::CL_ERR_NOT_EXIST;
+                return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
             }
         }
         else
         {
             LOG_ERROR("[ChronicleMetaDirectory] Something is wrong, stored Chronicle object is null");
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
     else
     {
         LOG_WARNING("[ChronicleMetaDirectory] ChronicleName={} does not exist", name.c_str());
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 }
 
@@ -371,32 +371,32 @@ ChronicleMetaDirectory::edit_chronicle_attr(std::string const &name, const std::
                 auto res = pChronicle->getPropertyList().insert_or_assign(key, value);
                 if(res.second)
                 {
-                    return chronolog::CL_SUCCESS;
+                    return chronolog::to_int(chronolog::ClientErrorCode::Success);
                 }
                 else
                 {
                     LOG_ERROR("[ChronicleMetaDirectory] Something is wrong, fail to insert property Key={}, Value={}"
                          , key.c_str(), value.c_str());
-                    return chronolog::CL_ERR_UNKNOWN;
+                    return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
                 }
             }
             else
             {
                 LOG_WARNING("[ChronicleMetaDirectory] Property Key={} does not exist in ChronicleName={}", key.c_str()
                      , name.c_str());
-                return chronolog::CL_ERR_NOT_EXIST;
+                return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
             }
         }
         else
         {
             LOG_ERROR("[ChronicleMetaDirectory] Something is wrong, stored Chronicle object is null");
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
     else
     {
         LOG_WARNING("[ChronicleMetaDirectory] ChronicleName={} does not exist", name.c_str());
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 }
 
@@ -414,7 +414,7 @@ int ChronicleMetaDirectory::show_chronicles(std::vector <std::string> &chronicle
     {
         chronicle_names.emplace_back(value->getName());
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**
@@ -437,7 +437,7 @@ int ChronicleMetaDirectory::show_stories(const std::string &chronicle_name, std:
     cid = CityHash64(chronicle_name.c_str(), chronicle_name.length());
     auto chronicleMapRecord = chronicleMap_->find(cid);
     if(chronicleMapRecord == chronicleMap_->end())
-    { return chronolog::CL_ERR_NOT_EXIST; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::NotExist); }
 
     Chronicle*pChronicle = chronicleMap_->find(cid)->second;
 
@@ -447,5 +447,5 @@ int ChronicleMetaDirectory::show_stories(const std::string &chronicle_name, std:
         std::string story_name = value->getName();
         story_names.emplace_back(story_name);
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }

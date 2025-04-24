@@ -58,7 +58,7 @@ int main(int argc, char**argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.CreateChronicle(chronicle_names[i], chronicle_attrs, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == chronolog::CL_SUCCESS);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
         duration_create_chronicle += (t2 - t1);
     }
 
@@ -81,7 +81,7 @@ int main(int argc, char**argv)
         ret = client.EditChronicleAttr(chronicle_names[i], key, "2023-01-15");
         t2 = std::chrono::steady_clock::now();
         //FIXME:  is not working, the following assert will fail
-        //assert(ret == CL_SUCCESS || ret == CL_ERR_NO_KEEPERS);
+        //assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NoKeepers));
         duration_edit_chronicle_attr += (t2 - t1);
 
         std::vector <std::string> story_names;
@@ -98,12 +98,12 @@ int main(int argc, char**argv)
             t1 = std::chrono::steady_clock::now();
             ret = client.AcquireStory(chronicle_names[i], story_names[j], story_attrs, flags).first;
             t2 = std::chrono::steady_clock::now();
-            assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NO_KEEPERS);
+            assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NoKeepers));
             duration_acquire_story += (t2 - t1);
         }
 
         ret = client.Disconnect(); //client_id, flags);
-        assert(ret == chronolog::CL_ERR_NO_KEEPERS || ret == chronolog::CL_ERR_ACQUIRED);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::NoKeepers) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
 
         t1 = std::chrono::steady_clock::now();
         std::vector <std::string> stories_names_retrieved;
@@ -121,7 +121,7 @@ int main(int argc, char**argv)
             t1 = std::chrono::steady_clock::now();
             ret = client.ReleaseStory(chronicle_names[i], story_names[j]); //, flags);
             t2 = std::chrono::steady_clock::now();
-            assert(ret == chronolog::CL_SUCCESS);
+            assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
             duration_release_story += (t2 - t1);
         }
 
@@ -131,7 +131,7 @@ int main(int argc, char**argv)
             t1 = std::chrono::steady_clock::now();
             ret = client.DestroyStory(chronicle_names[i], story_names[j]); // flags);
             t2 = std::chrono::steady_clock::now();
-            assert(ret == chronolog::CL_SUCCESS);
+            assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
             duration_destroy_story += (t2 - t1);
         }
 
@@ -139,7 +139,7 @@ int main(int argc, char**argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.GetChronicleAttr(chronicle_names[i], key, value);
         t2 = std::chrono::steady_clock::now();
-        //FIXME:assert(ret == CL_SUCCESS);
+        //FIXME:assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
         //FIXME: returning data using parameter is not working, the following assert will fail
         //ASSERT(value, ==, "2023-01-15");
         duration_get_chronicle_attr += (t2 - t1);
@@ -151,7 +151,7 @@ int main(int argc, char**argv)
         t1 = std::chrono::steady_clock::now();
         bool ret = client.DestroyChronicle(chronicle_names[i]); // flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == chronolog::CL_SUCCESS);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
         duration_destroy_chronicle += (t2 - t1);
     };
 
@@ -160,7 +160,7 @@ int main(int argc, char**argv)
         std::map <std::string, std::string> story_attrs;
         std::string temp_str = gen_random(STORY_NAME_LEN);
         ret = client.AcquireStory(chronicle_names[i].append(temp_str), temp_str, story_attrs, flags).first;
-        assert(ret == chronolog::CL_ERR_NOT_EXIST);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist));
     }
 
     LOG_INFO("[ClientLibMetadataRPCTest] CreateChronicle takes {} ns", duration_create_chronicle.count() / NUM_CHRONICLE);
@@ -194,7 +194,7 @@ int main(int argc, char**argv)
         t1 = std::chrono::steady_clock::now();
         ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == chronolog::CL_SUCCESS);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
         duration_create_chronicle += (t2 - t1);
     }
 
@@ -205,7 +205,7 @@ int main(int argc, char**argv)
         t1 = std::chrono::steady_clock::now();
         int ret = client.DestroyChronicle(chronicle_names[i]);//, flags);
         t2 = std::chrono::steady_clock::now();
-        assert(ret == chronolog::CL_SUCCESS);
+        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
         duration_destroy_chronicle += (t2 - t1);
     }
     LOG_INFO("[ClientLibMetadataRPCTest] Disconnecting from the server.");

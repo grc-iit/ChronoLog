@@ -593,7 +593,7 @@ int readVlenBytesEvents(H5::H5File*file, std::vector <LogEvent> &data)
         H5::FileIException::printErrorStack();
         return -1;
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**********************************************************************************************************************
@@ -629,7 +629,7 @@ int readStoryChunkUsingVlenBytesEvents(StoryChunk &story_chunk)
         { LOG_ERROR("Failed to insert {}-th event", event_idx); }
         event_idx++;
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**********************************************************************************************************************
@@ -698,14 +698,14 @@ int readBlob(H5::H5File*file, void*data, const H5::DataType &type)
         hsize_t dims_out[2];
         dataspace.getSimpleExtentDims(dims_out, nullptr);
         dataset.read(data, type);
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
         // catch failure caused by the H5File operations
     catch(H5::FileIException &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSet operations
@@ -713,7 +713,7 @@ int readBlob(H5::H5File*file, void*data, const H5::DataType &type)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSpace operations
@@ -721,7 +721,7 @@ int readBlob(H5::H5File*file, void*data, const H5::DataType &type)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataType operations
@@ -729,7 +729,7 @@ int readBlob(H5::H5File*file, void*data, const H5::DataType &type)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -781,12 +781,12 @@ int writeMapAsKVPairs(H5::H5File*file, std::map <StoryChunk2::EventSequence, Sto
         dataset->write(&offsetMapEntries.front(), offset_dtype);
         delete dataset;
         delete dataspace;
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     catch(H5::Exception &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -823,12 +823,12 @@ int readMapAsKVPairs(std::map <StoryChunk2::EventSequence, StoryChunk2::EventOff
         {
             offsetMap.insert({entry.eventId, entry.offsetSize});
         }
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     catch(H5::Exception &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -848,7 +848,7 @@ hsize_t writeStoryChunkUsingBlobAndKVPairs(StoryChunk2 &story_chunk)
     catch(H5::Exception &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -871,12 +871,12 @@ int readStoryChunkUsingBlobAndKVPairs(StoryChunk2 &story_chunk)
         story_chunk.totalSize = total_size;
         story_chunk.totalEventCount = total_events;
         story_chunk.currentOffset = total_size;
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     catch(H5::Exception &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -951,12 +951,12 @@ int rangeQuery(uint64_t start_time, uint64_t end_time, StoryChunk2 &res_story_ch
             event.logRecord.len = size;
             res_story_chunk.insertEvent(event);
         }
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     catch(H5::Exception &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -1040,7 +1040,7 @@ StoryChunk deserializeStoryChunk(char*story_chunk_json_str, uint64_t &story_id, 
     else
     {
         LOG_ERROR("Failed to parse story_chunk_json_str: {}", story_chunk_json_str);
-        exit(chronolog::CL_ERR_UNKNOWN);
+        exit(chronolog::to_int(chronolog::ClientErrorCode::Unknown));
     }
 //    LOG_DEBUG("#Events: {}", story_chunk.getNumEvents());
     return story_chunk;
@@ -1080,7 +1080,7 @@ hsize_t writeStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSet operations
@@ -1088,7 +1088,7 @@ hsize_t writeStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSpace operations
@@ -1096,7 +1096,7 @@ hsize_t writeStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataType operations
@@ -1104,7 +1104,7 @@ hsize_t writeStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -1123,14 +1123,14 @@ int readStoryChunkInJSON(StoryChunk &story_chunk)
         dataset.read(story_chunk_json_str, datatype);
         uint64_t story_id = test_story_id;
         story_chunk = deserializeStoryChunk((char*)story_chunk_json_str.c_str(), story_id, 0, 0);
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
         // catch failure caused by the H5File operations
     catch(H5::FileIException &error)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSet operations
@@ -1138,7 +1138,7 @@ int readStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataSpace operations
@@ -1146,7 +1146,7 @@ int readStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
         // catch failure caused by the DataType operations
@@ -1154,7 +1154,7 @@ int readStoryChunkInJSON(StoryChunk &story_chunk)
     {
         std::cout << error.getCDetailMsg() << std::endl;
         H5::FileIException::printErrorStack();
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 

@@ -159,11 +159,11 @@ public:
             auto res = propertyList_.insert_or_assign(name, value);
             if(res.second)
             {
-                return chronolog::CL_SUCCESS;
+                return chronolog::to_int(chronolog::ClientErrorCode::Success);
             }
             else
             {
-                return chronolog::CL_ERR_UNKNOWN;
+                return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
             }
         }
         else
@@ -177,8 +177,8 @@ public:
         if(metadataMap_.size() <= MAX_CHRONICLE_METADATA_MAP_SIZE)
         {
             auto res = metadataMap_.insert_or_assign(name, value);
-            if(res.second) return chronolog::CL_SUCCESS;
-            else return chronolog::CL_ERR_UNKNOWN;
+            if(res.second) return chronolog::to_int(chronolog::ClientErrorCode::Success);
+            else return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         else
         {
@@ -194,7 +194,7 @@ public:
         uint64_t sid = CityHash64(story_name_for_hash.c_str(), story_name_for_hash.length());
         auto story_iter = storyMap_.find(sid);
         if(story_iter != storyMap_.end())
-        { return std::pair <int, Story*>(chronolog::CL_SUCCESS, (*story_iter).second); }
+        { return std::pair <int, Story*>(chronolog::to_int(chronolog::ClientErrorCode::Success), (*story_iter).second); }
 
         Story*pStory = new Story();
         pStory->setName(story_name);
@@ -207,9 +207,9 @@ public:
 //        storyName2IdMap_->insert_or_assign(story_name_for_hash, sid);
 //        storyId2NameMap_->insert_or_assign(sid, story_name_for_hash);
         if(res.second)
-        { return std::pair <int, Story*>(chronolog::CL_SUCCESS, pStory); }
+        { return std::pair <int, Story*>(chronolog::to_int(chronolog::ClientErrorCode::Success), pStory); }
         else
-        { return std::pair <int, Story*>(chronolog::CL_ERR_UNKNOWN, nullptr); }
+        { return std::pair <int, Story*>(chronolog::to_int(chronolog::ClientErrorCode::Unknown), nullptr); }
     }
 
     int removeStory(std::string const &chronicle_name, const std::string &story_name)
@@ -227,7 +227,7 @@ public:
             /* Check if Story is acquired, fail if true */
             if(pStory->getAcquisitionCount() != 0)
             {
-                return chronolog::CL_ERR_ACQUIRED;
+                return chronolog::to_int(chronolog::ClientErrorCode::Acquired);
             }
             delete pStory;
             LOG_DEBUG("[Chronicle] Removing from StoryMap at {} with {} entries in Chronicle at {}"
@@ -235,10 +235,10 @@ public:
             auto nErased = storyMap_.erase(sid);
 //            storyName2IdMap_->erase(story_name_for_hash);
 //            storyId2NameMap_->erase(sid);
-            if(nErased == 1) return chronolog::CL_SUCCESS;
-            else return chronolog::CL_ERR_UNKNOWN;
+            if(nErased == 1) return chronolog::to_int(chronolog::ClientErrorCode::Success);
+            else return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 
 
@@ -256,8 +256,8 @@ public:
         LOG_DEBUG("[Chronicle] Adding to ArchiveMap at {} with {} entries in Chronicle at {}"
              , static_cast<void*>(&archiveMap_), archiveMap_.size(), static_cast<const void*>(this));
         auto res = archiveMap_.emplace(aid, pArchive);
-        if(res.second) return chronolog::CL_SUCCESS;
-        else return chronolog::CL_ERR_UNKNOWN;
+        if(res.second) return chronolog::to_int(chronolog::ClientErrorCode::Success);
+        else return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     int removeArchive(uint64_t cid, const std::string &name, int flags)
@@ -273,10 +273,10 @@ public:
             LOG_DEBUG("[Chronicle] Removing from ArchiveMap at {} with {} entries in Chronicle at {}"
                  , static_cast<void*>(&archiveMap_), archiveMap_.size(), static_cast<const void*>(this));
             auto nErased = archiveMap_.erase(aid);
-            if(nErased == 1) return chronolog::CL_SUCCESS;
-            else return chronolog::CL_ERR_UNKNOWN;
+            if(nErased == 1) return chronolog::to_int(chronolog::ClientErrorCode::Success);
+            else return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
-        return chronolog::CL_ERR_NOT_EXIST;
+        return chronolog::to_int(chronolog::ClientErrorCode::NotExist);
     }
 
     uint64_t incrementAcquisitionCount()

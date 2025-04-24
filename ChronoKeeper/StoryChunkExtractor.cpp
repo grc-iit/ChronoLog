@@ -98,7 +98,7 @@ void chronolog::StoryChunkExtractorBase::drainExtractionQueue()
                 break;
             }
             int ret = processStoryChunk(storyChunk);
-            if(ret == chronolog::CL_SUCCESS)
+            if(ret == chronolog::to_int(chronolog::ClientErrorCode::Success))
             {
                 LOG_DEBUG("[StoryChunkExtractionBase] Successfully processed a story chunk. ES Rank: {}, ULT ID: {}"
                           , es.get_rank(), thallium::thread::self_id());

@@ -17,11 +17,11 @@ namespace chronolog
 
 int KeeperRegistry::InitializeRegistryService(ChronoLog::ConfigurationManager const &confManager)
 {
-    int status = chronolog::CL_ERR_UNKNOWN;
+    int status = chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     std::lock_guard <std::mutex> lock(registryLock);
 
     if(registryState != UNKNOWN)
-    { return chronolog::CL_SUCCESS; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Success); }
 
     try
     {
@@ -60,7 +60,7 @@ int KeeperRegistry::InitializeRegistryService(ChronoLog::ConfigurationManager co
         dataStoreAdminServiceProtocol = confManager.KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.PROTO_CONF;
 
         registryState = INITIALIZED;
-        status = chronolog::CL_SUCCESS;
+        status = chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     catch(tl::exception const &ex)
     {
@@ -96,7 +96,7 @@ int KeeperRegistry::ShutdownRegistryService()
     if(is_shutting_down())
     {
         LOG_INFO("[ChronoProcessRegistry] Shutdown");
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
 
     registryState = SHUTTING_DOWN;
@@ -198,7 +198,7 @@ int KeeperRegistry::ShutdownRegistryService()
 
     if(nullptr != keeperRegistryService)
     { delete keeperRegistryService; }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 KeeperRegistry::~KeeperRegistry()
@@ -214,12 +214,12 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
 {
 
     if(is_shutting_down())
-    { return chronolog::CL_ERR_UNKNOWN; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     std::lock_guard <std::mutex> lock(registryLock);
     //re-check state after ther lock is aquired
     if(is_shutting_down())
-    { return chronolog::CL_ERR_UNKNOWN; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     KeeperIdCard keeper_id_card = keeper_reg_msg.getKeeperIdCard();
     ServiceId admin_service_id = keeper_reg_msg.getAdminServiceId();
@@ -234,7 +234,7 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
         {
             LOG_ERROR("[ChronoProcessRegistry] keeper registration failed to find RecordingGroup {}",
                       keeper_id_card.getGroupId());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         else { group_iter = insert_return.first; }
     }
@@ -276,7 +276,7 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
         else
         {
             LOG_INFO("[ChronoProcessRegistry] registration for Keeper {} cant's proceed as previous AdminClient is not yet dismantled", to_string(keeper_id_card));
-            return CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 
@@ -292,7 +292,7 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
     {
         LOG_ERROR("[ChronoProcessRegistry] Register Keeper: {} failed to create DataStoreAdminClient for {}"
              , to_string(keeper_id_card), to_string(admin_service_id));
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     //now create a new KeeperRecord with the new DataAdminclient
@@ -304,7 +304,7 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
     {
         LOG_ERROR("[ChronoProcessRegistry] registration failed for Keeper {}",to_string(keeper_id_card));
         delete collectionClient;
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     (*insert_return.first).second.keeperAdminClient = collectionClient;
@@ -331,22 +331,22 @@ int KeeperRegistry::registerKeeperProcess(KeeperRegistrationMsg const &keeper_re
 
     LOG_INFO("[ChronoProcessRegistry]  has {} activeGroups; {} RecordingGroups ", activeGroups.size(), recordingGroups.size());
     if(activeGroups.size() > 0) { registryState = RUNNING; }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 /////////////////
 
 int KeeperRegistry::unregisterKeeperProcess(KeeperIdCard const &keeper_id_card)
 {
     if(is_shutting_down())
-    { return chronolog::CL_ERR_UNKNOWN; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     std::lock_guard<std::mutex> lock(registryLock);
     //check again after the lock is acquired
     if(is_shutting_down())
-    { return chronolog::CL_ERR_UNKNOWN; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     auto group_iter = recordingGroups.find(keeper_id_card.getGroupId());
-    if(group_iter == recordingGroups.end()) { return chronolog::CL_SUCCESS; }
+    if(group_iter == recordingGroups.end()) { return chronolog::to_int(chronolog::ClientErrorCode::Success); }
 
     RecordingGroup& recording_group = (*group_iter).second;
 
@@ -355,7 +355,7 @@ int KeeperRegistry::unregisterKeeperProcess(KeeperIdCard const &keeper_id_card)
     if(keeper_process_iter == recording_group.keeperProcesses.end())
     { 
         //we don't have a record of this keeper, we have nothing to do
-        return CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     else
     {
@@ -391,7 +391,7 @@ int KeeperRegistry::unregisterKeeperProcess(KeeperIdCard const &keeper_id_card)
     // update registryState if needed
     if(!is_shutting_down() && activeGroups.size() == 0) { registryState = INITIALIZED; }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 /////////////////
 
@@ -497,7 +497,7 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStart(ChronicleName cons
         if(!is_running())
         {
             LOG_ERROR("[ChronoProcessRegistry] Registry has no active RecordingGroups to start recording story {}", story_id);
-            return chronolog::CL_ERR_NO_KEEPERS;
+            return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
         }
 
 
@@ -516,7 +516,7 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStart(ChronicleName cons
             //no need for notification , group processes are already recording this story
             LOG_INFO("[ChronoProcessRegistry] RecordingGroup {} is already recording story {}", recording_group->groupId,story_id);
             
-            return chronolog::CL_SUCCESS;
+            return chronolog::to_int(chronolog::ClientErrorCode::Success);
         }
 
         // select recording_group from the group id distribution using a random int value
@@ -536,14 +536,14 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStart(ChronicleName cons
     // the rpc code from DataAdminClients being destroyed while notification is in progress..
     int rpc_return = notifyGrapherOfStoryRecordingStart(*recording_group, chronicle, story, story_id, story_start_time);
 
-    if(rpc_return == CL_SUCCESS)
+    if(rpc_return == chronolog::to_int(chronolog::ClientErrorCode::Success))
     {
         recording_group->getActiveKeepers(vectorOfKeepers);
         rpc_return = notifyKeepersOfStoryRecordingStart(*recording_group, vectorOfKeepers, chronicle, story, story_id,
                                                         story_start_time);
     }
 
-    if(rpc_return == CL_SUCCESS && recording_group->playerProcess != nullptr)
+    if(rpc_return == chronolog::to_int(chronolog::ClientErrorCode::Success) && recording_group->playerProcess != nullptr)
     {
         player_service_id = recording_group->playerProcess->playbackServiceId;
     }
@@ -555,12 +555,12 @@ int KeeperRegistry::notifyGrapherOfStoryRecordingStart(RecordingGroup &recording
                                                        , StoryName const &story, StoryId const &storyId
                                                        , uint64_t story_start_time)
 {
-    int return_code = chronolog::CL_ERR_NO_KEEPERS;
+    int return_code = chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
 
     if(!is_running())
     {
         LOG_ERROR("[ChronoProcessRegistry] Registry has no active RecordingGroups to start recording story {}", storyId);
-        return chronolog::CL_ERR_NO_KEEPERS;
+        return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
     }
 
     DataStoreAdminClient* dataAdminClient = nullptr;
@@ -589,7 +589,7 @@ int KeeperRegistry::notifyGrapherOfStoryRecordingStart(RecordingGroup &recording
     try
     {
         return_code = dataAdminClient->send_start_story_recording(chronicle, story, storyId, story_start_time);
-        if(return_code != CL_SUCCESS)
+        if(return_code != chronolog::to_int(chronolog::ClientErrorCode::Success))
         {
             LOG_WARNING("[ChronoProcessRegistry] Registry failed RPC notification to {}", recordingGroup.grapherProcess->idCardString);
         }
@@ -610,12 +610,12 @@ int KeeperRegistry::notifyGrapherOfStoryRecordingStart(RecordingGroup &recording
 ///////////////
 int KeeperRegistry::notifyGrapherOfStoryRecordingStop(RecordingGroup& recordingGroup, StoryId const& storyId)
 {
-    int return_code = chronolog::CL_ERR_NO_KEEPERS;
+    int return_code = chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
 
     if(!is_running())
     {
         LOG_ERROR("[ChronoProcessRegistry] Registry has no active RecordingGroups to start recording story {}", storyId);
-        return chronolog::CL_ERR_NO_KEEPERS;
+        return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
     }
 
     DataStoreAdminClient* dataAdminClient = nullptr;
@@ -647,7 +647,7 @@ int KeeperRegistry::notifyGrapherOfStoryRecordingStop(RecordingGroup& recordingG
     try
     {
         return_code = dataAdminClient->send_stop_story_recording(storyId);
-        if(return_code != CL_SUCCESS)
+        if(return_code != chronolog::to_int(chronolog::ClientErrorCode::Success))
         {
             LOG_WARNING("[ChronoProcessRegistry] Registry failed RPC notification to grapher {}", id_string.str());
         }
@@ -677,7 +677,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStart(RecordingGroup& recording
     if(!is_running())
     {
         LOG_ERROR("[ChronoProcessRegistry] Registry has no active RecordingGroups to start recording story {}", storyId);
-        return chronolog::CL_ERR_NO_KEEPERS;
+        return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
     }
 
     std::vector<KeeperIdCard> vectorOfKeepersToNotify = vectorOfKeepers;
@@ -711,7 +711,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStart(RecordingGroup& recording
         try
         {
             int rpc_return = dataAdminClient->send_start_story_recording(chronicle, story, storyId, story_start_time);
-            if(rpc_return != CL_SUCCESS)
+            if(rpc_return != chronolog::to_int(chronolog::ClientErrorCode::Success))
             {
                 LOG_WARNING("[ChronoProcessRegistry] Registry failed RPC notification to keeper {}", to_string(keeper_id_card));
             }
@@ -731,10 +731,10 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStart(RecordingGroup& recording
     if(vectorOfKeepers.empty())
     {
         LOG_ERROR("[ChronoProcessRegistry] Registry failed to notify keepers to start recording story {}", storyId);
-        return chronolog::CL_ERR_NO_KEEPERS;
+        return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
     }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 /////////////////
 int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStop(StoryId const& story_id)
@@ -750,7 +750,7 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStop(StoryId const& stor
         if(!is_running())
         {
             LOG_ERROR("[ChronoProcessRegistry] Registry has no active RecordingGroups to start recording story {}", story_id);
-            return chronolog::CL_ERR_NO_KEEPERS;
+            return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
         }
 
 
@@ -759,7 +759,7 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStop(StoryId const& stor
         if(story_iter == activeStories.end())
         {
             //we don't know of this story
-            return CL_SUCCESS;
+            return chronolog::to_int(chronolog::ClientErrorCode::Success);
         }
 
         recording_group = (*story_iter).second;
@@ -779,7 +779,7 @@ int KeeperRegistry::notifyRecordingGroupOfStoryRecordingStop(StoryId const& stor
         notifyGrapherOfStoryRecordingStop(*recording_group, story_id);
     }
 
-    return CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 //////////////
 int KeeperRegistry::notifyKeepersOfStoryRecordingStop(RecordingGroup& recordingGroup,
@@ -789,7 +789,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStop(RecordingGroup& recordingG
     if(!is_running())
     {
         LOG_ERROR("[ChronoProcessRegistry] Registry has no keepers to notify of story release {}", storyId);
-        return chronolog::CL_ERR_NO_KEEPERS;
+        return chronolog::to_int(chronolog::ClientErrorCode::NoKeepers);
     }
 
     auto keeper_processes = recordingGroup.keeperProcesses;
@@ -818,7 +818,7 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStop(RecordingGroup& recordingG
         try
         {
             int rpc_return = dataAdminClient->send_stop_story_recording(storyId);
-            if(rpc_return != CL_SUCCESS)
+            if(rpc_return != chronolog::to_int(chronolog::ClientErrorCode::Success))
             {
                 LOG_WARNING("[ChronoProcessRegistry] Registry failed RPC notification to keeper {}", to_string(keeper_id_card));
             }
@@ -833,14 +833,14 @@ int KeeperRegistry::notifyKeepersOfStoryRecordingStop(RecordingGroup& recordingG
         }
     }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 ////////////////////////////
 
 int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_msg)
 {
-    if(is_shutting_down()) { return chronolog::CL_ERR_UNKNOWN; }
+    if(is_shutting_down()) { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     GrapherIdCard grapher_id_card = reg_msg.getGrapherIdCard();
     RecordingGroupId group_id = grapher_id_card.getGroupId();
@@ -848,7 +848,7 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
 
     std::lock_guard<std::mutex> lock(registryLock);
     //re-check state after ther lock is aquired
-    if(is_shutting_down()) { return chronolog::CL_ERR_UNKNOWN; }
+    if(is_shutting_down()) { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     //find the group that grapher belongs to in the registry
     auto group_iter = recordingGroups.find(group_id);
@@ -859,7 +859,7 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
         if(false == insert_return.second)
         {
             LOG_ERROR("[ChronoProcessRegistry] keeper registration failed to find RecordingGroup {}", group_id);
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         else { group_iter = insert_return.first; }
     }
@@ -903,7 +903,7 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
         {
             LOG_INFO("[ChronoProcessRegistry] registration for Grapher{} cant's proceed as previous grapherClient isn't yet "
                      "dismantled", chl::to_string(grapher_id_card));
-            return CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 
@@ -918,7 +918,7 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
     {
         LOG_ERROR("[ChronoProcessRegistry] Register Grapher {} failed to create DataStoreAdminClient for {}: provider_id={}",
                   chl::to_string(grapher_id_card), chl::to_string(admin_service_id));
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     //now create a new GrapherProcessEntry with the new DataAdminclient
@@ -951,7 +951,7 @@ int KeeperRegistry::registerGrapherProcess(GrapherRegistrationMsg const & reg_ms
     { 
         registryState = RUNNING; 
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 /////////////////
 
@@ -959,10 +959,10 @@ int KeeperRegistry::unregisterGrapherProcess(GrapherIdCard const& grapher_id_car
 {
     std::lock_guard<std::mutex> lock(registryLock);
     //check again after the lock is acquired
-    if(is_shutting_down()) { return chronolog::CL_ERR_UNKNOWN; }
+    if(is_shutting_down()) { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     auto group_iter = recordingGroups.find(grapher_id_card.getGroupId());
-    if(group_iter == recordingGroups.end()) { return chronolog::CL_SUCCESS; }
+    if(group_iter == recordingGroups.end()) { return chronolog::to_int(chronolog::ClientErrorCode::Success); }
 
     RecordingGroup& recording_group = ((*group_iter).second);
 
@@ -1020,7 +1020,7 @@ int KeeperRegistry::unregisterGrapherProcess(GrapherIdCard const& grapher_id_car
     // update registryState in case this was the last active recordingGroup
     if(activeGroups.size() == 0) { registryState = INITIALIZED; }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 }//namespace chronolog
@@ -1058,7 +1058,7 @@ void chl::KeeperRegistry::updateGrapherProcessStats(chl::GrapherStatsMsg const &
 
 int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const & reg_msg)
 {
-    if(is_shutting_down()) { return chronolog::CL_ERR_UNKNOWN; }
+    if(is_shutting_down()) { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     chl::PlayerIdCard id_card = reg_msg.getPlayerIdCard();
     chl::RecordingGroupId group_id = id_card.getGroupId();
@@ -1066,7 +1066,7 @@ int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const 
 
     std::lock_guard<std::mutex> lock(registryLock);
     if(is_shutting_down()) 
-    { return chronolog::CL_ERR_UNKNOWN; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     //find the recording group that new player process belongs to or create one 
     auto group_iter = recordingGroups.find(group_id);
@@ -1077,7 +1077,7 @@ int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const 
         if(false == insert_return.second)
         {
             LOG_ERROR("[ChronoProcessRegistry] player registration failed to find RecordingGroup {}", group_id);
-            return chl::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         else { group_iter = insert_return.first; }
     }
@@ -1120,7 +1120,7 @@ int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const 
             LOG_INFO("[ChronoProcessRegistry] registration for Player{} cant's proceed as previous playerClient isn't yet "
                      "dismantled", chl::to_string(id_card));
                      
-            return CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 
@@ -1136,7 +1136,7 @@ int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const 
     {
         LOG_ERROR("[ChronoProcessRegistry] Register Player {} failed to create DataStoreAdminClient for {}",
                   chl::to_string(id_card), chl::to_string(admin_service_id));
-        return chl::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     //now create a new GrapherProcessEntry with the new DataAdminclient
@@ -1157,18 +1157,18 @@ int chl::KeeperRegistry::registerPlayerProcess(chl::PlayerRegistrationMsg const 
     { 
         registryState = RUNNING; 
     }
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 /////////////////
 
 int chl::KeeperRegistry::unregisterPlayerProcess(chl::PlayerIdCard const& id_card)
 {
     std::lock_guard<std::mutex> lock(registryLock);
-    if(is_shutting_down()) { return chronolog::CL_ERR_UNKNOWN; }
+    if(is_shutting_down()) { return chronolog::to_int(chronolog::ClientErrorCode::Unknown); }
 
     auto group_iter = recordingGroups.find(id_card.getGroupId());
     if(group_iter == recordingGroups.end()) 
-    { return chronolog::CL_SUCCESS; }
+    { return chronolog::to_int(chronolog::ClientErrorCode::Success); }
 
     RecordingGroup& recording_group = ((*group_iter).second);
 
@@ -1201,7 +1201,7 @@ int chl::KeeperRegistry::unregisterPlayerProcess(chl::PlayerIdCard const& id_car
     if(activeGroups.size() == 0)
     { registryState = INITIALIZED; }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 void chl::KeeperRegistry::updatePlayerProcessStats(chl::PlayerStatsMsg const &statsMsg)

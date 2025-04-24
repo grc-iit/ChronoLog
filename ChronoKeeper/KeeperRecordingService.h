@@ -39,7 +39,7 @@ public:
         ss << log_event;
         LOG_DEBUG("[KeeperRecordingService] Recording event: {}", ss.str());
         theIngestionQueue.ingestLogEvent(log_event);
-        request.respond(chronolog::CL_SUCCESS);
+        request.respond(chronolog::to_int(chronolog::ClientErrorCode::Success));
     }
 
 private:

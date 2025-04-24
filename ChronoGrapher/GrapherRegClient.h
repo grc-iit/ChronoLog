@@ -47,7 +47,7 @@ public:
         catch(tl::exception const &)
         {
             LOG_ERROR("[GrapherRegistryClient] Failed Sending Registration Message.");
-            return CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 
@@ -63,7 +63,7 @@ public:
         catch(tl::exception const &)
         {
             LOG_ERROR("[GrapherRegistryClient] Failed Sending Unregistered Message.");
-            return CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 

@@ -49,7 +49,7 @@ public:
         {
             LOG_ERROR("[KeeperRecordingClient] Failed to send event message to {} exception: {}", to_string(keeperIdCard), ex.what());
         }
-        return (chronolog::CL_ERR_UNKNOWN);
+        return (chronolog::to_int(chronolog::ClientErrorCode::Unknown));
     }
 
     KeeperIdCard const & getKeeperId() const

@@ -7,6 +7,7 @@
 #include "chrono_monitor.h"
 #include "StoryChunk.h"
 #include "LogEventHVL.h"
+#include "StoryChunkHVL.h"
 
 namespace chronolog
 {

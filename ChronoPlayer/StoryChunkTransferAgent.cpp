@@ -95,6 +95,6 @@ int chronolog::StoryChunkTransferAgent::processStoryChunk(chronolog::StoryChunk*
     }
 
     LOG_ERROR("[StoryChunkTransferAgent] Failed to transfer StoryShunk, StoryId:{},StartTime:{}", story_chunk->getStoryId(), story_chunk->getStartTime());
-    return chronolog::CL_ERR_STORY_CHUNK_EXTRACTION;
+    return chronolog::to_int(chronolog::ServerErrorCode::StoryChunkExtractionError);
 }
 

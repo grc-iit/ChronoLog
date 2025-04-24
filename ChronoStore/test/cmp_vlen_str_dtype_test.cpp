@@ -328,7 +328,7 @@ int main(int argc, char*argv[])
         if(H5Lexists(story_file, story_chunk_dset_name.c_str(), H5P_DEFAULT) > 0)
         {
             LOG_ERROR("Story chunk already exists: {}", story_chunk_dset_name.c_str());
-            return chronolog::CL_ERR_STORY_CHUNK_EXISTS;
+            return chronolog::to_int(chronolog::ServerErrorCode::StoryChunkExists);
         }
 
         /**

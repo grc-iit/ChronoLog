@@ -168,7 +168,7 @@ public:
         }
         else
         {
-            return chronolog::CL_ERR_CHRONICLE_PROPERTY_FULL;
+            return chronolog::to_int(chronolog::ServerErrorCode::ChroniclePropertyFull);
         }
     }
 
@@ -182,7 +182,7 @@ public:
         }
         else
         {
-            return chronolog::CL_ERR_CHRONICLE_METADATA_FULL;
+            return chronolog::to_int(chronolog::ServerErrorCode::ChronicleMetadataFull);
         }
     }
 

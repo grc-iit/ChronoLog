@@ -177,7 +177,7 @@ int StoryWriter::writeStoryChunks(const std::map <uint64_t, chronolog::StoryChun
         if(H5Lexists(story_file, story_chunk_dset_name.c_str(), H5P_DEFAULT) > 0)
         {
             LOG_ERROR("Story chunk already exists: {}", story_chunk_dset_name.c_str());
-            return chronolog::CL_ERR_STORY_CHUNK_EXISTS;
+            return chronolog::to_int(chronolog::ServerErrorCode::StoryChunkExists);
         }
 
         // Create the dataspace for the dataset for the Story Chunk

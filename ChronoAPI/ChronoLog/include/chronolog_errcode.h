@@ -48,10 +48,6 @@ inline const char* to_string(ServerErrorCode e) {
     }
 }
 
-// Optional: for easy streaming
-inline std::ostream& operator<<(std::ostream& os, ServerErrorCode e) {
-    return os << to_string(e) << " (" << static_cast<int>(e) << ")";
-}
 
 } // namespace chronolog
 

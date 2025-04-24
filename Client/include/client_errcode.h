@@ -1,9 +1,6 @@
 #ifndef CHRONOLOG_CLIENT_ERRCODE_H
 #define CHRONOLOG_CLIENT_ERRCODE_H
 
-#include <string>
-#include <ostream>
-
 namespace chronolog {
 
 // A “scoped” enum for client-only errors:

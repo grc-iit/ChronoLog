@@ -227,7 +227,7 @@ int main(int argc, char**argv)
             chronolog::PlayerRegistrationMsg(playerIdCard, playerAdminServiceId));
     //if the first attemp failes retry 
     int retries = 5;
-    while((chronolog::CL_SUCCESS != registration_status) && (retries > 0))
+    while((chronolog::to_int(chronolog::ClientErrorCode::Success) != registration_status) && (retries > 0))
     {
         registration_status = playerRegistryClient->send_register_msg(
                 chronolog::PlayerRegistrationMsg(playerIdCard, playerAdminServiceId));
@@ -235,7 +235,7 @@ int main(int argc, char**argv)
         retries--;
     }
 
-    if(chronolog::CL_SUCCESS != registration_status)
+    if(chronolog::to_int(chronolog::ClientErrorCode::Success) != registration_status)
     {
         LOG_CRITICAL("[ChronoPlayer] Failed to register with ChronoVisor after multiple attempts. Exiting.");
         delete playerRegistryClient;

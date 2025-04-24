@@ -316,7 +316,7 @@ int main(int argc, char*argv[])
             if(story_file < 0)
             {
                 LOG_ERROR("Failed to open story file: {}", story_file_name.c_str());
-                return chronolog::CL_ERR_UNKNOWN;
+                return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
             }
 //            story_chunk_fd_map.emplace(story_id, story_file);
         }
@@ -359,7 +359,7 @@ int main(int argc, char*argv[])
         if(status < 0)
         {
             LOG_ERROR("Failed to create data type for log event, status: {}", status);
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
 
         // Create the dataspace for the dataset for the Story Chunk
@@ -369,7 +369,7 @@ int main(int argc, char*argv[])
         if(story_chunk_dspace < 0)
         {
             LOG_ERROR("Failed to create dataspace for story chunk: {}", story_chunk_dset_name.c_str());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
 
         // Create the property list
@@ -390,7 +390,7 @@ int main(int argc, char*argv[])
         if(story_chunk_dset < 0)
         {
             LOG_ERROR("Failed to create dataset for story chunk: {}", story_chunk_dset_name.c_str());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
 
         // Create a contiguous memory space for the variable-length data
@@ -431,7 +431,7 @@ int main(int argc, char*argv[])
                         printf("Error #%u: {}\n", n, err_desc->desc);
                         return 0;
                     }, nullptr);
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
         status = H5Dvlen_reclaim(log_event_type, story_chunk_dspace, H5P_DEFAULT, &g_events);
         LOG_DEBUG("H5Dvlen_reclaim returns: {}", status);
@@ -453,7 +453,7 @@ int main(int argc, char*argv[])
         {
             LOG_ERROR("Failed to close dataset or dataspace or file for story chunk: {}"
                       , story_chunk_dset_name.c_str());
-            return chronolog::CL_ERR_UNKNOWN;
+            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
         }
     }
 

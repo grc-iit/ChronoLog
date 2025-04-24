@@ -56,7 +56,7 @@ int StoryReader::readStory(const std::string &chronicle_name, const std::string 
     if(story_file < 0)
     {
         LOG_ERROR("Failed to open story file: {}", story_file_name.c_str());
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 
     // Read all Story Chunks
@@ -65,7 +65,7 @@ int StoryReader::readStory(const std::string &chronicle_name, const std::string 
     // Close Story file
     H5Fclose(story_file);
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**
@@ -99,7 +99,7 @@ int StoryReader::readAllStoryChunks(hid_t &story_file, std::map <uint64_t, chron
         story_chunk_map.emplace(story_chunk.getStartTime(), story_chunk);
     }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**
@@ -249,7 +249,7 @@ StoryReader::deserializeStoryChunk(char*story_chunk_json_str, std::string chroni
     else
     {
         LOG_ERROR("Failed to parse story_chunk_json_str: {}", story_chunk_json_str);
-        exit(chronolog::CL_ERR_UNKNOWN);
+        exit(chronolog::to_int(chronolog::ClientErrorCode::Unknown));
     }
     return story_chunk;
 }
@@ -272,7 +272,7 @@ int StoryReader::readStoryRange(const std::string &chronicle_name, const uint64_
     if(story_file < 0)
     {
         LOG_ERROR("Failed to open story file: {}", story_file_name.c_str());
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
     // Get all overlapped Story Chunk names
     std::vector <std::string> story_chunk_names_overlap = findContiguousStoryChunks(story_file, start_time, end_time);
@@ -283,7 +283,7 @@ int StoryReader::readStoryRange(const std::string &chronicle_name, const uint64_
         story_chunk_map.emplace(story_chunk.getStartTime(), story_chunk);
     }
 
-    return chronolog::CL_SUCCESS;
+    return chronolog::to_int(chronolog::ClientErrorCode::Success);
 }
 
 /**

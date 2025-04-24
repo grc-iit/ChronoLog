@@ -19,7 +19,7 @@ class AcquireStoryResponseMsg
 public:
 
     AcquireStoryResponseMsg()
-        : error_code(chronolog::CL_SUCCESS)
+        : error_code(chronolog::to_int(chronolog::ClientErrorCode::Success))
         , storyId(0)
         , player(ServiceId())
     {}

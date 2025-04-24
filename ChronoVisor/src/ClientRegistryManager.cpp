@@ -52,7 +52,7 @@ int ClientRegistryManager::add_story_acquisition(chl::ClientId const &client_id,
         if(clientInfo.acquiredStoryList_.find(sid) != clientInfo.acquiredStoryList_.end())
         {
             LOG_DEBUG("[ClientRegistryManager] ClientID={} has already acquired StoryID={}", client_id, sid);
-            return chronolog::CL_ERR_ACQUIRED;
+            return chronolog::to_int(chronolog::ClientErrorCode::Acquired);
         }
         else
         {
@@ -61,20 +61,20 @@ int ClientRegistryManager::add_story_acquisition(chl::ClientId const &client_id,
             if(res.second)
             {
                 LOG_DEBUG("[ClientRegistryManager] Added a new entry for ClientID={} acquiring StoryID={}", client_id, sid);
-                return chronolog::CL_SUCCESS;
+                return chronolog::to_int(chronolog::ClientErrorCode::Success);
             }
             else
             {
                 LOG_DEBUG("[ClientRegistryManager] Updated an existing entry for ClientID={} acquiring StoryID={}", client_id
                      , sid);
-                return chronolog::CL_ERR_UNKNOWN;
+                return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
             }
         }
     }
     else
     {
         LOG_DEBUG("[ClientRegistryManager] ClientID={} does not exist", client_id);
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -96,26 +96,26 @@ int ClientRegistryManager::remove_story_acquisition(chl::ClientId const &client_
                      , client_id);
                 LOG_DEBUG("[ClientRegistryManager] Acquired Story List of ClientID={} has {} entries left", client_id
                      , clientRegistryRecord->second.acquiredStoryList_.size());
-                return chronolog::CL_SUCCESS;
+                return chronolog::to_int(chronolog::ClientErrorCode::Success);
             }
             else
             {
                 LOG_DEBUG("[ClientRegistryManager] Failed to remove StoryID={} from AcquiredStoryList for ClientID={}", sid
                      , client_id);
-                return chronolog::CL_ERR_UNKNOWN;
+                return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
             }
         }
         else
         {
             LOG_WARNING("[ClientRegistryManager] StoryID={} is not acquired by ClientID={}, cannot remove from AcquiredStoryList for it"
                  , sid, client_id);
-            return chronolog::CL_ERR_NOT_ACQUIRED;
+            return chronolog::to_int(chronolog::ClientErrorCode::NotAcquired);
         }
     }
     else
     {
         LOG_ERROR("[ClientRegistryManager] ClientID={} does not exist", client_id);
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -131,12 +131,12 @@ int ClientRegistryManager::add_client_record(chl::ClientId const &client_id, con
              , static_cast<void*>(clientRegistry_));
         LOG_DEBUG("[ClientRegistryManager] Client Registry at {} has {} entries stored", static_cast<void*>(clientRegistry_)
              , clientRegistry_->size());
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     else
     {
         LOG_ERROR("[ClientRegistryManager] Fail to add entry for ClientID={} to clientRegistry_", client_id);
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }
 
@@ -154,23 +154,23 @@ int ClientRegistryManager::remove_client_record(const chronolog::ClientId &clien
         {
             LOG_WARNING("[ClientRegistryManager] ClientID={} still has {} stories acquired, entry cannot be removed", client_id
                  , clientInfo.acquiredStoryList_.size());
-            return chronolog::CL_ERR_ACQUIRED;
+            return chronolog::to_int(chronolog::ClientErrorCode::Acquired);
         }
     }
     else
     {
         LOG_ERROR("[ClientRegistryManager] ClientID={} does not exist", client_id);
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
     if(clientRegistry_->erase(client_id))
     {
         LOG_DEBUG("[ClientRegistryManager] Entry for ClientID={} has been removed from clientRegistry_ at {}", client_id
              , static_cast<void*>(clientRegistry_));
-        return chronolog::CL_SUCCESS;
+        return chronolog::to_int(chronolog::ClientErrorCode::Success);
     }
     else
     {
         LOG_ERROR("[ClientRegistryManager] Failed to remove ClientID={} from clientRegistry_", client_id);
-        return chronolog::CL_ERR_UNKNOWN;
+        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
     }
 }

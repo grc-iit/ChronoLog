@@ -234,7 +234,7 @@ int main(int argc, char**argv)
             chronolog::GrapherRegistrationMsg(processIdCard, dataStoreServiceId));
     //if the first attemp failes retry 
     int retries = 5;
-    while((chronolog::to_int(chronolog::ClientErrorCode::Success) != registration_status) && (retries > 0))
+    while((chronolog::CL_SUCCESS != registration_status) && (retries > 0))
     {
         registration_status = grapherRegistryClient->send_register_msg(
                 chronolog::GrapherRegistrationMsg(processIdCard, dataStoreServiceId));
@@ -243,7 +243,7 @@ int main(int argc, char**argv)
         retries--;
     }
 
-    if(chronolog::to_int(chronolog::ClientErrorCode::Success) != registration_status)
+    if(chronolog::CL_SUCCESS != registration_status)
     {
         LOG_CRITICAL("[ChronoGrapher] Failed to register with ChronoVisor after multiple attempts. Exiting.");
         delete grapherRegistryClient;

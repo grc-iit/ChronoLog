@@ -70,28 +70,28 @@ int chronolog::StoryChunkTransferAgent::processStoryChunk(chronolog::StoryChunk*
         if(bytes_transfered == serialized_story_chunk_size)
         {
             LOG_INFO("[StoryChunkTransferAgent] Successfully transfered StoryChunk, StoryId:{}, StartTime:{}", story_chunk->getStoryId(), story_chunk->getStartTime());
-            return chronolog::to_int(chronolog::ClientErrorCode::Success);
+            return chronolog::CL_SUCCESS;
         }
     }
     catch(tl::exception const &ex)
     {
         LOG_ERROR("[StoryChunkTransferAgent] Thallium exception while transferring StoryChunk: {}", ex.what());
-        return (chronolog::to_int(chronolog::ClientErrorCode::Unknown));
+        return (chronolog::CL_ERR_UNKNOWN);
     }
     catch(cereal::Exception const &ex)
     {
         LOG_ERROR("[StoryChunkTransferAgent] Cereal exception while serializing StoryChunk: {}", ex.what());
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
     catch(std::exception const &ex)
     {
         LOG_ERROR("[StoryChunkTransferAgent] Standard exception while serializing StoryChunk: {}", ex.what());
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
     catch(...)
     {
         LOG_ERROR("[StoryChunkTransferAgent] Unknown exception while  transferring StoryChunk.");
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
 
     LOG_ERROR("[StoryChunkTransferAgent] Failed to transfer StoryShunk, StoryId:{},StartTime:{}", story_chunk->getStoryId(), story_chunk->getStartTime());

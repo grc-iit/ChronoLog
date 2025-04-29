@@ -55,7 +55,7 @@ public:
 
     int shutdown_collection()
     {
-        int status = chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        int status = chronolog::CL_ERR_UNKNOWN;
         try
         {
             LOG_INFO("[DataStoreAdminClient] Shutdown");
@@ -70,7 +70,7 @@ public:
     send_start_story_recording(ChronicleName const &chronicle_name, StoryName const &story_name, StoryId const &story_id
                                , uint64_t start_time)
     {
-        int status = chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        int status = chronolog::CL_ERR_UNKNOWN;
         try
         {
             LOG_DEBUG("[DataStoreAdminClient] START Story Recording for StoryID={}", story_id);
@@ -83,7 +83,7 @@ public:
 
     int send_stop_story_recording(StoryId const &story_id)
     {
-        int status = chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        int status = chronolog::CL_ERR_UNKNOWN;
         try
         {
             LOG_DEBUG("[DataStoreAdminClient] STOP Story Recording for StoryId={}", story_id);

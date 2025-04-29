@@ -394,7 +394,7 @@ public:
         {
             std::cerr << "[ConfigurationManager] Failed to open configuration file at path: " << conf_file_path.c_str()
                       << ". Exiting..." << std::endl;
-            exit(chronolog::to_int(chronolog::ClientErrorCode::NotExist));
+            exit(chronolog::CL_ERR_NOT_EXIST);
         }
 
         json_object_object_foreach(root, key, val)

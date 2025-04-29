@@ -407,7 +407,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str() << ". Clock configuration is not found or is not an object."
                               << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseClockConf(clock_conf);
             }
@@ -419,7 +419,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". Authentication configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseAuthConf(auth_conf);
             }
@@ -431,7 +431,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". ChronoVisor configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseVisorConf(chrono_visor_conf);
             }
@@ -443,7 +443,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". ChronoKeeper configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseKeeperConf(chrono_keeper_conf);
             }
@@ -455,7 +455,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". ChronoGrapher configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseGrapherConf(chrono_grapher_conf);
             }
@@ -467,7 +467,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". ChronoPlayer configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parsePlayerConf(chrono_player_conf);
             }
@@ -479,7 +479,7 @@ public:
                     std::cerr << "[ConfigurationManager] Error while parsing configuration file "
                               << conf_file_path.c_str()
                               << ". ChronoClient configuration is not found or is not an object." << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
                 parseClientConf(chrono_client_conf);
             }
@@ -635,7 +635,7 @@ private:
                     std::cerr
                             << "[ConfigurationManager] Failed to parse configuration file: clocksource_type is not a string"
                             << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
             }
             else if(strcmp(key, "drift_cal_sleep_sec") == 0)
@@ -649,7 +649,7 @@ private:
                     std::cerr
                             << "[ConfigurationManager] Failed to parse configuration file: drift_cal_sleep_sec is not an integer"
                             << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
             }
             else if(strcmp(key, "drift_cal_sleep_nsec") == 0)
@@ -663,7 +663,7 @@ private:
                     std::cerr
                             << "[ConfigurationManager] Failed to parse configuration file: drift_cal_sleep_nsec is not an integer"
                             << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
             }
         }
@@ -676,7 +676,7 @@ private:
             std::cerr
                     << "[ConfigurationManager] Error while parsing configuration file. Authentication configuration is not found or is not an object."
                     << std::endl;
-            exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+            exit(chronolog::CL_ERR_INVALID_CONF);
         }
         json_object_object_foreach(auth_conf, key, val)
         {
@@ -690,7 +690,7 @@ private:
                 {
                     std::cerr << "[ConfigurationManager] Failed to parse configuration file: auth_type is not a string"
                               << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
             }
             else if(strcmp(key, "module_location") == 0)
@@ -704,7 +704,7 @@ private:
                     std::cerr
                             << "[ConfigurationManager] Failed to parse configuration file: module_location is not a string"
                             << std::endl;
-                    exit(chronolog::to_int(chronolog::ServerErrorCode::InvalidConfig));
+                    exit(chronolog::CL_ERR_INVALID_CONF);
                 }
             }
         }

@@ -5,46 +5,40 @@
 
 namespace chronolog {
 
-// A “scoped” enum just for server‐only errors:
-enum class ServerErrorCode : int {
-    StoryExists               = -101,  // Specified Story exists, cannot be created/renamed to
-    ArchiveExists             = -102,  // Specified Archive exists, cannot be created/renamed to
-    ChroniclePropertyFull     = -103,  // Property list of Chronicle is full, cannot add new property
-    StoryPropertyFull         = -104,  // Property list of Story is full, cannot add new property
-    ChronicleMetadataFull     = -105,  // Metadata list of Chronicle is full, cannot add new property
-    StoryMetadataFull         = -106,  // Metadata list of Story is full, cannot add new property
-    InvalidConfig             = -107,  // Invalid configuration, cannot be created
-    StoryChunkExists          = -108,  // Specified Story chunk exists, cannot be created
-    ChronicleDirNotExist      = -109,  // Chronicle directory does not exist
-    StoryFileNotExist         = -110,  // Story file does not exist
-    StoryChunkDatasetNotExist = -111,  // Story chunk dataset does not exist
-    StoryChunkExtractionError = -112   // Error in extracting Story chunk in ChronoKeeper
+// A simple enum for server-only errors:
+enum ServerErrorCode {
+    CL_ERR_STORY_EXISTS                = -101,  // Specified Story exists, cannot be created/renamed to
+    CL_ERR_ARCHIVE_EXISTS              = -102,  // Specified Archive exists, cannot be created/renamed to
+    CL_ERR_CHRONICLE_PROPERTY_FULL     = -103,  // Property list of Chronicle is full, cannot add new property
+    CL_ERR_STORY_PROPERTY_FULL         = -104,  // Property list of Story is full, cannot add new property
+    CL_ERR_CHRONICLE_METADATA_FULL     = -105,  // Metadata list of Chronicle is full, cannot add new property
+    CL_ERR_STORY_METADATA_FULL         = -106,  // Metadata list of Story is full, cannot add new property
+    CL_ERR_INVALID_CONF                = -107,  // Invalid configuration, cannot be created
+    CL_ERR_STORY_CHUNK_EXISTS          = -108,  // Specified Story chunk exists, cannot be created
+    CL_ERR_CHRONICLE_DIR_NOT_EXIST     = -109,  // Chronicle directory does not exist
+    CL_ERR_STORY_FILE_NOT_EXIST        = -110,  // Story file does not exist
+    CL_ERR_STORY_CHUNK_DSET_NOT_EXIST  = -111,  // Story chunk dataset does not exist
+    CL_ERR_STORY_CHUNK_EXTRACTION      = -112   // Error in extracting Story chunk in ChronoKeeper
 };
-
-// Convert enum to its integer value
-constexpr int to_int(ServerErrorCode e) noexcept {
-return static_cast<int>(e);
-}
 
 // Convert enum value to its name (for logging)
 inline const char* to_string(ServerErrorCode e) {
     switch (e) {
-    case ServerErrorCode::StoryExists:               return "StoryExists";
-    case ServerErrorCode::ArchiveExists:             return "ArchiveExists";
-    case ServerErrorCode::ChroniclePropertyFull:     return "ChroniclePropertyFull";
-    case ServerErrorCode::StoryPropertyFull:         return "StoryPropertyFull";
-    case ServerErrorCode::ChronicleMetadataFull:     return "ChronicleMetadataFull";
-    case ServerErrorCode::StoryMetadataFull:         return "StoryMetadataFull";
-    case ServerErrorCode::InvalidConfig:             return "InvalidConfig";
-    case ServerErrorCode::StoryChunkExists:          return "StoryChunkExists";
-    case ServerErrorCode::ChronicleDirNotExist:      return "ChronicleDirNotExist";
-    case ServerErrorCode::StoryFileNotExist:         return "StoryFileNotExist";
-    case ServerErrorCode::StoryChunkDatasetNotExist: return "StoryChunkDatasetNotExist";
-    case ServerErrorCode::StoryChunkExtractionError: return "StoryChunkExtractionError";
-    default:                                         return "UnknownServerErrorCode";
+    case CL_ERR_STORY_EXISTS:               return "CL_ERR_STORY_EXISTS";
+    case CL_ERR_ARCHIVE_EXISTS:             return "CL_ERR_ARCHIVE_EXISTS";
+    case CL_ERR_CHRONICLE_PROPERTY_FULL:    return "CL_ERR_CHRONICLE_PROPERTY_FULL";
+    case CL_ERR_STORY_PROPERTY_FULL:        return "CL_ERR_STORY_PROPERTY_FULL";
+    case CL_ERR_CHRONICLE_METADATA_FULL:    return "CL_ERR_CHRONICLE_METADATA_FULL";
+    case CL_ERR_STORY_METADATA_FULL:        return "CL_ERR_STORY_METADATA_FULL";
+    case CL_ERR_INVALID_CONF:               return "CL_ERR_INVALID_CONF";
+    case CL_ERR_STORY_CHUNK_EXISTS:         return "CL_ERR_STORY_CHUNK_EXISTS";
+    case CL_ERR_CHRONICLE_DIR_NOT_EXIST:    return "CL_ERR_CHRONICLE_DIR_NOT_EXIST";
+    case CL_ERR_STORY_FILE_NOT_EXIST:       return "CL_ERR_STORY_FILE_NOT_EXIST";
+    case CL_ERR_STORY_CHUNK_DSET_NOT_EXIST: return "CL_ERR_STORY_CHUNK_DSET_NOT_EXIST";
+    case CL_ERR_STORY_CHUNK_EXTRACTION:     return "CL_ERR_STORY_CHUNK_EXTRACTION";
+    default:                                return "UnknownServerErrorCode";
     }
 }
-
 
 } // namespace chronolog
 

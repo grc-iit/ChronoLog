@@ -227,7 +227,7 @@ int writeStoryChunks(std::map <uint64_t, StoryChunk> &story_chunk_map, StoryChun
         if(H5Lexists(story_file, story_chunk_dset_name.c_str(), H5P_DEFAULT) > 0)
         {
             LOG_ERROR("Story chunk already exists: {}", story_chunk_dset_name.c_str());
-            return chronolog::to_int(chronolog::ServerErrorCode::StoryChunkExists);
+            return chronolog::CL_ERR_STORY_CHUNK_EXISTS;
         }
 
         /**

@@ -37,7 +37,7 @@ int chronolog::GrapherDataStore::startStoryRecording(std::string const &chronicl
             pipelinesWaitingForExit.erase(waiting_iter);
         }
 
-        return chronolog::to_int(chronolog::ClientErrorCode::Success);
+        return chronolog::CL_SUCCESS;
     }
 
     auto result = theMapOfStoryPipelines.emplace(
@@ -52,13 +52,13 @@ int chronolog::GrapherDataStore::startStoryRecording(std::string const &chronicl
         //engage StoryPipeline with the IngestionQueue
         chl::StoryChunkIngestionHandle*ingestionHandle = (*pipeline_iter).second->getActiveIngestionHandle();
         theIngestionQueue.addStoryIngestionHandle(story_id, ingestionHandle);
-        return chronolog::to_int(chronolog::ClientErrorCode::Success);
+        return chronolog::CL_SUCCESS;
     }
     else
     {
         LOG_ERROR("[GrapherDataStore] Failed to create StoryPipeline for StoryId: {}. Possible memory or resource issue."
                   , story_id);
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
 }
 ////////////////////////
@@ -86,7 +86,7 @@ int chronolog::GrapherDataStore::stopStoryRecording(chronolog::StoryId const &st
     {
         LOG_WARNING("[GrapherDataStore] Attempt to stop recording for non-existent StoryId={}", story_id);
     }
-    return chronolog::to_int(chronolog::ClientErrorCode::Success);
+    return chronolog::CL_SUCCESS;
 }
 
 ////////////////////////

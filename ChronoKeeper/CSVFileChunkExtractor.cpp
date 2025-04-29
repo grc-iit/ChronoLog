@@ -47,6 +47,6 @@ int chronolog::CSVFileStoryChunkExtractor::processStoryChunk(StoryChunk*story_ch
     chunk_fstream.close();
     LOG_DEBUG("[CSVFileStoryChunkExtractor] Finished processing StoryChunk. File={}", chunk_filename);
 
-    return chronolog::to_int(chronolog::ClientErrorCode::Success);
+    return chronolog::CL_SUCCESS;
 }
 

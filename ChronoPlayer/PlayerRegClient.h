@@ -48,7 +48,7 @@ public:
         catch(tl::exception const &)
         {
             LOG_ERROR("[PlayerRegistryClient] Failed Sending Registration Message.");
-            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+            return chronolog::CL_ERR_UNKNOWN;
         }
     }
 
@@ -64,7 +64,7 @@ public:
         catch(tl::exception const &)
         {
             LOG_ERROR("[PlayerRegistryClient] Failed Sending Unregistered Message.");
-            return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+            return chronolog::CL_ERR_UNKNOWN;
         }
     }
 

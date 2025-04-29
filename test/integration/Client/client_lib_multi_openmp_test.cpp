@@ -62,26 +62,26 @@ int main(int argc, char**argv)
         flags = 2;
         auto acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
 
-        assert(acquire_ret.first == chronolog::to_int(chronolog::ClientErrorCode::Success));
+        assert(acquire_ret.first == chronolog::CL_SUCCESS);
         ret = client->DestroyStory(chronicle_name, story_name);//, flags);
         LOG_INFO("[ClientLibMultiOpenMPTest] Thread {} destroying story: {}", i, story_name);
 
-        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+        assert(ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->Disconnect();//client_id, flags);
-        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+        assert(ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->ReleaseStory(chronicle_name, story_name);//, flags);
-        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
+        assert(ret == chronolog::CL_SUCCESS);
         ret = client->DestroyStory(chronicle_name, story_name);//, flags);
-        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
         ret = client->DestroyChronicle(chronicle_name);//, flags);
-        assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+        assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
         LOG_INFO("[ClientLibMultiOpenMPTest] Thread {} destroying chronicle: {}", i, chronicle_name);
     }
 
     // Disconnecting from the server
     LOG_INFO("[ClientLibMultiOpenMPTest] Disconnecting from the server.");
     ret = client->Disconnect();
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
+    assert(ret == chronolog::CL_SUCCESS);
     LOG_INFO("[ClientLibMultiOpenMPTest] Disconnected successfully.");
 
     delete client;

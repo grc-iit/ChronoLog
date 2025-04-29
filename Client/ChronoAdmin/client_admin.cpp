@@ -199,7 +199,7 @@ int test_create_chronicle(chronolog::Client &client, const std::string &chronicl
     chronicle_attrs.emplace("IndexGranularity", "Millisecond");
     chronicle_attrs.emplace("TieringPolicy", "Hot");
     ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::ChronicleExists));
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_CHRONICLE_EXISTS);
     return ret;
 }
 
@@ -215,7 +215,7 @@ test_acquire_story(chronolog::Client &client, const std::string &chronicle_name,
     std::pair <int, chronolog::StoryHandle*> acq_ret = client.AcquireStory(chronicle_name, story_name
                                                                            , story_acquisition_attrs, flags);
 //    LOG_DEBUG("acq_ret: {}", acq_ret.first);
-    assert(acq_ret.first == chronolog::to_int(chronolog::ClientErrorCode::Success) || acq_ret.first == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+    assert(acq_ret.first == chronolog::CL_SUCCESS || acq_ret.first == chronolog::CL_ERR_ACQUIRED);
     return acq_ret.second;
 }
 
@@ -230,21 +230,21 @@ int test_release_story(chronolog::Client &client, const std::string &chronicle_n
 {
     random_sleep(); // TODO: (Kun) remove this when the hanging bug upon concurrent acquire is fixed
     int ret = client.ReleaseStory(chronicle_name, story_name);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist));
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST);
     return ret;
 }
 
 int test_destroy_chronicle(chronolog::Client &client, const std::string &chronicle_name)
 {
     int ret = client.DestroyChronicle(chronicle_name);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
     return ret;
 }
 
 int test_destroy_story(chronolog::Client &client, const std::string &chronicle_name, const std::string &story_name)
 {
     int ret = client.DestroyStory(chronicle_name, story_name);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success) || ret == chronolog::to_int(chronolog::ClientErrorCode::NotExist) || ret == chronolog::to_int(chronolog::ClientErrorCode::Acquired));
+    assert(ret == chronolog::CL_SUCCESS || ret == chronolog::CL_ERR_NOT_EXIST || ret == chronolog::CL_ERR_ACQUIRED);
     return ret;
 }
 
@@ -354,7 +354,7 @@ int main(int argc, char**argv)
 
     std::string username = getpwuid(getuid())->pw_name;
     ret = connectTimer.timeBlock(&chronolog::Client::Connect, client);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
+    assert(ret == chronolog::CL_SUCCESS);
 
 //    std::cout << "Connected to server address: " << server_uri << std::endl;
     std::string payload_str(MAX_EVENT_SIZE, 'a');
@@ -578,7 +578,7 @@ std::vector <std::string> &command_subs)
     double local_e2e_end = MPI_Wtime();
 
     ret = disconnectTimer.timeBlock(&chronolog::Client::Disconnect, client);
-    assert(ret == chronolog::to_int(chronolog::ClientErrorCode::Success));
+    assert(ret == chronolog::CL_SUCCESS);
     if(workload_args.barrier)
         MPI_Barrier(MPI_COMM_WORLD);
 

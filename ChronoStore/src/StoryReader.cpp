@@ -46,7 +46,7 @@ std::map <uint64_t, chronolog::StoryChunk> StoryReader::readAllStories(const std
  * @param chronicle_name Chronicle name to read
  * @param story_file_name Story file name to read
  * @param story_chunk_map the map to store StoryChunk objects
- * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if successful, else error code
+ * @return chronolog::CL_SUCCESS if successful, else error code
  */
 int StoryReader::readStory(const std::string &chronicle_name, const std::string &story_file_name
                            , std::map <uint64_t, chronolog::StoryChunk> &story_chunk_map)
@@ -56,7 +56,7 @@ int StoryReader::readStory(const std::string &chronicle_name, const std::string 
     if(story_file < 0)
     {
         LOG_ERROR("Failed to open story file: {}", story_file_name.c_str());
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
 
     // Read all Story Chunks
@@ -65,14 +65,14 @@ int StoryReader::readStory(const std::string &chronicle_name, const std::string 
     // Close Story file
     H5Fclose(story_file);
 
-    return chronolog::to_int(chronolog::ClientErrorCode::Success);
+    return chronolog::CL_SUCCESS;
 }
 
 /**
  * Read all Story Chunks in the Story file
  * @param story_file Story file to read
  * @param story_chunk_map the map to store StoryChunk objects
- * @return chronolog::to_int(chronolog::ClientErrorCode::Success) if successful, else error code
+ * @return chronolog::CL_SUCCESS if successful, else error code
  */
 int StoryReader::readAllStoryChunks(hid_t &story_file, std::map <uint64_t, chronolog::StoryChunk> &story_chunk_map)
 {
@@ -99,7 +99,7 @@ int StoryReader::readAllStoryChunks(hid_t &story_file, std::map <uint64_t, chron
         story_chunk_map.emplace(story_chunk.getStartTime(), story_chunk);
     }
 
-    return chronolog::to_int(chronolog::ClientErrorCode::Success);
+    return chronolog::CL_SUCCESS;
 }
 
 /**
@@ -249,7 +249,7 @@ StoryReader::deserializeStoryChunk(char*story_chunk_json_str, std::string chroni
     else
     {
         LOG_ERROR("Failed to parse story_chunk_json_str: {}", story_chunk_json_str);
-        exit(chronolog::to_int(chronolog::ClientErrorCode::Unknown));
+        exit(chronolog::CL_ERR_UNKNOWN);
     }
     return story_chunk;
 }
@@ -261,7 +261,7 @@ StoryReader::deserializeStoryChunk(char*story_chunk_json_str, std::string chroni
  * @param start_time start time of the range
  * @param end_time end time of the range
  * @param story_chunk_map map of Story Chunks to be populated
- * @return chronolog::to_int(chronolog::ClientErrorCode::Success) on success, else error code
+ * @return chronolog::CL_SUCCESS on success, else error code
  */
 int StoryReader::readStoryRange(const std::string &chronicle_name, const uint64_t &story_id, uint64_t start_time
                                 , uint64_t end_time, std::map <uint64_t, chronolog::StoryChunk> &story_chunk_map)
@@ -272,7 +272,7 @@ int StoryReader::readStoryRange(const std::string &chronicle_name, const uint64_
     if(story_file < 0)
     {
         LOG_ERROR("Failed to open story file: {}", story_file_name.c_str());
-        return chronolog::to_int(chronolog::ClientErrorCode::Unknown);
+        return chronolog::CL_ERR_UNKNOWN;
     }
     // Get all overlapped Story Chunk names
     std::vector <std::string> story_chunk_names_overlap = findContiguousStoryChunks(story_file, start_time, end_time);
@@ -283,7 +283,7 @@ int StoryReader::readStoryRange(const std::string &chronicle_name, const uint64_
         story_chunk_map.emplace(story_chunk.getStartTime(), story_chunk);
     }
 
-    return chronolog::to_int(chronolog::ClientErrorCode::Success);
+    return chronolog::CL_SUCCESS;
 }
 
 /**

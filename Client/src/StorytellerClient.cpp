@@ -108,11 +108,11 @@ int chronolog::StoryWritingHandle<KeeperChoicePolicy>::playback_story(uint64_t s
     playback_events.clear();
 
     if(nullptr == playbackQueryClient)
-    { return chronolog::to_int(chronolog::ClientErrorCode::NoPlayers); }
+    { return chronolog::CL_ERR_NO_PLAYERS; }
 
     playbackQueryClient->send_story_playback_request(chronicle, story, start_time, end_time);
 
-return chronolog::to_int(chronolog::ClientErrorCode::Success);
+return chronolog::CL_SUCCESS;
 }
 
 //////////////////////////////////////////

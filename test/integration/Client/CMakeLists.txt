@@ -9,10 +9,12 @@ message("Building CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}")
 message("Build target: ClientExamples")
 
 set(client_examples 
+    client_lib_basic_example 
     client_lib_connect_rpc_test client_lib_metadata_rpc_test 
     client_lib_multi_argobots_test client_lib_multi_pthread_test  
     client_lib_thread_interdependency_test
-    client_lib_multi_storytellers client_lib_story_reader)
+    client_lib_multi_storytellers 
+    client_lib_story_reader)
 
 # Custom target to copy server_list.in file
 add_custom_target(copyserverlist ALL

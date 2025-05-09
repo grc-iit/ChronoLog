@@ -36,6 +36,25 @@ inline const char* to_string(ClientErrorCode e) {
     }
 }
 
+inline const char* to_string_client(int code) {
+    switch (static_cast<chronolog::ClientErrorCode>(code)) {
+        case CL_SUCCESS:
+        case CL_ERR_UNKNOWN:
+        case CL_ERR_INVALID_ARG:
+        case CL_ERR_NOT_EXIST:
+        case CL_ERR_ACQUIRED:
+        case CL_ERR_NOT_ACQUIRED:
+        case CL_ERR_CHRONICLE_EXISTS:
+        case CL_ERR_NO_KEEPERS:
+        case CL_ERR_NO_CONNECTION:
+        case CL_ERR_NOT_AUTHORIZED:
+        case CL_ERR_NO_PLAYERS:
+            return to_string(static_cast<chronolog::ClientErrorCode>(code));
+        default:
+            return "UnknownClientErrorCode";
+    }
+}
+
 } // namespace chronolog
 
 #endif // CHRONOLOG_CLIENT_ERRORCODE_H

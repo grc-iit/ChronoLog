@@ -25,7 +25,7 @@ typedef struct workload_conf_args_
     uint64_t event_count = 1;
     uint64_t event_interval = 0;
     bool barrier = false;
-    std::string event_input_file;
+    std::string event_payload_file;
     bool interactive = false;
     bool shared_story = false;
     bool perf_test = false;
@@ -40,20 +40,20 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
     workload_conf_args workload_args;
 
     // Define the long options and their corresponding short options
-    struct option long_options[] = {{  "config"          , required_argument, nullptr, 'c'}
-                                    , {"interactive"     , optional_argument, nullptr, 'i'}
-                                    , {"chronicle_count" , required_argument, nullptr, 'h'}
-                                    , {"story_count"     , required_argument, nullptr, 't'}
-                                    , {"min_event_size"  , required_argument, nullptr, 'a'}
-                                    , {"ave_event_size"  , required_argument, nullptr, 's'}
-                                    , {"max_event_size"  , required_argument, nullptr, 'b'}
-                                    , {"event_count"     , required_argument, nullptr, 'n'}
-                                    , {"event_interval"  , required_argument, nullptr, 'g'}
-                                    , {"barrier"         , optional_argument, nullptr, 'r'}
-                                    , {"event_input_file", optional_argument, nullptr, 'f'}
-                                    , {"shared_story"    , optional_argument, nullptr, 'o'}
-                                    , {"perf"            , optional_argument, nullptr, 'p'}
-                                    , {nullptr           , 0                , nullptr, 0} // Terminate the options array
+    struct option long_options[] = {{  "config"              , required_argument, nullptr, 'c'}
+                                    , {"interactive"         , optional_argument, nullptr, 'i'}
+                                    , {"chronicle_count"     , required_argument, nullptr, 'h'}
+                                    , {"story_count"         , required_argument, nullptr, 't'}
+                                    , {"min_event_size"      , required_argument, nullptr, 'a'}
+                                    , {"ave_event_size"      , required_argument, nullptr, 's'}
+                                    , {"max_event_size"      , required_argument, nullptr, 'b'}
+                                    , {"event_count"         , required_argument, nullptr, 'n'}
+                                    , {"event_interval"      , required_argument, nullptr, 'g'}
+                                    , {"barrier"             , optional_argument, nullptr, 'r'}
+                                    , {"event_payload_file"  , optional_argument, nullptr, 'f'}
+                                    , {"shared_story"        , optional_argument, nullptr, 'o'}
+                                    , {"perf"                , optional_argument, nullptr, 'p'}
+                                    , {nullptr               , 0                , nullptr, 0}
     };
 
     // Parse the command-line options
@@ -92,7 +92,7 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                 workload_args.barrier = true;
                 break;
             case 'f':
-                workload_args.event_input_file = optarg;
+                workload_args.event_payload_file = optarg;
                 break;
             case 'o':
                 workload_args.shared_story = true;
@@ -113,7 +113,7 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                              "-n|--event_count <event_count>\n"
                              "-g|--event_interval <event_interval>\n"
                              "-r|--barrier\n"
-                             "-f|--input <event_input_file>\n"
+                             "-f|--input <event_payload_file>\n"
                              "-o|--shared_story\n"
                              "-p|--perf\n" << argv[0] << std::endl;
                 exit(EXIT_FAILURE);
@@ -139,9 +139,10 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                 std::cout << "Interactive mode: off" << std::endl;
                 std::cout << "Chronicle count: " << workload_args.chronicle_count << std::endl;
                 std::cout << "Story count: " << workload_args.story_count << std::endl;
-                if(!workload_args.event_input_file.empty())
+                if(!workload_args.event_payload_file.empty())
                 {
-                    std::cout << "Event input file specified: " << workload_args.event_input_file.c_str() << std::endl;
+                    std::cout << "Event payload file specified: " << workload_args.event_payload_file.c_str()
+                              << std::endl;
                     std::cout << "Barrier: " << (workload_args.barrier ? "true" : "false") << std::endl;
                     std::cout << "Shared story: " << (workload_args.shared_story ? "true" : "false") << std::endl;
                 }
@@ -475,7 +476,7 @@ std::vector <std::string> &command_subs)
                                             workload_args.event_count / workload_args.story_count;
                                     for(uint64_t k = 0; k < event_count_per_story; k++)
                                     {
-                                        if(workload_args.event_input_file.empty())
+                                        if(workload_args.event_payload_file.empty())
                                         {
                                             // randomly generate events size if range is specified
                                             writeEventTimer.pauseTimer();
@@ -505,7 +506,7 @@ std::vector <std::string> &command_subs)
                                         else
                                         {
                                             // read event payload from input file line by line
-                                            std::ifstream input_file(workload_args.event_input_file);
+                                            std::ifstream input_file(workload_args.event_payload_file);
 
                                             // check if the file opened successfully
                                             if(input_file.is_open())

@@ -54,6 +54,26 @@ inline const char* to_string(ServerErrorCode e) {
     }
 }
 
+inline const char* to_string_server(int code) {
+    switch (static_cast<chronolog::ServerErrorCode>(code)) {
+        case CL_ERR_STORY_EXISTS:
+        case CL_ERR_ARCHIVE_EXISTS:
+        case CL_ERR_CHRONICLE_PROPERTY_FULL:
+        case CL_ERR_STORY_PROPERTY_FULL:
+        case CL_ERR_CHRONICLE_METADATA_FULL:
+        case CL_ERR_STORY_METADATA_FULL:
+        case CL_ERR_INVALID_CONF:
+        case CL_ERR_STORY_CHUNK_EXISTS:
+        case CL_ERR_CHRONICLE_DIR_NOT_EXIST:
+        case CL_ERR_STORY_FILE_NOT_EXIST:
+        case CL_ERR_STORY_CHUNK_DSET_NOT_EXIST:
+        case CL_ERR_STORY_CHUNK_EXTRACTION:
+            return to_string(static_cast<chronolog::ServerErrorCode>(code));
+        default:
+            return "UnknownServerErrorCode";
+    }
+}
+
 } // namespace chronolog
 
 #endif // CHRONOLOG_SERVER_ERRCODE_H

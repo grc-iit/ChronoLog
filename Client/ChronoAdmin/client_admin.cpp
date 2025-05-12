@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <functional>
 #include <chrono>
+#include <cctype>
 #include <mpi.h>
 #include <chrono_monitor.h>
 #include <TimerWrapper.h>
@@ -286,27 +287,85 @@ int test_destroy_story(chronolog::Client &client, const std::string &chronicle_n
     return ret;
 }
 
+std::vector <std::string> parse_command_line(const std::string &line)
+{
+    std::vector <std::string> tokens;
+    std::string current_token;
+    bool in_quotes = false;
+
+    for(char ch: line)
+    {
+        if(ch == '\"')
+        {
+            if(in_quotes)
+            {
+                tokens.push_back(current_token);
+                current_token.clear();
+                in_quotes = false;
+            }
+            else
+            {
+                if(!current_token.empty())
+                {
+                    tokens.push_back(current_token);
+                    current_token.clear();
+                }
+                in_quotes = true;
+            }
+        }
+        else if(std::isspace(static_cast<unsigned char>(ch)) && !in_quotes)
+        {
+            if(!current_token.empty())
+            {
+                tokens.push_back(current_token);
+                current_token.clear();
+            }
+        }
+        else
+        {
+            current_token += ch;
+        }
+    }
+
+    if(!current_token.empty())
+    {
+        tokens.push_back(current_token);
+    }
+
+    if(in_quotes)
+    {
+        std::cerr << "Warning: Unterminated quote in command line: " << line << std::endl;
+    }
+
+    return tokens;
+}
+
 // function to extract and execute commands from command line input
 void command_dispatcher(const std::string &command_line, std::unordered_map <std::string, std::function <void(
         std::vector <std::string> &)>> command_map)
 {
-    const char*delim = " ";
-    std::vector <std::string> command_subs;
-    char*s = std::strtok((char*)command_line.c_str(), delim);
-    command_subs.emplace_back(s);
-    while(s != nullptr)
+    if(command_line.empty())
     {
-        s = std::strtok(nullptr, delim);
-        if(s != nullptr)
-            command_subs.emplace_back(s);
+        return;
     }
-    if(command_map.find(command_subs[0]) != command_map.end())
+
+    std::vector <std::string> parsed_tokens = parse_command_line(command_line);
+
+    if(parsed_tokens.empty())
     {
-        command_map[command_subs[0]](command_subs);
+        return;
+    }
+
+    // Find the command in the map.
+    std::string command_name = trim_string(parsed_tokens[0]);
+    auto it = command_map.find(command_name);
+    if(it != command_map.end())
+    {
+        it->second(parsed_tokens);
     }
     else
     {
-        std::cout << "Invalid command. Please try again." << std::endl;
+        std::cerr << "Error: Command not found: '" << parsed_tokens[0] << "'" << std::endl;
     }
 }
 
@@ -416,7 +475,11 @@ std::vector <std::string> &command_subs)
         {
             assert(command_subs.size() == 2);
             std::string chronicle_name = command_subs[1];
-            test_create_chronicle(client, chronicle_name);
+            ret = test_create_chronicle(client, chronicle_name);
+            if(ret == chronolog::CL_SUCCESS)
+            {
+                std::cout << "Chronicle created successfully: " << chronicle_name << std::endl;
+            }
         }}
                                                                                                            , {"-a", [&](
                         std::vector <std::string> &command_subs)
@@ -427,6 +490,11 @@ std::vector <std::string> &command_subs)
                         std::string chronicle_name = command_subs[2];
                         std::string story_name = command_subs[3];
                         story_handle = test_acquire_story(client, chronicle_name, story_name);
+                        if(story_handle)
+                        {
+                            std::cout << "Story acquired successfully: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
                     }
                 }}
                                                                                                            , {"-q", [&](
@@ -437,7 +505,17 @@ std::vector <std::string> &command_subs)
                         assert(command_subs.size() == 4);
                         std::string chronicle_name = command_subs[2];
                         std::string story_name = command_subs[3];
-                        test_release_story(client, chronicle_name, story_name);
+                        ret = test_release_story(client, chronicle_name, story_name);
+                        if(ret == chronolog::CL_SUCCESS)
+                        {
+                            std::cout << "Story released successfully: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
+                        else if(ret == chronolog::CL_ERR_NOT_EXIST)
+                        {
+                            std::cout << "Story does not exist: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
                     }
                 }}
                                                                                                            , {"-w", [&](
@@ -445,7 +523,12 @@ std::vector <std::string> &command_subs)
                 {
                     assert(command_subs.size() == 2);
                     std::string event_payload = command_subs[1];
-                    test_write_event(story_handle, event_payload);
+                    ret = test_write_event(story_handle, event_payload);
+                    if(ret == 1)
+                    {
+                        std::cout << "Event written successfully, payload length: " << event_payload.length()
+                                  << std::endl;
+                    }
                 }}
                                                                                                            , {"-d", [&](
                         std::vector <std::string> &command_subs)
@@ -454,14 +537,41 @@ std::vector <std::string> &command_subs)
                     {
                         assert(command_subs.size() == 3);
                         std::string chronicle_name = command_subs[2];
-                        test_destroy_chronicle(client, chronicle_name);
+                        ret = test_destroy_chronicle(client, chronicle_name);
+                        if(ret == chronolog::CL_SUCCESS)
+                        {
+                            std::cout << "Chronicle destroyed successfully: " << chronicle_name << std::endl;
+                        }
+                        else if(ret == chronolog::CL_ERR_ACQUIRED)
+                        {
+                            std::cout << "Chronicle is still acquired, cannot destroy: " << chronicle_name << std::endl;
+                        }
+                        else if(ret == chronolog::CL_ERR_NOT_EXIST)
+                        {
+                            std::cout << "Chronicle does not exist: " << chronicle_name << std::endl;
+                        }
                     }
                     else if(command_subs[1] == "-s")
                     {
                         assert(command_subs.size() == 4);
                         std::string chronicle_name = command_subs[2];
                         std::string story_name = command_subs[3];
-                        test_destroy_story(client, chronicle_name, story_name);
+                        ret = test_destroy_story(client, chronicle_name, story_name);
+                        if(ret == chronolog::CL_SUCCESS)
+                        {
+                            std::cout << "Story destroyed successfully: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
+                        else if(ret == chronolog::CL_ERR_ACQUIRED)
+                        {
+                            std::cout << "Story is still acquired, cannot destroy: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
+                        else if(ret == chronolog::CL_ERR_NOT_EXIST)
+                        {
+                            std::cout << "Story does not exist: " << story_name << " in Chronicle "
+                                      << chronicle_name << std::endl;
+                        }
                     }
                 }}};
 
@@ -470,6 +580,7 @@ std::vector <std::string> &command_subs)
         {
             command_line.clear();
             std::getline(std::cin, command_line);
+            trim_string(command_line);
             if(command_line == "-disconnect") break;
             command_dispatcher(command_line, command_map);
         }
@@ -558,6 +669,7 @@ std::vector <std::string> &command_subs)
                                                 struct timespec sleep_ts{};
                                                 while(std::getline(input_file, event_payload))
                                                 {
+                                                    if(event_payload.empty()) continue;
                                                     event_timestamp = get_event_timestamp(event_payload);
                                                     if(event_timestamp < last_event_timestamp)
                                                     {

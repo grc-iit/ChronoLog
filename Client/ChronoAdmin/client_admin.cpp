@@ -335,7 +335,9 @@ std::vector <std::string> parse_command_line(const std::string &line)
 
     if(in_quotes)
     {
-        std::cerr << "Warning: Unterminated quote in command line: " << line << std::endl;
+        std::cerr << "Error: Unterminated quote in command line: " << line << std::endl;
+        tokens.clear(); // Clear tokens to indicate an error
+        return tokens;  // Return an empty list to signal failure
     }
 
     return tokens;
@@ -581,7 +583,7 @@ std::vector <std::string> &command_subs)
         {
             command_line.clear();
             std::getline(std::cin, command_line);
-            trim_string(command_line);
+            command_line = trim_string(command_line);
             if(command_line == "-disconnect") break;
             command_dispatcher(command_line, command_map);
         }

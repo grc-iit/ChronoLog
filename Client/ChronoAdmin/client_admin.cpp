@@ -34,7 +34,7 @@ typedef struct workload_conf_args_
 
 void usage(char**argv)
 {
-    std::cerr << "\nUsage: \n"
+    std::cerr << "\nUsage: " << argv[0] << " [options]\n"
                  "-c|--config <config_file>\n"
                  "-i|--interactive\n"
                  "-h|--chronicle_count <chronicle_count>\n"
@@ -45,7 +45,7 @@ void usage(char**argv)
                  "-n|--event_count <event_count>\n"
                  "-g|--event_interval <event_interval>\n"
                  "-r|--barrier\n"
-                 "-f|--input <event_payload_file>\n"
+                 "-f|--event_payload_file <event_payload_file>\n"
                  "-o|--shared_story\n"
                  "-p|--perf\n" << argv[0] << std::endl;
 }
@@ -78,13 +78,14 @@ std::string &trim_string(std::string &str)
 uint64_t get_uint64_t_from_string(const std::string &str)
 {
     char *endptr;
+    errno = 0; // Reset errno before calling strtoull
     uint64_t value = strtoull(str.c_str(), &endptr, 10);
     if(*endptr != '\0')
     {
         std::cerr << "Invalid number: " << str << std::endl;
         exit(EXIT_FAILURE);
     }
-    if(value == 0 || value == ULLONG_MAX)
+    if(value == 0 || errno == ERANGE)
     {
         std::cerr << "Only positive number is allowed" << std::endl;
         exit(EXIT_FAILURE);

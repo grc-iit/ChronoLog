@@ -9,18 +9,21 @@ int main() {
     chronolog::Client client(portalConf);
 
     // Connect to ChronoVisor
-    client.Connect();
+    int ret = client.Connect();
+    assert(ret != chronolog::CL_SUCCESS);
 
     // Create a chronicle
     std::string chronicle_name = "MyChronicle";
     std::map<std::string, std::string> chronicle_attrs;
     int flags = 0;
-    client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
+    ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
+    assert(ret != chronolog::CL_SUCCESS);
 
     // Acquire a story
     std::string story_name = "MyStory";
     std::map<std::string, std::string> story_attrs;
     auto acquire_result = client.AcquireStory(chronicle_name, story_name, story_attrs, flags);
+    assert(acquire_ret.first == chronolog::CL_SUCCESS);
     auto story_handle = acquire_result.second;
 
     // Log a few events to the story
@@ -31,16 +34,23 @@ int main() {
     // TODO: Replay the story to read logged events
 
     // Release the story
-    client.ReleaseStory(chronicle_name, story_name);
+    ret = client.ReleaseStory(chronicle_name, story_name);
+    assert(ret != chronolog::CL_SUCCESS);
 
     // Destroy the story
-    client.DestroyStory(chronicle_name, story_name);
+    ret = client.DestroyStory(chronicle_name, story_name);
+    assert(ret != chronolog::CL_SUCCESS);
 
     // Destroy the chronicle
-    client.DestroyChronicle(chronicle_name);
+    ret = client.DestroyChronicle(chronicle_name);
+    assert(ret != chronolog::CL_SUCCESS);
 
     // Disconnect from ChronoVisor
-    client.Disconnect();
+    ret = client.Disconnect();
+    assert(ret != chronolog::CL_SUCCESS);
+
+    // Clean up
+    delete client;
 
     return 0;
 }

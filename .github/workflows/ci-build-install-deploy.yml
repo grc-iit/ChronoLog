@@ -1,0 +1,122 @@
+name: ChronoLog CI Build, Install, Deploy
+
+on:
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  ci-check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t chronolog-ci .github/docker
+
+      - name: Run CI inside Docker container
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            chronolog-ci \
+            bash -c "
+              set -e
+              ##################################
+              # Step 1: Spack Environment
+              ##################################
+              echo '[1/6] Setting up Spack...'
+              source /opt/spack/share/spack/setup-env.sh
+              spack env activate -p .
+              spack install
+
+              ##################################
+              # Step 2: Build ChronoLog
+              ##################################
+              echo '[2/6] Building ChronoLog...'
+              if [ -x /workspace/deploy/local_single_user_deploy.sh ]; then
+                cd /workspace/deploy
+                ./local_single_user_deploy.sh --build --build-type Debug --install-dir \$HOME/chronolog-install/
+                cd /workspace
+              else
+                echo '❌ Deploy script not found or not executable'
+                exit 1
+              fi
+
+              ##################################
+              # Step 3: Install ChronoLog
+              ##################################
+              echo '[3/6] Installing ChronoLog...'
+              if [ -x /workspace/deploy/local_single_user_deploy.sh ]; then
+                cd /workspace/deploy
+                ./local_single_user_deploy.sh -i -w \$HOME/chronolog-install/Debug/
+                cd /workspace
+              else
+                echo '❌ Deploy script not found or not executable'
+                exit 1
+              fi
+              ls -l \$HOME/chronolog-install
+
+              ##################################
+              # Step 4: Post-Install Verification
+              ##################################
+              echo '[4/6] Verifying install...'
+              if [ -d \"\$HOME/chronolog-install/Debug/bin\" ]; then
+                echo '✅ Install successful!'
+                ls -l \$HOME/chronolog-install/Debug/bin
+              else
+                echo '❌ Install failed — bin directory not found'
+                exit 1
+              fi
+
+              ##################################
+              # Step 5: Deploy ChronoLog
+              ##################################
+              echo '[5/6] Deploying ChronoLog...'
+              if [ -x /workspace/deploy/local_single_user_deploy.sh ]; then
+                cd /workspace/deploy
+                ./local_single_user_deploy.sh -d -w \$HOME/chronolog-install/Debug/
+                cd /workspace
+              else
+                echo '❌ Deploy script not found or not executable'
+                exit 1
+              fi
+
+              ##################################
+              # Step 6: Check Deployment
+              ##################################
+              echo '[6/6] Verifying Deployment...'
+              sleep 5
+              echo '📦 Listing ChronoLog processes...'
+              pgrep -la chrono > /tmp/chrono_processes.txt || true
+              cat /tmp/chrono_processes.txt
+
+              echo '🔍 Checking required components...'
+              missing=0
+              for proc in chronovisor_server chrono_grapher chrono_player chrono_keeper; do
+                if grep -q \"\$proc\" /tmp/chrono_processes.txt; then
+                  echo \"✅ Found: \$proc\"
+                else
+                  echo \"❌ Missing: \$proc\"
+                  missing=1
+                fi
+              done
+
+              if [ \"\$missing\" -eq 0 ]; then
+                echo '✅ All ChronoLog components are running.'
+              else
+                echo '❌ Deployment incomplete — some components are not running.'
+                echo \"==== Dumping monitor logs ====\"
+                if [ -d \"\$HOME/chronolog-install/Debug/monitor\" ]; then
+                  for log in \$HOME/chronolog-install/Debug/monitor/*; do
+                    echo \"==== \$log ====\"
+                    cat \"\$log\"
+                  done
+                else
+                  echo \"No monitor logs found!\"
+                fi
+                exit 1
+              fi              
+            "

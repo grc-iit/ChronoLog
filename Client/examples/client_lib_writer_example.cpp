@@ -31,8 +31,6 @@ int main() {
     story_handle->log_event("Event 2");
     story_handle->log_event("Event 3");
 
-    // TODO: Replay the story to read logged events
-
     // Release the story
     ret = client.ReleaseStory(chronicle_name, story_name);
     assert(ret != chronolog::CL_SUCCESS);

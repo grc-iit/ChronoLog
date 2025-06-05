@@ -77,7 +77,7 @@ jobs:
               echo '[5/6] Deploying ChronoLog...'
               if [ -x /workspace/deploy/local_single_user_deploy.sh ]; then
                 cd /workspace/deploy
-                ./local_single_user_deploy.sh -d -w \$HOME/chronolog-install/Debug/
+                ./local_single_user_deploy.sh -d -k 5 -r 3 -w \$HOME/chronolog-install/Debug/
                 cd /workspace
               else
                 echo '❌ Deploy script not found or not executable'
@@ -94,20 +94,31 @@ jobs:
               cat /tmp/chrono_processes.txt
 
               echo '🔍 Checking required components...'
-              missing=0
               for proc in chronovisor_server chrono_grapher chrono_player chrono_keeper; do
-                if grep -q \"\$proc\" /tmp/chrono_processes.txt; then
-                  echo \"✅ Found: \$proc\"
+                count=\$(grep -c \"\$proc\" /tmp/chrono_processes.txt || true)
+                case \$proc in
+                  chronovisor_server)
+                    expected=1
+                    ;;
+                  chrono_grapher|chrono_player)
+                    expected=3
+                    ;;
+                  chrono_keeper)
+                    expected=5
+                    ;;
+                esac
+                if [ \"\$count\" -eq \"\$expected\" ]; then
+                  echo \"✅ Found \$count \$proc (expected \$expected)\"
                 else
-                  echo \"❌ Missing: \$proc\"
+                  echo \"❌ Missing or wrong count: \$proc (found \$count, expected \$expected)\"
                   missing=1
                 fi
               done
 
-              if [ \"\$missing\" -eq 0 ]; then
+              if [ \"\$missing\" != \"1\" ]; then
                 echo '✅ All ChronoLog components are running.'
               else
-                echo '❌ Deployment incomplete — some components are not running.'
+                echo '❌ Deployment incomplete — some components are not running or wrong count.'
                 echo \"==== Dumping monitor logs ====\"
                 if [ -d \"\$HOME/chronolog-install/Debug/monitor\" ]; then
                   for log in \$HOME/chronolog-install/Debug/monitor/*; do

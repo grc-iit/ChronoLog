@@ -1,5 +1,6 @@
 #include <chronolog_client.h>
 #include <common.h>
+#include <cassert>
 
 int main() {
     // Configure the client connection
@@ -23,7 +24,7 @@ int main() {
     std::string story_name = "MyStory";
     std::map<std::string, std::string> story_attrs;
     auto acquire_result = client.AcquireStory(chronicle_name, story_name, story_attrs, flags);
-    assert(acquire_ret.first == chronolog::CL_SUCCESS);
+    assert(acquire_result.first == chronolog::CL_SUCCESS);
     auto story_handle = acquire_result.second;
 
     // Log a few events to the story
@@ -46,9 +47,6 @@ int main() {
     // Disconnect from ChronoVisor
     ret = client.Disconnect();
     assert(ret != chronolog::CL_SUCCESS);
-
-    // Clean up
-    delete client;
 
     return 0;
 }

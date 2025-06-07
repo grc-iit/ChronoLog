@@ -223,6 +223,24 @@ void ChronoLog::ConfigurationManager::parsePlayerConf(json_object*json_conf)
                 }
             }
         }
+        else if(strcmp(key, "ArchiveReaders") == 0)
+        {
+            assert(json_object_is_type(val, json_type_object));
+            json_object*archive_readers = json_object_object_get(json_conf, "ArchiveReaders");
+            json_object_object_foreach(archive_readers, key, val)
+            {
+                if(strcmp(key, "story_files_dir") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    PLAYER_CONF.READER_CONF.story_files_dir = json_object_get_string(val);
+                }
+                else
+                {
+                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown archive reader configuration " << key
+                              << std::endl;
+                }
+            }
+        }
         else
         {
             std::cerr << "[ConfigurationManager][chrono_player] Unknown configuration " << key << std::endl;

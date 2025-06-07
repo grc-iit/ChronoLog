@@ -123,10 +123,10 @@
       }
     },
     "DataStoreInternals": {
-        "max_story_chunk_size": 4096
+      "max_story_chunk_size": 4096
     },
     "Extractors": {
-        "story_files_dir" : "/tmp"
+      "story_files_dir": "/tmp"
     }
  },
  "chrono_player": {
@@ -165,7 +165,10 @@
         "filenum": 3,
         "flushlevel": "debug"
       }
-    }
+    },
+   "ArchiveReaders": {
+     "story_files_dir": "/tmp"
+   }
  },
   "chrono_client": {
     "VisorClientPortalService": {

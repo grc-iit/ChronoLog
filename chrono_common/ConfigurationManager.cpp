@@ -77,7 +77,7 @@ void ChronoLog::ConfigurationManager::parseGrapherConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown Logging configuration: " << key
+                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown Monitoring configuration: " << key
                               << std::endl;
                 }
             }
@@ -95,7 +95,8 @@ void ChronoLog::ConfigurationManager::parseGrapherConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown configuration: " << key << std::endl;
+                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown DataStoreInternals configuration: "
+                              << key << std::endl;
                 }
             }
         }
@@ -113,14 +114,14 @@ void ChronoLog::ConfigurationManager::parseGrapherConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown extractor configuration " << key
+                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown Extractors configuration " << key
                               << std::endl;
                 }
             }
         }
         else
         {
-            std::cerr << "[ConfigurationManager][chrono_grapher] Unknown configuration " << key << std::endl;
+            std::cerr << "[ConfigurationManager][chrono_grapher] Unknown Grapher configuration " << key << std::endl;
         }
     }
 }
@@ -184,7 +185,7 @@ void ChronoLog::ConfigurationManager::parsePlayerConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_playher] Unknown VisorRegistryService configuration: "
+                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown VisorRegistryService configuration: "
                               << key << std::endl;
                 }
             }
@@ -201,7 +202,7 @@ void ChronoLog::ConfigurationManager::parsePlayerConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown Logging configuration: " << key
+                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown Monitoring configuration: " << key
                               << std::endl;
                 }
             }
@@ -219,7 +220,8 @@ void ChronoLog::ConfigurationManager::parsePlayerConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown configuration: " << key << std::endl;
+                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown DataStoreInternals configuration: "
+                              << key << std::endl;
                 }
             }
         }
@@ -236,14 +238,14 @@ void ChronoLog::ConfigurationManager::parsePlayerConf(json_object*json_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown archive reader configuration " << key
+                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown ArchiveReaders configuration " << key
                               << std::endl;
                 }
             }
         }
         else
         {
-            std::cerr << "[ConfigurationManager][chrono_player] Unknown configuration " << key << std::endl;
+            std::cerr << "[ConfigurationManager][chrono_player] Unknown Player configuration " << key << std::endl;
         }
     }
 }

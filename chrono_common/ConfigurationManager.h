@@ -147,6 +147,28 @@ typedef struct KeeperGrapherDrainServiceConf_
     }
 } KeeperGrapherDrainServiceConf;
 
+typedef struct DataStoreConf_
+{
+    int max_story_chunk_size;
+
+    [[nodiscard]] std::string to_String() const
+    {
+        return  "[DATA_STORE_CONF: max_story_chunk_size: " + std::to_string(max_story_chunk_size) +
+                "]";
+    }
+} DataStoreConf;
+
+typedef struct ArchiveExtractorReaderConf_
+{
+    std::string story_files_dir;
+
+    [[nodiscard]] std::string to_String() const
+    {
+        return  "[EXTRACTOR_READER_CONF: STORY_FILES_DIR: " + story_files_dir +
+                "]";
+    }
+} ExtractorReaderConf;
+
 typedef struct VisorConf_
 {
     VisorClientPortalServiceConf VISOR_CLIENT_PORTAL_SERVICE_CONF;
@@ -170,7 +192,8 @@ typedef struct KeeperConf_
     KeeperDataStoreAdminServiceConf KEEPER_DATA_STORE_ADMIN_SERVICE_CONF;
     VisorKeeperRegistryServiceConf VISOR_KEEPER_REGISTRY_SERVICE_CONF;
     KeeperGrapherDrainServiceConf KEEPER_GRAPHER_DRAIN_SERVICE_CONF;
-    std::string STORY_FILES_DIR;
+    DataStoreConf DATA_STORE_CONF{};
+    ExtractorReaderConf EXTRACTOR_CONF;
     LogConf KEEPER_LOG_CONF;
 
     [[nodiscard]] std::string to_String() const
@@ -180,31 +203,11 @@ typedef struct KeeperConf_
                ", KEEPER_DATA_STORE_ADMIN_SERVICE_CONF: " + KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.to_String() +
                ", VISOR_KEEPER_REGISTRY_SERVICE_CONF: " + VISOR_KEEPER_REGISTRY_SERVICE_CONF.to_String() +
                ", KEEPER_GRAPHER_DRAIN_SERVICE_CONF: " + KEEPER_GRAPHER_DRAIN_SERVICE_CONF.to_String() +
-               ", STORY_FILES_DIR: " + STORY_FILES_DIR + ", KEEPER_LOG_CONF: " + KEEPER_LOG_CONF.to_String() + "]";
+               ", DATA_STORE_CONF: " + DATA_STORE_CONF.to_String() +
+               ", EXTRACTOR_CONF: " + EXTRACTOR_CONF.to_String() +
+               ", KEEPER_LOG_CONF: " + KEEPER_LOG_CONF.to_String() + "]";
     }
 } KeeperConf;
-
-typedef struct DataStoreConf_
-{
-    int max_story_chunk_size;
-
-    [[nodiscard]] std::string to_String() const
-    {
-        return  "[DATA_STORE_CONF: max_story_chunk_size: " + std::to_string(max_story_chunk_size) +
-                "]";
-    }
-} DataStoreConf;
-
-typedef struct ArchiveExtractorReaderConf_
-{
-    std::string story_files_dir;
-
-    [[nodiscard]] std::string to_String() const
-    {
-        return  "[EXTRACTOR_READER_CONF: STORY_FILES_DIR: " + story_files_dir +
-                "]";
-    }
-} ExtractorReaderConf;
 
 typedef struct GrapherConf_
 {
@@ -213,8 +216,8 @@ typedef struct GrapherConf_
     RPCProviderConf DATA_STORE_ADMIN_SERVICE_CONF;
     RPCProviderConf VISOR_REGISTRY_SERVICE_CONF;
     LogConf LOG_CONF;
-    DataStoreConf  DATA_STORE_CONF{};
-    ExtractorReaderConf  EXTRACTOR_CONF;
+    DataStoreConf DATA_STORE_CONF{};
+    ExtractorReaderConf EXTRACTOR_CONF;
 
     [[nodiscard]] std::string to_String() const
     {
@@ -247,8 +250,8 @@ typedef struct PlayerConf_
     RPCProviderConf PLAYBACK_SERVICE_CONF;
     RPCProviderConf VISOR_REGISTRY_SERVICE_CONF;
     LogConf LOG_CONF;
-    DataStoreConf  DATA_STORE_CONF{};
-    ExtractorReaderConf  READER_CONF;
+    DataStoreConf DATA_STORE_CONF{};
+    ExtractorReaderConf READER_CONF;
 
     PlayerConf_()
     {
@@ -360,7 +363,9 @@ public:
         KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.BASE_PORT = 3333;
         KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID = 33;
 
-        KEEPER_CONF.STORY_FILES_DIR = "/tmp/";
+        KEEPER_CONF.DATA_STORE_CONF.max_story_chunk_size = 4096;
+
+        KEEPER_CONF.EXTRACTOR_CONF.story_files_dir = "/tmp/";
 
         /* Grapher-related configurations */
         GRAPHER_CONF.RECORDING_GROUP = 0;
@@ -378,6 +383,8 @@ public:
         GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.IP = "127.0.0.1";
         GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.BASE_PORT = 8888;
         GRAPHER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID = 88;
+
+        GRAPHER_CONF.DATA_STORE_CONF.max_story_chunk_size = 4096;
 
         GRAPHER_CONF.EXTRACTOR_CONF.story_files_dir = "/tmp/";
 
@@ -397,6 +404,8 @@ public:
         PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.IP = "127.0.0.1";
         PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.BASE_PORT = 8888;
         PLAYER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID = 88;
+
+        PLAYER_CONF.DATA_STORE_CONF.max_story_chunk_size = 4096;
 
         PLAYER_CONF.READER_CONF.story_files_dir = "/tmp/";
 
@@ -848,8 +857,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown VisorClientPortalService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown VisorClientPortalService "
+                                     "configuration: " << key << std::endl;
                     }
                 }
             }
@@ -866,8 +875,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown VisorKeeperRegistryService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown VisorKeeperRegistryService "
+                                     "configuration: " << key << std::endl;
                     }
                 }
             }
@@ -883,7 +892,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown VisorLog configuration: " << key << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown Monitoring configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
@@ -896,7 +906,7 @@ private:
             }
             else
             {
-                std::cerr << "[ConfigurationManager] Unknown VisorLog configuration: " << key << std::endl;
+                std::cerr << "[ConfigurationManager] [chrono_visor] Unknown Visor configuration: " << key << std::endl;
             }
         }
     }
@@ -923,8 +933,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown KeeperRecordingService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperRecordingService "
+                                     "configuration: " << key << std::endl;
                     }
                 }
             }
@@ -941,8 +951,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown KeeperDataStoreAdminService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperDataStoreAdminService "
+                                     "configuration: " << key << std::endl;
                     }
                 }
             }
@@ -959,8 +969,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown VisorKeeperRegistryService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown VisorKeeperRegistryService configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
@@ -977,8 +987,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown KeeperGrapherDrainService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperGrapherDrainService configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
@@ -994,18 +1004,52 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown KeeperLog configuration: " << key << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown Monitoring configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
-            else if(strcmp(key, "story_files_dir") == 0)
+            else if(strcmp(key, "DataStoreInternals") == 0)
             {
-                assert(json_object_is_type(val, json_type_string));
-                KEEPER_CONF.STORY_FILES_DIR = json_object_get_string(val);
+                assert(json_object_is_type(val, json_type_object));
+                json_object*data_store_conf = json_object_object_get(json_conf, "DataStoreInternals");
+                json_object_object_foreach(data_store_conf, key, val)
+                {
+                    if(strcmp(key, "max_story_chunk_size") == 0)
+                    {
+                        assert(json_object_is_type(val, json_type_int));
+                        KEEPER_CONF.DATA_STORE_CONF.max_story_chunk_size = json_object_get_int(val);
+                    }
+                    else
+                    {
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown DataStoreInternals configuration: "
+                                  << key << std::endl;
+                    }
+                }
+            }
+            else if(strcmp(key, "Extractors") == 0)
+            {
+                assert(json_object_is_type(val, json_type_object));
+                json_object*extractors = json_object_object_get(json_conf, "Extractors");
+                json_object_object_foreach(extractors, key, val)
+                {
+                    if(strcmp(key, "story_files_dir") == 0)
+                    {
+//                    std::cerr << "reading story_files_dir" << std::endl;
+                        assert(json_object_is_type(val, json_type_string));
+                        KEEPER_CONF.EXTRACTOR_CONF.story_files_dir = json_object_get_string(val);
+                    }
+                    else
+                    {
+                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown Extractors configuration "
+                                  << key << std::endl;
+                    }
+                }
             }
             else
             {
-                std::cerr << "[ConfigurationManager] Unknown Keeper configuration: " << key << std::endl;
+                std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown Keeper configuration: "
+                          << key << std::endl;
             }
         }
     }
@@ -1030,8 +1074,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown ClientQueryService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_client] Unknown ClientQueryService configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
@@ -1048,8 +1092,8 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown VisorClientPortalService configuration: " << key
-                                  << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_client] Unknown VisorClientPortalService configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
@@ -1065,13 +1109,15 @@ private:
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] Unknown ClientLog configuration: " << key << std::endl;
+                        std::cerr << "[ConfigurationManager] [chrono_client] Unknown Monitoring configuration: "
+                                  << key << std::endl;
                     }
                 }
             }
             else
             {
-                std::cerr << "[ConfigurationManager] Unknown ClientLog configuration: " << key << std::endl;
+                std::cerr << "[ConfigurationManager] [chrono_client] Unknown Client configuration: "
+                          << key << std::endl;
             }
         }
     }

@@ -11,14 +11,14 @@ int main() {
 
     // Connect to ChronoVisor
     int ret = client.Connect();
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Create a chronicle
     std::string chronicle_name = "MyChronicle";
     std::map<std::string, std::string> chronicle_attrs;
     int flags = 0;
     ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Acquire a story
     std::string story_name = "MyStory";
@@ -34,19 +34,19 @@ int main() {
 
     // Release the story
     ret = client.ReleaseStory(chronicle_name, story_name);
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Destroy the story
     ret = client.DestroyStory(chronicle_name, story_name);
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Destroy the chronicle
     ret = client.DestroyChronicle(chronicle_name);
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Disconnect from ChronoVisor
     ret = client.Disconnect();
-    assert(ret != chronolog::CL_SUCCESS);
+    assert(ret == chronolog::CL_SUCCESS);
 
     return 0;
 }

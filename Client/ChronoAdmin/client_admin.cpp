@@ -528,7 +528,7 @@ std::vector <std::string> &command_subs)
                     assert(command_subs.size() == 2);
                     std::string event_payload = command_subs[1];
                     ret_u = test_write_event(story_handle, event_payload);
-                    if(ret_i > 0)
+                    if(ret_u > 0)
                     {
                         std::cout << "Event written successfully, payload length: " << event_payload.length()
                                   << std::endl;

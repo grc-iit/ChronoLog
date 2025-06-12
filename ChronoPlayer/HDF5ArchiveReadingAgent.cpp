@@ -70,7 +70,7 @@ int chronolog::HDF5ArchiveReadingAgent::readArchivedStory(const ChronicleName &c
             , std::get <0>(end_it->first), std::get <1>(end_it->first), std::get <2>(end_it->first), end_it->second);
     do
     {
-        fs::path file_full_path = fs::path(archive_path_) / fs::path(start_it->second);
+        fs::path file_full_path = fs::path(start_it->second);
         std::string file_name = file_full_path.string();
         std::unique_ptr <H5::H5File> file;
         StoryChunk *story_chunk = nullptr;

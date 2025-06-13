@@ -51,7 +51,6 @@ int chronolog::HDF5ArchiveReadingAgent::readArchivedStory(const ChronicleName &c
     LOG_DEBUG("[HDF5ArchiveReadingAgent] readArchiveStory {}-{} range {}-{}", chronicleName, storyName, startTime
               , endTime);
 
-
     if(start_it == end_it)
     {
         LOG_DEBUG("[HDF5ArchiveReadingAgent] No matching files found for story {}-{} in range {}-{}", chronicleName
@@ -68,13 +67,13 @@ int chronolog::HDF5ArchiveReadingAgent::readArchivedStory(const ChronicleName &c
     LOG_DEBUG(
             "[HDF5ArchiveReadingAgent] End iterator: chronicle name: {}, story name: {}, start time: {}, file name: {}"
             , std::get <0>(end_it->first), std::get <1>(end_it->first), std::get <2>(end_it->first), end_it->second);
-    do
+
+    while(start_it != end_it)
     {
-        fs::path file_full_path = fs::path(start_it->second);
+        fs::path file_full_path = fs::path(start_it++->second);
         std::string file_name = file_full_path.string();
         std::unique_ptr <H5::H5File> file;
         StoryChunk *story_chunk = nullptr;
-        uint64_t event_count = 0;
         try
         {
             H5::Exception::dontPrint();
@@ -131,17 +130,18 @@ int chronolog::HDF5ArchiveReadingAgent::readArchivedStory(const ChronicleName &c
                 LogEvent event(event_hvl.storyId, event_hvl.eventTime, event_hvl.clientId, event_hvl.eventIndex
                                , std::string(static_cast<char *>(event_hvl.logRecord.p), event_hvl.logRecord.len));
                 story_chunk->insertEvent(event);
-                event_count++;
             }
-            LOG_DEBUG("[HDF5ArchiveReadingAgent] Inserted {} events into StoryChunk {}-{} range {}-{}", event_count
-                      , chronicleName, storyName, startTime, endTime);
 
-            if(event_count != 0)
+            if(story_chunk->getEventCount() > 0)
             {
                 listOfChunks.emplace_back(story_chunk);
+                LOG_DEBUG("[HDF5ArchiveReadingAgent] Inserted a StoryChunk with {} events {}-{} range {}-{} into list"
+                          , story_chunk->getEventCount(), chronicleName, storyName, startTime, endTime);
             }
             else
             {
+                LOG_DEBUG("[HDF5ArchiveReadingAgent] No events in {}-{} are in range {}-{}, "
+                          "no StoryChunk added to list", chronicleName, storyName, startTime, endTime);
                 delete story_chunk;
             }
         }
@@ -172,7 +172,7 @@ int chronolog::HDF5ArchiveReadingAgent::readArchivedStory(const ChronicleName &c
             delete story_chunk;
             return CL_ERR_UNKNOWN;
         }
-    } while(++start_it != end_it);
+    }
 
     return 0;
 }

@@ -84,9 +84,7 @@
       }
     },
     "DataStoreInternals": {
-      "max_story_chunk_size": 4096,
-      "story_chunk_duration_secs": 10,  
-      "acceptance_window_secs" : 30
+      "max_story_chunk_size": 4096
     },
     "Extractors": {
       "story_files_dir": "/tmp"
@@ -131,8 +129,6 @@
     },
     "DataStoreInternals": {
       "max_story_chunk_size": 4096
-      "story_chunk_duration_secs": 60,  
-      "acceptance_window_secs" : 180
     },
     "Extractors": {
       "story_files_dir": "/tmp"
@@ -177,8 +173,6 @@
     },
     "DataStoreInternals": {
       "max_story_chunk_size": 4096
-      "story_chunk_duration_secs": 60,  
-      "acceptance_window_secs" : 180
     },
     "ArchiveReaders": {
       "story_files_dir": "/tmp"

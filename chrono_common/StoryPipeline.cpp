@@ -45,7 +45,8 @@ chronolog::StoryPipeline::StoryPipeline(StoryChunkExtractionQueue &extractionQue
 
     while( storyTimelineMap.size() < 3)
     {
-        appendStoryChunk();
+        storyTimelineMap.insert( std::pair <uint64_t, chronolog::StoryChunk*>(story_start_time 
+                    , new chronolog::StoryChunk(chronicleName, storyName, storyId, story_start_time, story_start_time + chunkGranularity)));
     }
 
     LOG_DEBUG("[StoryPipeline] Initialized pipeline : Chronicle {} Story {} StoryId {} timeline {}-{} Granularity {} AcceptanceWindow {}"
@@ -289,7 +290,7 @@ void chronolog::StoryPipeline::mergeEvents(chronolog::StoryChunk &other_chunk)
         // and deal with auxiliary files if recording of this particular Story turns to be slow...
         acceptanceWindow = (TimelineStart() - other_chunk.firstEventTime()) + 3000; //current delay + 3 microseconds buffer
 
-        LOG_INFO("[StoryPipeline] StoryId {} timeline {}-{} : increasing acceptanceWindow to {} seconds", storyId, TimelineStart(), TimelineEnd(), acceptanceWindow%1000000000);
+        LOG_INFO("[StoryPipeline] StoryId {} timeline {}-{} : increasing acceptanceWindow to {} seconds", storyId, TimelineStart(), TimelineEnd(), acceptanceWindow/1000000000);
 
         while(other_chunk.firstEventTime() < TimelineStart())
         {

@@ -36,18 +36,18 @@ chronolog::StoryPipeline::StoryPipeline(StoryChunkExtractionQueue &extractionQue
     //adjust the timeline start to the closest prior boundary of chunkGranularity
     story_start_time -= (story_start_time % chunkGranularity);
 
-    while( storyTimelineMap.size() < 3) 
+    for(int i=0; i<3; ++i)
     {
-        storyTimelineMap.insert( std::pair <uint64_t, chronolog::StoryChunk*>(story_start_time 
-                    , new chronolog::StoryChunk(chronicleName, storyName, storyId, story_start_time, story_start_time + chunkGranularity)));
+        StoryChunk * new_chunk = new chronolog::StoryChunk(chronicleName, storyName, storyId, (story_start_time + chunkGranularity*i), (story_start_time + chunkGranularity*(i+1)));
+        storyTimelineMap.insert( std::pair <uint64_t, chronolog::StoryChunk*>(new_chunk->getStartTime(), new_chunk));
     }
 
-    auto chunk_start_point = std::chrono::time_point<std::chrono::system_clock,std::chrono::nanoseconds>{} // epoch_time_point{};
+    auto timeline_start_point = std::chrono::time_point<std::chrono::system_clock,std::chrono::nanoseconds>{} // epoch_time_point{};
         + std::chrono::nanoseconds(TimelineStart());
-    std::time_t time_t_story_start = std::chrono::high_resolution_clock::to_time_t(chunk_start_point);
-    auto chunk_end_point = std::chrono::time_point<std::chrono::system_clock,std::chrono::nanoseconds>{}
+    std::time_t time_t_story_start = std::chrono::high_resolution_clock::to_time_t(timeline_start_point);
+    auto timeline_end_point = std::chrono::time_point<std::chrono::system_clock,std::chrono::nanoseconds>{}
         + std::chrono::nanoseconds(TimelineEnd());
-    std::time_t time_t_story_end = std::chrono::high_resolution_clock::to_time_t(chunk_end_point);
+    std::time_t time_t_story_end = std::chrono::high_resolution_clock::to_time_t(timeline_end_point);
     LOG_INFO("[StoryPipeline] Initialized StoryPipleine StoryID={}, {}-{} timeline {}-{} Start {} End {} "
              "ChunkGranularity={} seconds, AcceptanceWindow={} seconds", storyId, chronicleName, storyName, TimelineStart(), TimelineEnd()
             , std::ctime(&time_t_story_start), std::ctime(&time_t_story_end), chunkGranularity / 1000000000, acceptanceWindow / 1000000000);
@@ -261,9 +261,15 @@ void chronolog::StoryPipeline::mergeEvents(chronolog::EventDeque &event_deque)
             {
                 // find the new chunk_to_merge the event into : we are lookingt for
                 // the chunk preceeding the first chunk with the startTime > event.time()
-                chunk_to_merge_iter = storyTimelineMap.upper_bound(event.time());  
-                //merge into the preceeding chunk
-                if(!(*(--chunk_to_merge_iter)).second->insertEvent(event))
+                chunk_to_merge_iter = storyTimelineMap.lower_bound(event.time());  
+                // in a rare case when the event.time() is exactly on the chunk.StartTime boundary merge into it right away,
+                //  otherwise merge into the preceeding chunk
+                if(chunk_to_merge_iter == storyTimelineMap.end() || (*chunk_to_merge_iter).second->getStartTime() > event.time())
+                { 
+                  chunk_to_merge_iter --;
+                }
+                
+                if(!(*chunk_to_merge_iter).second->insertEvent(event))
                 {
                     LOG_ERROR("[StoryPipeline] StoryID: {} - Discarded event with timestamp: {}", storyId, event.time());
                 }

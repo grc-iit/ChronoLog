@@ -206,7 +206,7 @@ void chronolog::StoryPipeline::extractDecayedStoryChunks(uint64_t current_time)
             std::chrono::time_point <std::chrono::system_clock, std::chrono::nanoseconds>{} // epoch_time_point{};
             + std::chrono::nanoseconds(head_chunk_end_time + acceptanceWindow);
     std::time_t time_t_decay = std::chrono::high_resolution_clock::to_time_t(decay_point);
-    LOG_TRACE("[StoryPipeline] StoryId: {} - Current time: {} - Timeline size: {} - Head chunk decay time: {}", storyId
+    LOG_TRACE("[StoryPipeline] StoryId: {} - Current time: {} - TimelineMap-size: {} - Head chunk decay time: {}", storyId
          , std::ctime(&time_t_current_time), storyTimelineMap.size(), std::ctime(&time_t_decay));
 #endif
 
@@ -305,7 +305,7 @@ void chronolog::StoryPipeline::mergeEvents(chronolog::StoryChunk &other_chunk)
         
         if(chunk_to_merge_iter == storyTimelineMap.end())
         {
-            // the last chunk is the one to merge into
+            // the last chunk is the one to merge into because we know that other_chunk.firstEventTime() is within TimelineStart/End boundaries
             chunk_to_merge_iter--;
             LOG_DEBUG("[StoryPipeline] StoryId {} timeline {}-{} : Merging in StoryChunk {}-{} into the last chunk {}-{}", storyId, TimelineStart(), TimelineEnd(),
                     other_chunk.getStartTime(), other_chunk.getEndTime(), (*chunk_to_merge_iter).second->getStartTime(), (*chunk_to_merge_iter).second->getEndTime());
@@ -313,7 +313,7 @@ void chronolog::StoryPipeline::mergeEvents(chronolog::StoryChunk &other_chunk)
         }
         else if( other_chunk.firstEventTime() == (*chunk_to_merge_iter).second->getStartTime())
         {
-          // we start merging with  the chunk_to_merge_iter  
+          // we start merging with chunk_to_merge_iter
         
             LOG_DEBUG("[StoryPipeline] StoryId {} timeline {}-{} : Merging in StoryChunk {}-{} starts with chunk {} - exact lower_bound", storyId, TimelineStart(), TimelineEnd(), other_chunk.getStartTime(), other_chunk.getEndTime(), (*chunk_to_merge_iter).second->getStartTime());
         }

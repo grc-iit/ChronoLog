@@ -98,8 +98,7 @@ void chronolog::StoryPipeline::finalize()
             storyTimelineMap.erase(storyTimelineMap.begin());
 
 #ifdef TRACE_CHUNK_EXTRACTION
-            LOG_TRACE("[StoryPipeline] Finalized chunk for StoryID={}. Is empty: {}", storyId, extractedChunk->empty()
-                                                                                          ? "Yes" : "No");
+            LOG_TRACE("[StoryPipeline] Finalized chunk for StoryID={}. Is empty: {}", storyId, (extractedChunk->empty() ? "Yes" : "No"));
 #endif
             if(extractedChunk->empty())
             {  // no need to carry an empty chunk any further...
@@ -123,10 +122,10 @@ std::map <uint64_t, chronolog::StoryChunk*>::iterator chronolog::StoryPipeline::
     std::chrono::time_point<std::chrono::system_clock,std::chrono::nanoseconds> epoch_time_point{};
     auto chunk_start_point = epoch_time_point + std::chrono::nanoseconds(TimelineStart()-chunkGranularity);
     std::time_t time_t_chunk_start = std::chrono::high_resolution_clock::to_time_t(chunk_start_point);
-    auto chunk_end_point = epoch_time_point + std::chrono::nanoseconds(TimelineStart);
+    auto chunk_end_point = epoch_time_point + std::chrono::nanoseconds(TimelineStart());
     std::time_t time_t_chunk_end = std::chrono::high_resolution_clock::to_time_t(chunk_end_point);
     LOG_TRACE("[StoryPipeline] Prepending new chunk for StoryID={} timeline {}-{} prepend_chunk {}-{}",
-                               storyId, TimelineStart(), TimelineEnd(), std::ctime(time_t_chunk_start), istd::ctime(time_t_chunk_end));
+                               storyId, TimelineStart(), TimelineEnd(), std::ctime(&time_t_chunk_start), std::ctime(&time_t_chunk_end));
 #endif
     auto result = storyTimelineMap.insert(
             std::pair <uint64_t, chronolog::StoryChunk*>(TimelineStart() - chunkGranularity, new chronolog::StoryChunk(

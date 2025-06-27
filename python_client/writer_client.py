@@ -26,7 +26,7 @@
 # 
 #############################
 
-def main():
+def writer_client():
 
     print("Basic test for py_chronolog_client writer")
 
@@ -88,39 +88,6 @@ def main():
     return_code = client.Disconnect()
     print("\n client.Disconnect() returned:", return_code);
 
-
-
-    print("Basic test for py_chronolog_client reader ")
-    
-    #create ClientPortalServiceConf instance with the connection credentials to ChronoVisor ClientPortalService
-
-    clientQueryConf = py_chronolog_client.ClientQueryServiceConf("ofi+sockets","127.0.0.1",5557,57);
-
-    # instantiate ChronoLog Client object
-    reader_client = py_chronolog_client.Client(clientConf, clientQueryConf);
-
-    return_code = reader_client.Connect()
-    print( "\n client.Connect() call returns:", return_code)
-
-    return_tuple = reader_client.AcquireStory("py_chronicle", "my_story", attrs, 1);
-    print( "\n client.AcquireStory() returned:" , return_tuple)
-
-    event_series = py_chronolog_client.EventList()   
-    return_code = reader_client.ReplayStory("py_chronicle","my_story", 1746486900000000000,1746486930000000000, event_series);
-
-    print( "\n client.ReplayStory() call returns:", return_code)
-    print( "\n client.ReplayStory() call returns event_series : ", event_series)
-     
-    # release acquired Story
-    # returns 0 on success and error_code othewise
-    return_code = reader_client.ReleaseStory("py_chronicle","my_story");
-    print("\n client.ReleaseStory() returned:", return_code);
-
-    # Disconenct the client from ChronoLog system
-    # returns 0 on success and error_code otherwise
-    return_code = reader_client.Disconnect()
-    print("\n client.Disconnect() returned:", return_code);
-
-
 if __name__=="__main__":
-    main()
+
+    writer_client()

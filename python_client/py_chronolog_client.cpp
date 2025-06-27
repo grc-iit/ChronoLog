@@ -83,7 +83,7 @@ void BindChronologClient(pybind11::module &m)
 {
    pybind11::class_<Client>(m,"Client")
     .def(pybind11::init<const ClientPortalServiceConf &>())
-    .def(pybind11::init<const ClientPortalServiceConf &, const ClientQueryServiceConf &>())
+    .def(pybind11::init<const ClientPortalServiceConf & , const ClientQueryServiceConf & >())
     .def("Connect", &Client::Connect)
     .def("Disconnect", &Client::Disconnect)
     .def("CreateChronicle", &Client::CreateChronicle)
@@ -91,7 +91,8 @@ void BindChronologClient(pybind11::module &m)
     .def("AcquireStory", &Client::AcquireStory, pybind11::return_value_policy::reference)
     .def("ReleaseStory", &Client::ReleaseStory, pybind11::arg("chronicle_name"), pybind11::arg("story_name"))
     .def("DestroyStory", &Client::DestroyStory, pybind11::arg("chronicle_name"), pybind11::arg("story_name"))
-    .def("ReplayStory", &Client::ReplayStory);
+    .def("ReplayStory", &Client::ReplayStory)
+    ;
 };
 
 PYBIND11_MODULE(py_chronolog_client, m) 

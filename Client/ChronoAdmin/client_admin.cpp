@@ -1,6 +1,5 @@
 #include <chronolog_client.h>
 #include <cmd_arg_parse.h>
-#include <chronolog_client.h>
 #include <ClientConfiguration.h>
 #include <common.h>
 #include <cassert>
@@ -13,7 +12,6 @@
 #include <mpi.h>
 #include <chrono_monitor.h>
 #include <TimerWrapper.h>
-#include <cstring>
 #include <margo.h>
 
 #define MAX_EVENT_SIZE (32 * 1024 * 1024)
@@ -408,6 +406,7 @@ uint64_t get_bigbang_timestamp(std::ifstream &file)
 
 int main(int argc, char**argv)
 {
+    // To suppress argobots warning
     std::string argobots_conf_str = R"({"argobots" : {"abt_mem_max_num_stacks" : 8
                                                     , "abt_thread_stacksize" : 2097152}})";
     margo_set_environment(argobots_conf_str.c_str());
@@ -433,7 +432,7 @@ int main(int argc, char**argv)
     }
     
     if (rank == 0) {
-    confManager.log_configuration(std::cout);
+        confManager.log_configuration(std::cout);
     }
 
     // Initialize logging

@@ -12,10 +12,7 @@ void BindChronologClientPortalServiceConf(pybind11::module &m)
 {
    pybind11::class_<ClientPortalServiceConf>(m,"ClientPortalServiceConf")
       .def(pybind11::init<const std::string &, const std::string &, uint16_t, uint16_t>())
-      .def("proto_conf", &ClientPortalServiceConf::proto_conf)
-      .def("ip", &ClientPortalServiceConf::ip)
-      .def("port", &ClientPortalServiceConf::port)
-      .def("provider_id", &ClientPortalServiceConf::provider_id);
+    ;
 };
 
 using chronolog::ClientQueryServiceConf;
@@ -23,10 +20,7 @@ void BindChronologClientQueryServiceConf(pybind11::module &m)
 {
    pybind11::class_<ClientQueryServiceConf>(m,"ClientQueryServiceConf")
       .def(pybind11::init<const std::string &, const std::string &, uint16_t, uint16_t>())
-      .def("proto_conf", &ClientQueryServiceConf::proto_conf)
-      .def("ip", &ClientQueryServiceConf::ip)
-      .def("port", &ClientQueryServiceConf::port)
-      .def("provider_id", &ClientQueryServiceConf::provider_id);
+    ;
 };
 
 

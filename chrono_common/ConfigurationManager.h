@@ -149,11 +149,17 @@ typedef struct KeeperGrapherDrainServiceConf_
 
 typedef struct DataStoreConf_
 {
-    int max_story_chunk_size;
+    int max_story_chunk_size = 4096;
+    int story_chunk_duration_secs = 30;
+    int acceptance_window_secs = 60;
+    int inactive_story_delay_secs = 180;
 
     [[nodiscard]] std::string to_String() const
     {
         return  "[DATA_STORE_CONF: max_story_chunk_size: " + std::to_string(max_story_chunk_size) +
+                " story_chunk_duration_secs: " + std::to_string(story_chunk_duration_secs) +
+                " acceptance_window_secs: " + std::to_string(acceptance_window_secs) +
+                " inactive_story_delay_secs: " + std::to_string(inactive_story_delay_secs) +
                 "]";
     }
 } DataStoreConf;
@@ -219,6 +225,32 @@ typedef struct GrapherConf_
     DataStoreConf DATA_STORE_CONF{};
     ExtractorReaderConf EXTRACTOR_CONF;
 
+    GrapherConf_()
+    {
+        RECORDING_GROUP = 0;
+        KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
+        KEEPER_GRAPHER_DRAIN_SERVICE_CONF.IP = "127.0.0.1";
+        KEEPER_GRAPHER_DRAIN_SERVICE_CONF.BASE_PORT = 9999;
+        KEEPER_GRAPHER_DRAIN_SERVICE_CONF.SERVICE_PROVIDER_ID = 99;
+
+        DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
+        DATA_STORE_ADMIN_SERVICE_CONF.IP = "127.0.0.1";
+        DATA_STORE_ADMIN_SERVICE_CONF.BASE_PORT = 4444;
+        DATA_STORE_ADMIN_SERVICE_CONF.SERVICE_PROVIDER_ID = 44;
+
+        VISOR_REGISTRY_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
+        VISOR_REGISTRY_SERVICE_CONF.IP = "127.0.0.1";
+        VISOR_REGISTRY_SERVICE_CONF.BASE_PORT = 8888;
+        VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID = 88;
+
+        DATA_STORE_CONF.max_story_chunk_size = 4096;
+        DATA_STORE_CONF.story_chunk_duration_secs = 60;
+        DATA_STORE_CONF.acceptance_window_secs = 180;
+        DATA_STORE_CONF.inactive_story_delay_secs = 300;
+
+        EXTRACTOR_CONF.story_files_dir = "/tmp/";
+    }
+
     [[nodiscard]] std::string to_String() const
     {
         return "[CHRONO_GRAPHER_CONFIGURATION: RECORDING_GROUP: "+ std::to_string(RECORDING_GROUP) +
@@ -255,7 +287,6 @@ typedef struct PlayerConf_
 
     PlayerConf_()
     {
-        /* Grapher-related configurations */
         RECORDING_GROUP = 0;
         DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
         DATA_STORE_ADMIN_SERVICE_CONF.IP = "127.0.0.1";
@@ -271,6 +302,13 @@ typedef struct PlayerConf_
         VISOR_REGISTRY_SERVICE_CONF.IP = "127.0.0.1";
         VISOR_REGISTRY_SERVICE_CONF.BASE_PORT = 8888;
         VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID = 88;
+    
+        DATA_STORE_CONF.max_story_chunk_size = 4096;
+        DATA_STORE_CONF.story_chunk_duration_secs = 60;
+        DATA_STORE_CONF.acceptance_window_secs = 180;
+        DATA_STORE_CONF.inactive_story_delay_secs = 300;
+    
+        READER_CONF.story_files_dir = "/tmp/";
     }
 
     [[nodiscard]] std::string to_String() const
@@ -285,7 +323,7 @@ typedef struct PlayerConf_
                "]";
     }
 } PlayerConf;
-
+/*
 typedef struct ClientConf_
 {
     RPCProviderConf CLIENT_QUERY_SERVICE_CONF;
@@ -299,7 +337,7 @@ typedef struct ClientConf_
                ", CLIENT_LOG_CONF:" + CLIENT_LOG_CONF.to_String() + "]";
     }
 } ClientConf;
-
+*/
 class ConfigurationManager
 {
 public:
@@ -308,14 +346,12 @@ public:
     ClocksourceType CLOCKSOURCE_TYPE{};
     AuthConf AUTH_CONF{};
     VisorConf VISOR_CONF{};
-    ClientConf CLIENT_CONF{};
     KeeperConf KEEPER_CONF{};
     GrapherConf GRAPHER_CONF{};
     PlayerConf PLAYER_CONF{};
 
     ConfigurationManager()
     {
-        std::cout << "[ConfigurationManager] Initializing configuration with default settings." << std::endl;
         ROLE = CHRONOLOG_UNKNOWN;
 
         /* Clock-related configurations */
@@ -340,8 +376,7 @@ public:
         VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID = 88;
 
         VISOR_CONF.DELAYED_DATA_ADMIN_EXIT_IN_SECS = 3;
-
-        /* Keeper-related configurations */
+/*
         KEEPER_CONF.RECORDING_GROUP = 0;
         KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.PROTO_CONF = "ofi+sockets";
         KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.IP = "127.0.0.1";
@@ -367,7 +402,6 @@ public:
 
         KEEPER_CONF.EXTRACTOR_CONF.story_files_dir = "/tmp/";
 
-        /* Grapher-related configurations */
         GRAPHER_CONF.RECORDING_GROUP = 0;
         GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
         GRAPHER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.IP = "127.0.0.1";
@@ -388,7 +422,6 @@ public:
 
         GRAPHER_CONF.EXTRACTOR_CONF.story_files_dir = "/tmp/";
 
-        /* Player-related configurations */
         PLAYER_CONF.RECORDING_GROUP = 0;
         PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
         PLAYER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.IP = "127.0.0.1";
@@ -408,36 +441,13 @@ public:
         PLAYER_CONF.DATA_STORE_CONF.max_story_chunk_size = 4096;
 
         PLAYER_CONF.READER_CONF.story_files_dir = "/tmp/";
-
-        /* Client-related configurations */
-        CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.PROTO_CONF = "ofi+sockets";
-        CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.BASE_PORT = 5555;
-        CLIENT_CONF.VISOR_CLIENT_PORTAL_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID = 55;
-
-        CLIENT_CONF.CLIENT_QUERY_SERVICE_CONF.PROTO_CONF = "ofi+sockets";
-        CLIENT_CONF.CLIENT_QUERY_SERVICE_CONF.IP = "127.0.0.1";
-        CLIENT_CONF.CLIENT_QUERY_SERVICE_CONF.BASE_PORT = 5557;
-        CLIENT_CONF.CLIENT_QUERY_SERVICE_CONF.SERVICE_PROVIDER_ID = 57;
-
-        PrintConf();
+*/
+        //PrintConf();
     }
 
     explicit ConfigurationManager(const std::string &conf_file_path)
     {
-        std::cout << "[ConfigurationManager] Loading configuration from file: " << conf_file_path.c_str() << std::endl;
         LoadConfFromJSONFile(conf_file_path);
-    }
-
-    void PrintConf() const
-    {
-        std::cout << "******** Start of configuration output ********" << std::endl;
-        std::cout << "AUTH_CONF: " << AUTH_CONF.to_String().c_str() << std::endl;
-        std::cout << "VISOR_CONF: " << VISOR_CONF.to_String().c_str() << std::endl;
-        std::cout << "KEEPER_CONF: " << KEEPER_CONF.to_String().c_str() << std::endl;
-        std::cout << "GRAPHER_CONF: " << GRAPHER_CONF.to_String().c_str() << std::endl;
-        std::cout << "PLAYER_CONF: " << PLAYER_CONF.to_String().c_str() << std::endl;
-        std::cout << "CLIENT_CONF: " << CLIENT_CONF.to_String().c_str() << std::endl;
-        std::cout << "******** End of configuration output ********" << std::endl;
     }
 
     void LoadConfFromJSONFile(const std::string &conf_file_path)
@@ -530,38 +540,10 @@ public:
             }
         }
         json_object_put(root);
-        PrintConf();
     }
 
 private:
-    /*  void parseRPCImplConf(json_object*json_conf, ChronoLogRPCImplementation &rpc_impl)
-      {
-          if(json_object_is_type(json_conf, json_type_string))
-          {
-              const char*conf_str = json_object_get_string(json_conf);
-              if(strcmp(conf_str, "Thallium_sockets") == 0)
-              {
-                  rpc_impl = CHRONOLOG_THALLIUM_SOCKETS;
-              }
-              else if(strcmp(conf_str, "Thallium_tcp") == 0)
-              {
-                  rpc_impl = CHRONOLOG_THALLIUM_TCP;
-              }
-              else if(strcmp(conf_str, "Thallium_roce") == 0)
-              {
-                  rpc_impl = CHRONOLOG_THALLIUM_ROCE;
-              }
-              else
-              {
-                  std::cout << "[ConfigurationManager] Unknown rpc implementation: " << conf_str << std::endl;
-              }
-          }
-          else
-          {
-              std::cerr << "[ConfigurationManager] Invalid rpc implementation configuration" << std::endl;
-          }
-      }
-  */
+
     void parselogLevelConf(json_object*json_conf, spdlog::level::level_enum &log_level)
     {
         if(json_object_is_type(json_conf, json_type_string))

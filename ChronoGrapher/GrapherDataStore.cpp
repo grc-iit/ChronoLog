@@ -17,8 +17,7 @@ namespace tl = thallium;
 ////////////////////////
 
 int chronolog::GrapherDataStore::startStoryRecording(std::string const &chronicle, std::string const &story
-                                                    , chronolog::StoryId const &story_id, uint64_t start_time
-                                                    , uint32_t time_chunk_duration, uint32_t access_window)
+                                                    , chronolog::StoryId const &story_id, uint64_t start_time)
 {
     LOG_INFO("[GrapherDataStore] Start recording story: Chronicle={}, Story={}, StoryId={}"
              , chronicle, story, story_id);
@@ -41,9 +40,8 @@ int chronolog::GrapherDataStore::startStoryRecording(std::string const &chronicl
     }
 
     auto result = theMapOfStoryPipelines.emplace(
-            std::pair <chl::StoryId, chl::StoryPipeline*>(story_id, new chl::StoryPipeline(theExtractionQueue, chronicle
-                                                                                           , story, story_id, start_time
-                                                                                           , time_chunk_duration, access_window)));
+            std::pair <chl::StoryId, chl::StoryPipeline*>(story_id, new chl::StoryPipeline(theExtractionQueue, chronicle, story, story_id, start_time
+                                                        , story_chunk_duration_secs, acceptance_window_secs)));
 
     if(result.second)
     {

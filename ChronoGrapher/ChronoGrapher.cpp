@@ -154,7 +154,12 @@ int main(int argc, char**argv)
 
 //    chronolog::CSVFileStoryChunkExtractor storyExtractor(process_id_string.str(), csv_files_directory);
     chronolog::HDF5FileChunkExtractor storyExtractor(chl::to_string(processIdCard), csv_files_directory);
-    chronolog::GrapherDataStore theDataStore(ingestionQueue, storyExtractor.getExtractionQueue());
+
+    chronolog::GrapherDataStore theDataStore(ingestionQueue, storyExtractor.getExtractionQueue(),
+                GRAPHER_CONF.DATA_STORE_CONF.max_story_chunk_size,
+                GRAPHER_CONF.DATA_STORE_CONF.story_chunk_duration_secs,
+                GRAPHER_CONF.DATA_STORE_CONF.acceptance_window_secs,
+                GRAPHER_CONF.DATA_STORE_CONF.inactive_story_delay_secs);
 
     tl::engine*dataAdminEngine = nullptr;
 

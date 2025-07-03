@@ -184,8 +184,13 @@ int main(int argc, char**argv)
     chronolog::StoryChunkExtractorRDMA storyExtractor = chronolog::StoryChunkExtractorRDMA(*extractionEngine
                                                                                            , drain_to_grapher
                                                                                            , service_ph);
-    //    chronolog::CSVFileStoryChunkExtractor storyExtractor(keeperIdCard, keeper_csv_files_directory);
-    chronolog::KeeperDataStore theDataStore(ingestionQueue, storyExtractor.getExtractionQueue());
+    
+    chronolog::KeeperDataStore theDataStore(ingestionQueue, storyExtractor.getExtractionQueue(),
+                KEEPER_CONF.DATA_STORE_CONF.max_story_chunk_size, 
+                KEEPER_CONF.DATA_STORE_CONF.story_chunk_duration_secs, 
+                KEEPER_CONF.DATA_STORE_CONF.acceptance_window_secs,
+                KEEPER_CONF.DATA_STORE_CONF.inactive_story_delay_secs
+                );
 
     // Instantiate KeeperRecordingService
     tl::engine*dataAdminEngine = nullptr;

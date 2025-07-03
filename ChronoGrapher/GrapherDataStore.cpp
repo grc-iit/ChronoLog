@@ -72,8 +72,8 @@ int chronolog::GrapherDataStore::stopStoryRecording(chronolog::StoryId const &st
     auto pipeline_iter = theMapOfStoryPipelines.find(story_id);
     if(pipeline_iter != theMapOfStoryPipelines.end())
     {
-        uint64_t exit_time = std::chrono::high_resolution_clock::now().time_since_epoch().count() +
-                             (*pipeline_iter).second->getAcceptanceWindow();
+        uint64_t exit_time = std::chrono::high_resolution_clock::now().time_since_epoch().count() + inactive_pipeline_delay_secs*1000000000;
+                            // (*pipeline_iter).second->getAcceptanceWindow();
         pipelinesWaitingForExit[(*pipeline_iter).first] = (std::pair <chl::StoryPipeline*, uint64_t>(
                 (*pipeline_iter).second, exit_time));
         LOG_INFO("[GrapherDataStore] Scheduled pipeline to retire: StoryId {} timeline {}-{} acceptanceWindow {} retirementTime {}",

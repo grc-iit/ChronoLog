@@ -19,6 +19,7 @@ cmake .. -DCHRONOLOG_BUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
 ``` bash
 make all
 ctest --output-on-failure
+ctest -R StoryChunk --output-on-failure
 ```
 
 ### Auto format before push
@@ -29,5 +30,5 @@ clang-format -style=file -i test/unit/StoryChunkTest.cpp
 
 ### Notes
 - First focusing on story chunk tests 
-- Listed insertevent tests and implemented some
-- To add tests for the next functions
+- finished insertevent and mergeevents
+- Need to confirm behavior of a few test cases

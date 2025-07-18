@@ -4,6 +4,7 @@
 #include "chrono_monitor.h"
 #include <common.h>
 #include <cassert>
+#include <unistd.h>
 
 int main(int argc, char** argv) {
     // Load configuration
@@ -32,17 +33,24 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    // Build portal config
+    // Build portal configs
     chronolog::ClientPortalServiceConf portalConf;
     portalConf.PROTO_CONF = confManager.PORTAL_CONF.PROTO_CONF;
     portalConf.IP = confManager.PORTAL_CONF.IP;
     portalConf.PORT = confManager.PORTAL_CONF.PORT;
     portalConf.PROVIDER_ID = confManager.PORTAL_CONF.PROVIDER_ID;
 
+    // Build query configs
+    chronolog::ClientQueryServiceConf queryConf;
+    queryConf.PROTO_CONF = confManager.QUERY_CONF.PROTO_CONF;
+    queryConf.IP = confManager.QUERY_CONF.IP;
+    queryConf.PORT = confManager.QUERY_CONF.PORT;
+    queryConf.PROVIDER_ID = confManager.QUERY_CONF.PROVIDER_ID;
+
     LOG_INFO("[ClientExample] Starting ChronoLog Client Example");
 
     // Create a ChronoLog client
-    chronolog::Client client(portalConf);
+    chronolog::Client client(portalConf, queryConf);
 
     // Connect to ChronoVisor
     int ret = client.Connect();
@@ -71,13 +79,54 @@ int main(int argc, char** argv) {
     ret = client.ReleaseStory(chronicle_name, story_name);
     assert(ret == chronolog::CL_SUCCESS);
 
+    std::vector<chronolog::Event> events;
+    uint64_t start_time = 1;
+    uint64_t end_time = UINT64_MAX;
+
+    int replay_ret = chronolog::CL_ERR_UNKNOWN;
+    int max_seconds = 300;
+    int retry_interval_sec = 5;
+    int max_attempts = max_seconds / retry_interval_sec;
+
+    bool success = false;
+
+    for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+        events.clear(); // Clear previous results
+        replay_ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
+
+        if (replay_ret == chronolog::CL_SUCCESS) {
+            if (!events.empty()) {
+                std::cout << "[ClientExample] Replay succeeded with " << events.size() << " event(s) after "
+                        << attempt * retry_interval_sec << " seconds.\n";
+                success = true;
+                break;
+            } else {
+                std::cout << "[ClientExample] Replay returned 0 events (attempt " << attempt << "). Waiting...\n";
+            }
+        } else {
+            std::cout << "[ClientExample] Replay attempt " << attempt << " failed. Retrying...\n";
+        }
+
+        sleep(retry_interval_sec);
+    }
+
+    if (!success) {
+        std::cerr << "[ClientExample] Replay failed after " << max_seconds << " seconds with no events.\n";
+        return EXIT_FAILURE;
+    }
+
+    // If we reach here, events are available
+    for (const auto& ev : events) {
+        std::cout << ev.to_string() << "\n";
+    }
+
     // Destroy the story
-    //ret = client.DestroyStory(chronicle_name, story_name);
-    //assert(ret == chronolog::CL_SUCCESS);
+    ret = client.DestroyStory(chronicle_name, story_name);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Destroy the chronicle
-    //ret = client.DestroyChronicle(chronicle_name);
-    //assert(ret == chronolog::CL_SUCCESS);
+    ret = client.DestroyChronicle(chronicle_name);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Disconnect from ChronoVisor
     ret = client.Disconnect();

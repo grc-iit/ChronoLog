@@ -75,50 +75,33 @@ int main(int argc, char** argv) {
     story_handle->log_event("Event 2");
     story_handle->log_event("Event 3");
 
-    // Release the story
-    ret = client.ReleaseStory(chronicle_name, story_name);
-    assert(ret == chronolog::CL_SUCCESS);
+    // Wait for events to be processed
+    sleep(800);
 
+    // Read a story
     std::vector<chronolog::Event> events;
-    uint64_t start_time = 1;
-    uint64_t end_time = UINT64_MAX;
+    uint64_t start_time = 0;
+    uint64_t end_time = 2000000000000000000;
+    int replay_ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
 
-    int replay_ret = chronolog::CL_ERR_UNKNOWN;
-    int max_seconds = 300;
-    int retry_interval_sec = 5;
-    int max_attempts = max_seconds / retry_interval_sec;
-
-    bool success = false;
-
-    for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-        events.clear(); // Clear previous results
-        replay_ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
-
-        if (replay_ret == chronolog::CL_SUCCESS) {
-            if (!events.empty()) {
-                std::cout << "[ClientExample] Replay succeeded with " << events.size() << " event(s) after "
-                        << attempt * retry_interval_sec << " seconds.\n";
-                success = true;
-                break;
-            } else {
-                std::cout << "[ClientExample] Replay returned 0 events (attempt " << attempt << "). Waiting...\n";
-            }
-        } else {
-            std::cout << "[ClientExample] Replay attempt " << attempt << " failed. Retrying...\n";
-        }
-
-        sleep(retry_interval_sec);
-    }
-
-    if (!success) {
-        std::cerr << "[ClientExample] Replay failed after " << max_seconds << " seconds with no events.\n";
+    if (replay_ret != chronolog::CL_SUCCESS) {
+        std::cerr << "[ClientExample] Replay failed with error code: " << replay_ret << "\n";
         return EXIT_FAILURE;
     }
 
-    // If we reach here, events are available
+    if (events.empty()) {
+        std::cerr << "[ClientExample] Replay succeeded but no events were returned.\n";
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "[ClientExample] Replay succeeded with " << events.size() << " event(s):\n";
     for (const auto& ev : events) {
         std::cout << ev.to_string() << "\n";
     }
+
+    // Release the story
+    ret = client.ReleaseStory(chronicle_name, story_name);
+    assert(ret == chronolog::CL_SUCCESS);
 
     // Destroy the story
     ret = client.DestroyStory(chronicle_name, story_name);

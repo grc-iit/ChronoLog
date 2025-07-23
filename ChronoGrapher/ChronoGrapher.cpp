@@ -73,7 +73,7 @@ int main(int argc, char**argv)
     }
 
     ChronoLog::ConfigurationManager confManager(conf_file_path);
-    ChronoLog::GrapherConf GRAPHER_CONF = confManager.GRAPHER_CONF;
+    ChronoLog::GrapherConfiguration GRAPHER_CONF = confManager.GRAPHER_CONF;
 
     std::cout << "ChronoGrapher Configuration "<< GRAPHER_CONF.to_String()<<std::endl;
 

@@ -70,16 +70,16 @@ int main(int argc, char**argv)
     }
     ChronoLog::ConfigurationManager confManager(conf_file_path);
 
-    ChronoLog::KeeperConf KEEPER_CONF = confManager.KEEPER_CONF;
+    ChronoLog::KeeperConfiguration KEEPER_CONF = confManager.KEEPER_CONF;
     std::cout << "ChronoKeeper Configuration "<< KEEPER_CONF.to_String()<<std::endl;
     
-    int result = chronolog::chrono_monitor::initialize(KEEPER_CONF.KEEPER_LOG_CONF.LOGTYPE
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.LOGFILE
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.LOGLEVEL
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.LOGNAME
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.LOGFILESIZE
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.LOGFILENUM
-                                                       , KEEPER_CONF.KEEPER_LOG_CONF.FLUSHLEVEL);
+    int result = chronolog::chrono_monitor::initialize(KEEPER_CONF.LOG_CONF.LOGTYPE
+                                                       , KEEPER_CONF.LOG_CONF.LOGFILE
+                                                       , KEEPER_CONF.LOG_CONF.LOGLEVEL
+                                                       , KEEPER_CONF.LOG_CONF.LOGNAME
+                                                       , KEEPER_CONF.LOG_CONF.LOGFILESIZE
+                                                       , KEEPER_CONF.LOG_CONF.LOGFILENUM
+                                                       , KEEPER_CONF.LOG_CONF.FLUSHLEVEL);
     if(result == 1)
     {
         exit(EXIT_FAILURE);
@@ -92,13 +92,13 @@ int main(int argc, char**argv)
     // instantiate DataStoreAdminService
 
     /// DataStoreAdminService setup ____________________________________________________________________________________
-    std::string datastore_service_ip = KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.IP;
-    int datastore_service_port = KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.BASE_PORT;
+    std::string datastore_service_ip = KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.IP;
+    int datastore_service_port = KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.BASE_PORT;
     std::string KEEPER_DATASTORE_SERVICE_NA_STRING =
-            KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
+            KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF + "://" +
             datastore_service_ip + ":" + std::to_string(datastore_service_port);
 
-    uint16_t datastore_service_provider_id = KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
+    uint16_t datastore_service_provider_id = KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
     chronolog::service_endpoint datastore_endpoint;
     // validate ip address, instantiate DataAdminService and create ServiceId to be included in KeeperRegistrationMsg
@@ -109,16 +109,16 @@ int main(int argc, char**argv)
         return (-1);
     }
 
-    chronolog::ServiceId dataStoreServiceId( KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.PROTO_CONF,
-                        datastore_endpoint, KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID);
+    chronolog::ServiceId dataStoreServiceId( KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF,
+                        datastore_endpoint, KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.SERVICE_PROVIDER_ID);
 
  
     /// KeeperRecordingService setup ___________________________________________________________________________________
     // Instantiate KeeperRecordingService
-    std::string KEEPER_RECORDING_SERVICE_PROTOCOL = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.PROTO_CONF;
-    std::string KEEPER_RECORDING_SERVICE_IP = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.IP;
-    uint16_t KEEPER_RECORDING_SERVICE_PORT = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.BASE_PORT;
-    uint16_t recording_service_provider_id = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
+    std::string KEEPER_RECORDING_SERVICE_PROTOCOL = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.PROTO_CONF;
+    std::string KEEPER_RECORDING_SERVICE_IP = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.IP;
+    uint16_t KEEPER_RECORDING_SERVICE_PORT = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.BASE_PORT;
+    uint16_t recording_service_provider_id = KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
 
     // validate ip address, instantiate Recording Service and create KeeperIdCard
@@ -135,10 +135,10 @@ int main(int argc, char**argv)
     // create KeeperIdCard to identify this Keeper process in ChronoVisor's KeeperRegistry
     chronolog::RecordingGroupId keeper_group_id = KEEPER_CONF.RECORDING_GROUP;
     chronolog::KeeperIdCard keeperIdCard(keeper_group_id, 
-            chronolog::ServiceId(KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.PROTO_CONF,
-            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.IP,
-            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.BASE_PORT,
-            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID));
+            chronolog::ServiceId(KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.PROTO_CONF,
+            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.IP,
+            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.BASE_PORT,
+            KEEPER_CONF.KEEPER_RECORDING_SERVICE_CONF.SERVICE_PROVIDER_ID));
 
     std::string KEEPER_RECORDING_SERVICE_NA_STRING;
     keeperIdCard.getRecordingServiceId().get_service_as_string(KEEPER_RECORDING_SERVICE_NA_STRING);
@@ -152,10 +152,10 @@ int main(int argc, char**argv)
     tl::engine*extractionEngine = nullptr;
     tl::remote_procedure drain_to_grapher;
     tl::provider_handle service_ph;
-    uint16_t extraction_provider_id = KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
+    uint16_t extraction_provider_id = KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.SERVICE_PROVIDER_ID;
     try
     {
-        extractionEngine = new tl::engine(KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.PROTO_CONF
+        extractionEngine = new tl::engine(KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF
                                           , THALLIUM_CLIENT_MODE);
 
         std::stringstream s1;
@@ -163,9 +163,9 @@ int main(int argc, char**argv)
         LOG_INFO("[ChronoKeeperInstance] GroupID={} starting extraction engine at address {}", keeper_group_id
                  , s1.str());
         std::string KEEPER_GRAPHER_NA_STRING =
-                KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
-                KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.IP + ":" +
-                std::to_string(KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.RPC_CONF.BASE_PORT);
+                KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.PROTO_CONF + "://" +
+                KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.IP + ":" +
+                std::to_string(KEEPER_CONF.KEEPER_GRAPHER_DRAIN_SERVICE_CONF.BASE_PORT);
         std::string extraction_rpc_name = "record_story_chunk";
         drain_to_grapher = extractionEngine->define(extraction_rpc_name);
         LOG_DEBUG("[ChronoKeeperInstance] Looking up {} at: {} ...", extraction_rpc_name, KEEPER_GRAPHER_NA_STRING);
@@ -259,11 +259,11 @@ int main(int argc, char**argv)
     /// KeeperRegistryClient SetUp _____________________________________________________________________________________
     // create KeeperRegistryClient and register the new KeeperRecording service with the KeeperRegistry
     std::string KEEPER_REGISTRY_SERVICE_NA_STRING =
-            KEEPER_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
-            KEEPER_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.IP + ":" +
-            std::to_string(KEEPER_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.BASE_PORT);
+            KEEPER_CONF.VISOR_REGISTRY_SERVICE_CONF.PROTO_CONF + "://" +
+            KEEPER_CONF.VISOR_REGISTRY_SERVICE_CONF.IP + ":" +
+            std::to_string(KEEPER_CONF.VISOR_REGISTRY_SERVICE_CONF.BASE_PORT);
 
-    uint16_t KEEPER_REGISTRY_SERVICE_PROVIDER_ID = KEEPER_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
+    uint16_t KEEPER_REGISTRY_SERVICE_PROVIDER_ID = KEEPER_CONF.VISOR_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID;
 
     chronolog::KeeperRegistryClient*keeperRegistryClient = chronolog::KeeperRegistryClient::CreateKeeperRegistryClient(
             *dataAdminEngine, KEEPER_REGISTRY_SERVICE_NA_STRING, KEEPER_REGISTRY_SERVICE_PROVIDER_ID);

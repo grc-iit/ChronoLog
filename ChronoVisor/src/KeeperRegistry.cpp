@@ -27,11 +27,11 @@ int KeeperRegistry::InitializeRegistryService(ChronoLog::ConfigurationManager co
     {
         // initialise thalium engine for KeeperRegistryService
         std::string KEEPER_REGISTRY_SERVICE_NA_STRING =
-                confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.PROTO_CONF + "://" +
-                confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.IP + ":" +
-                std::to_string(confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.BASE_PORT);
+                confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.PROTO_CONF + "://" +
+                confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.IP + ":" +
+                std::to_string(confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.BASE_PORT);
 
-        uint16_t provider_id = confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.RPC_CONF.SERVICE_PROVIDER_ID;
+        uint16_t provider_id = confManager.VISOR_CONF.VISOR_KEEPER_REGISTRY_SERVICE_CONF.SERVICE_PROVIDER_ID;
         margo_instance_id margo_id = margo_init(KEEPER_REGISTRY_SERVICE_NA_STRING.c_str(), MARGO_SERVER_MODE, 1, 2);
 
         if(MARGO_INSTANCE_NULL == margo_id)
@@ -57,7 +57,7 @@ int KeeperRegistry::InitializeRegistryService(ChronoLog::ConfigurationManager co
         // Currently, it is protected by the deployment script that ensures the same protocol is used for both.
         // TODO (Kun): add DataStoreAdminService section to the configuration of ChronoVisor and make sure all three
         //  ends (Keeper, Grapher, and Visor) use the same protocol.
-        dataStoreAdminServiceProtocol = confManager.KEEPER_CONF.KEEPER_DATA_STORE_ADMIN_SERVICE_CONF.RPC_CONF.PROTO_CONF;
+        dataStoreAdminServiceProtocol = confManager.KEEPER_CONF.DATA_STORE_ADMIN_SERVICE_CONF.PROTO_CONF;
 
         registryState = INITIALIZED;
         status = chronolog::CL_SUCCESS;

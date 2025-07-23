@@ -37,7 +37,7 @@ chronolog::StoryChunk*generateRandomStoryChunk()
     auto*story_chunk = new chronolog::StoryChunk(chronicle_name, story_name, story_id, start_time, end_time);
     for(int i = 0; i < NUM_EVENTS; ++i)
     {
-        chronolog::EventSequence event_sequence = chronolog::EventSequence(start_time, client_id, i);
+        //chronolog::EventSequence event_sequence = chronolog::EventSequence(start_time, client_id, i);
         chronolog::LogEvent event;
         event.storyId = story_id;
         event.clientId = client_id;
@@ -170,7 +170,7 @@ int main(int argc, char**argv)
 {
     std::string conf_file_path;
     conf_file_path = parse_conf_path_arg(argc, argv);
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
+    chronolog::ConfigurationManager confManager(conf_file_path);
     int result = chronolog::chrono_monitor::initialize("console", confManager.KEEPER_CONF.LOG_CONF.LOGFILE
                                                        , confManager.KEEPER_CONF.LOG_CONF.LOGLEVEL
                                                        , confManager.KEEPER_CONF.LOG_CONF.LOGNAME

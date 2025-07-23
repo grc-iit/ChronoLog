@@ -72,8 +72,8 @@ int main(int argc, char**argv)
         std::exit(EXIT_FAILURE);
     }
 
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
-    ChronoLog::GrapherConfiguration GRAPHER_CONF = confManager.GRAPHER_CONF;
+    chronolog::ConfigurationManager confManager(conf_file_path);
+    chronolog::GrapherConfiguration GRAPHER_CONF = confManager.GRAPHER_CONF;
 
     std::cout << "ChronoGrapher Configuration "<< GRAPHER_CONF.to_String()<<std::endl;
 

@@ -2,7 +2,7 @@
 
 
 
-int  ChronoLog::ClockConf::parseJsonConf(json_object*clock_conf)
+int  chronolog::ClockConf::parseJsonConf(json_object*clock_conf)
     {
         json_object_object_foreach(clock_conf, key, val)
         {
@@ -61,8 +61,8 @@ int  ChronoLog::ClockConf::parseJsonConf(json_object*clock_conf)
 return 1;
     }
 
-int ChronoLog::AuthConf::parseJsonConf(json_object*auth_conf)
-    {
+int chronolog::AuthConf::parseJsonConf(json_object*auth_conf)
+{
         if(auth_conf == nullptr || !json_object_is_type(auth_conf, json_type_object))
         {
             std::cerr
@@ -101,9 +101,9 @@ int ChronoLog::AuthConf::parseJsonConf(json_object*auth_conf)
             }
         }
 return 1;
-    }
+}
 
-int ChronoLog::RPCProviderConf::parseJsonConf(json_object * json_conf)
+int chronolog::RPCProviderConf::parseJsonConf(json_object * json_conf)
     {
         json_object_object_foreach(json_conf, key, val)
         {
@@ -135,7 +135,7 @@ int ChronoLog::RPCProviderConf::parseJsonConf(json_object * json_conf)
 return 1;
     }
 
-int ChronoLog::LogConf::parseJsonConf(json_object*json_conf)
+int chronolog::LogConf::parseJsonConf(json_object*json_conf)
 {
 
         if(!json_object_is_type(json_conf, json_type_object))
@@ -198,7 +198,7 @@ int ChronoLog::LogConf::parseJsonConf(json_object*json_conf)
 return 1;
 }
 
-    int ChronoLog::VisorConfiguration::parseJsonConf(json_object*json_conf)
+    int chronolog::VisorConfiguration::parseJsonConf(json_object*json_conf)
     {
         json_object_object_foreach(json_conf, key, val)
         {
@@ -259,7 +259,7 @@ return 1;
 return 1;
     }
 
-    int ChronoLog::KeeperConfiguration::parseJsonConf(json_object*json_conf)
+    int chronolog::KeeperConfiguration::parseJsonConf(json_object*json_conf)
     {
         json_object_object_foreach(json_conf, key, val)
         {
@@ -391,7 +391,7 @@ return 1;
 return 1;
     }
 
-int ChronoLog::GrapherConfiguration::parseJsonConf(json_object*json_conf)
+int chronolog::GrapherConfiguration::parseJsonConf(json_object*json_conf)
 {
     json_object_object_foreach(json_conf, key, val)
     {
@@ -506,7 +506,7 @@ int ChronoLog::GrapherConfiguration::parseJsonConf(json_object*json_conf)
 return 1;
 }
 
-int ChronoLog::PlayerConfiguration::parseJsonConf(json_object*json_conf)
+int chronolog::PlayerConfiguration::parseJsonConf(json_object*json_conf)
 {
     json_object_object_foreach(json_conf, key, val)
     {
@@ -619,7 +619,7 @@ int ChronoLog::PlayerConfiguration::parseJsonConf(json_object*json_conf)
 return 1;
 }
 
-int ChronoLog::DataStoreConf::parseJsonConf(json_object* data_store_json_conf)
+int chronolog::DataStoreConf::parseJsonConf(json_object* data_store_json_conf)
 {
     json_object_object_foreach(data_store_json_conf, key, val)
     {

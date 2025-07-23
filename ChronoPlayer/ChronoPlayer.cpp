@@ -43,8 +43,8 @@ int main(int argc, char**argv)
     {
         std::exit(EXIT_FAILURE);
     }
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
-    ChronoLog::PlayerConfiguration PLAYER_CONF = confManager.PLAYER_CONF;
+    chronolog::ConfigurationManager confManager(conf_file_path);
+    chronolog::PlayerConfiguration PLAYER_CONF = confManager.PLAYER_CONF;
 
     std::cout << "ChronoPlayer Configuration "<< PLAYER_CONF.to_String()<<std::endl;
 

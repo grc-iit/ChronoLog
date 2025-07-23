@@ -31,7 +31,7 @@ chronolog::VisorClientPortal::VisorClientPortal(): clientPortalState(chl::VisorC
 }
 
 ////////////////
-int chronolog::VisorClientPortal::StartServices(ChronoLog::VisorConfiguration const & VISOR_CONF
+int chronolog::VisorClientPortal::StartServices(chronolog::VisorConfiguration const & VISOR_CONF
                                                 , chl::KeeperRegistry*keeperRegistry)
 {
     int return_status = chronolog::CL_ERR_UNKNOWN;

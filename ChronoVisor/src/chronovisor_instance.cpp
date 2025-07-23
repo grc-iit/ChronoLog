@@ -39,8 +39,8 @@ int main(int argc, char**argv)
     {
         std::exit(EXIT_FAILURE);
     }
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
-    ChronoLog::VisorConfiguration VISOR_CONF = confManager.VISOR_CONF;
+    chronolog::ConfigurationManager confManager(conf_file_path);
+    chronolog::VisorConfiguration VISOR_CONF = confManager.VISOR_CONF;
 
     std::cout << "VISOR_CONFIGURATION " << VISOR_CONF.to_String() << std::endl;
 

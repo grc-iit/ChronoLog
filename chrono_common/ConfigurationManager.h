@@ -13,7 +13,7 @@
 #include "enum.h"
 #include "chronolog_errcode.h"
 
-namespace ChronoLog
+namespace chronolog
 {
 struct ClockConf
 {

@@ -68,9 +68,9 @@ int main(int argc, char**argv)
     {
         std::exit(EXIT_FAILURE);
     }
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
+    chronolog::ConfigurationManager confManager(conf_file_path);
 
-    ChronoLog::KeeperConfiguration KEEPER_CONF = confManager.KEEPER_CONF;
+    chronolog::KeeperConfiguration KEEPER_CONF = confManager.KEEPER_CONF;
     std::cout << "ChronoKeeper Configuration "<< KEEPER_CONF.to_String()<<std::endl;
     
     int result = chronolog::chrono_monitor::initialize(KEEPER_CONF.LOG_CONF.LOGTYPE

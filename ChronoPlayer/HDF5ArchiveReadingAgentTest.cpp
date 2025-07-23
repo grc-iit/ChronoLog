@@ -48,7 +48,7 @@ int main(int argc, char**argv)
     {
         std::exit(EXIT_FAILURE);
     }
-    ChronoLog::ConfigurationManager confManager(conf_file_path);
+    chronolog::ConfigurationManager confManager(conf_file_path);
     int result = chronolog::chrono_monitor::initialize(confManager.PLAYER_CONF.LOG_CONF.LOGTYPE
                                                        , confManager.PLAYER_CONF.LOG_CONF.LOGFILE
                                                        , confManager.PLAYER_CONF.LOG_CONF.LOGLEVEL

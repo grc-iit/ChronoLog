@@ -465,7 +465,7 @@ public:
         {
             std::cerr << "[ConfigurationManager] Failed to open configuration file at path: " << conf_file_path.c_str()
                       << ". Exiting..." << std::endl;
-            exit(chronolog::CL_ERR_NOT_EXIST);
+            exit(chronolog::CL_ERR_UNKNOWN);
         }
 
         json_object_object_foreach(root, key, val)
@@ -545,108 +545,6 @@ public:
         }
         json_object_put(root);
     }
-
-private:
-
-/*    void parselogLevelConf(json_object*json_conf, spdlog::level::level_enum &log_level)
-    {
-        if(json_object_is_type(json_conf, json_type_string))
-        {
-            const char*conf_str = json_object_get_string(json_conf);
-            if(strcmp(conf_str, "trace") == 0)
-            {
-                log_level = spdlog::level::trace;
-            }
-            else if(strcmp(conf_str, "info") == 0)
-            {
-                log_level = spdlog::level::info;
-            }
-            else if(strcmp(conf_str, "debug") == 0)
-            {
-                log_level = spdlog::level::debug;
-            }
-            else if(strcmp(conf_str, "warning") == 0)
-            {
-                log_level = spdlog::level::warn;
-            }
-            else if(strcmp(conf_str, "error") == 0)
-            {
-                log_level = spdlog::level::err;
-            }
-            else if(strcmp(conf_str, "critical") == 0)
-            {
-                log_level = spdlog::level::critical;
-            }
-            else if(strcmp(conf_str, "off") == 0)
-            {
-                log_level = spdlog::level::off;
-            }
-            else
-            {
-                std::cout << "[ConfigurationManager] Unknown log level: " << conf_str << std::endl;
-            }
-        }
-        else
-        {
-            std::cerr << "[ConfigurationManager] Invalid Log Level implementation configuration" << std::endl;
-        }
-    }
-
-    void parseFlushLevelConf(json_object*json_conf, spdlog::level::level_enum &flush_level)
-    {
-        if(json_object_is_type(json_conf, json_type_string))
-        {
-            const char*conf_str = json_object_get_string(json_conf);
-            if(strcmp(conf_str, "trace") == 0)
-            {
-                flush_level = spdlog::level::trace;
-            }
-            else if(strcmp(conf_str, "info") == 0)
-            {
-                flush_level = spdlog::level::info;
-            }
-            else if(strcmp(conf_str, "debug") == 0)
-            {
-                flush_level = spdlog::level::debug;
-            }
-            else if(strcmp(conf_str, "warning") == 0)
-            {
-                flush_level = spdlog::level::warn;
-            }
-            else if(strcmp(conf_str, "error") == 0)
-            {
-                flush_level = spdlog::level::err;
-            }
-            else if(strcmp(conf_str, "critical") == 0)
-            {
-                flush_level = spdlog::level::critical;
-            }
-            else if(strcmp(conf_str, "off") == 0)
-            {
-                flush_level = spdlog::level::off;
-            }
-            else
-            {
-                std::cout << "[ConfigurationManager] Unknown flush level: " << conf_str << "Set it to default value: "
-                                                                                           "Warning" << std::endl;
-                flush_level = spdlog::level::warn;
-            }
-        }
-        else
-        {
-            std::cerr << "[ConfigurationManager] Invalid Flush Level implementation configuration" << std::endl;
-        }
-    }
-
-    void parseClockConf(json_object*json_conf, ClockConf &);
-    void parseAuthConf(json_object*json_conf, AuthConf &);
-    void parseLogConf(json_object*json_conf, LogConf &);
-    void parseRPCProviderConf(json_object*json_conf, RPCProviderConf &);
-    void parseVisorConf(json_object*json_conf);
-    void parseKeeperConf(json_object*json_conf);
-    void parseGrapherConf(json_object*json_conf);
-    void parsePlayerConf(json_object*json_conf);
-*/
 };
 }
 

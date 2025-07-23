@@ -38,7 +38,7 @@ public:
 
     ~VisorClientPortal();
 
-    int StartServices(ChronoLog::ConfigurationManager const &, KeeperRegistry*);
+    int StartServices(ChronoLog::VisorConfiguration const &, KeeperRegistry*);
 
     void ShutdownServices();
 

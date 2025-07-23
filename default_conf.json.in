@@ -85,9 +85,9 @@
     },
     "DataStoreInternals": {
       "max_story_chunk_size": 4096,
-      "story_chunk_duration_secs": 30,
-      "acceptance_window_secs": 60,
-      "inactive_story_delay_secs": 180
+      "story_chunk_duration_secs": 10,
+      "acceptance_window_secs": 15,
+      "inactive_story_delay_secs": 120
     },
     "Extractors": {
       "story_files_dir": "/tmp"

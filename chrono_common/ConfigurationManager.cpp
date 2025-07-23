@@ -18,13 +18,13 @@ int  ChronoLog::ClockConf::parseJsonConf(json_object*clock_conf)
                     else if(strcmp(clocksource_type, "TSC") == 0)
                         CLOCKSOURCE_TYPE = ClocksourceType::TSC;
                     else
-                        std::cout << "[ConfigurationManager] Unknown clocksource type: " << clocksource_type
+                        std::cout << "[ClockConfiguration] Unknown clocksource type: " << clocksource_type
                                   << std::endl;
                 }
                 else
                 {
                     std::cerr
-                            << "[ConfigurationManager] Failed to parse configuration file: clocksource_type is not a string"
+                            << "[ClockConfiguration] Failed to parse configuration file: clocksource_type is not a string"
                             << std::endl;
                     exit(chronolog::CL_ERR_INVALID_CONF);
                 }
@@ -38,9 +38,9 @@ int  ChronoLog::ClockConf::parseJsonConf(json_object*clock_conf)
                 else
                 {
                     std::cerr
-                            << "[ConfigurationManager] Failed to parse configuration file: drift_cal_sleep_sec is not an integer"
+                            << "[ClockConfiguration] Failed to parse configuration file: drift_cal_sleep_sec is not an integer"
                             << std::endl;
-                    exit(chronolog::CL_ERR_INVALID_CONF);
+                    return (chronolog::CL_ERR_INVALID_CONF);
                 }
             }
             else if(strcmp(key, "drift_cal_sleep_nsec") == 0)
@@ -54,7 +54,7 @@ int  ChronoLog::ClockConf::parseJsonConf(json_object*clock_conf)
                     std::cerr
                             << "[ConfigurationManager] Failed to parse configuration file: drift_cal_sleep_nsec is not an integer"
                             << std::endl;
-                    exit(chronolog::CL_ERR_INVALID_CONF);
+                    return (chronolog::CL_ERR_INVALID_CONF);
                 }
             }
         }
@@ -66,9 +66,9 @@ int ChronoLog::AuthConf::parseJsonConf(json_object*auth_conf)
         if(auth_conf == nullptr || !json_object_is_type(auth_conf, json_type_object))
         {
             std::cerr
-                    << "[ConfigurationManager] Error while parsing configuration file. Authentication configuration is not found or is not an object."
+                    << "[AuthConfiguration] Error while parsing configuration file. Authentication configuration is not found or is not an object."
                     << std::endl;
-            exit(chronolog::CL_ERR_INVALID_CONF);
+            return (chronolog::CL_ERR_INVALID_CONF);
         }
         json_object_object_foreach(auth_conf, key, val)
         {
@@ -80,9 +80,9 @@ int ChronoLog::AuthConf::parseJsonConf(json_object*auth_conf)
                 }
                 else
                 {
-                    std::cerr << "[ConfigurationManager] Failed to parse configuration file: auth_type is not a string"
+                    std::cerr << "[AuthConfiguration] Failed to parse configuration file: auth_type is not a string"
                               << std::endl;
-                    exit(chronolog::CL_ERR_INVALID_CONF);
+                    return (chronolog::CL_ERR_INVALID_CONF);
                 }
             }
             else if(strcmp(key, "module_location") == 0)
@@ -94,16 +94,16 @@ int ChronoLog::AuthConf::parseJsonConf(json_object*auth_conf)
                 else
                 {
                     std::cerr
-                            << "[ConfigurationManager] Failed to parse configuration file: module_location is not a string"
+                            << "[AuthConfiguration] Failed to parse configuration file: module_location is not a string"
                             << std::endl;
-                    exit(chronolog::CL_ERR_INVALID_CONF);
+                    return (chronolog::CL_ERR_INVALID_CONF);
                 }
             }
         }
 return 1;
     }
 
-int ChronoLog::RPCProviderConf::parseJsonConf(json_object*json_conf)
+int ChronoLog::RPCProviderConf::parseJsonConf(json_object * json_conf)
     {
         json_object_object_foreach(json_conf, key, val)
         {
@@ -129,58 +129,74 @@ int ChronoLog::RPCProviderConf::parseJsonConf(json_object*json_conf)
             }
             else
             {
-                std::cerr << "[ConfigurationManager] Unknown client end configuration: " << key << std::endl;
+                std::cerr << "[RPCProviderConf] Unknown client end configuration: " << key << std::endl;
             }
         }
 return 1;
     }
 
-    int ChronoLog::LogConf::parseJsonConf(json_object*json_conf)
-    {
-        json_object_object_foreach(json_conf, key, val)
+int ChronoLog::LogConf::parseJsonConf(json_object*json_conf)
+{
+
+        if(!json_object_is_type(json_conf, json_type_object))
         {
-            if(strcmp(key, "type") == 0)
-            {
-                assert(json_object_is_type(val, json_type_string));
-                LOGTYPE = json_object_get_string(val);
-            }
-            else if(strcmp(key, "file") == 0)
-            {
-                assert(json_object_is_type(val, json_type_string));
-                LOGFILE = json_object_get_string(val);
-            }
-            else if(strcmp(key, "level") == 0)
-            {
-                assert(json_object_is_type(val, json_type_string));
-                parselogLevelConf(val, LOGLEVEL);
-            }
-            else if(strcmp(key, "name") == 0)
-            {
-                assert(json_object_is_type(val, json_type_string));
-                LOGNAME = json_object_get_string(val);
-            }
-            else if(strcmp(key, "filesize") == 0)
-            {
-                assert(json_object_is_type(val, json_type_int));
-                LOGFILESIZE = json_object_get_int(val);
-            }
-            else if(strcmp(key, "filenum") == 0)
-            {
-                assert(json_object_is_type(val, json_type_int));
-                LOGFILENUM = json_object_get_int(val);
-            }
-            else if(strcmp(key, "flushlevel") == 0)
-            {
-                assert(json_object_is_type(val, json_type_string));
-                parseFlushLevelConf(val, FLUSHLEVEL);
-            }
-            else
-            {
-                std::cerr << "[ConfigurationManager] Unknown log configuration: " << key << std::endl;
-            }
+            std::cerr
+                    << "[LogConf] Logger configuration is not found or is not an object." << std::endl;
+            return (chronolog::CL_ERR_INVALID_CONF);
         }
-return 1;
+        json_object_object_foreach(json_conf, key, json_val)
+        {
+            if(strcmp(key, "monitor") != 0)
+            {
+                std::cerr << "[LogConf] Unknown Log configuration key : " << key << std::endl;
+                return (chronolog::CL_ERR_INVALID_CONF);
+            }
+
+            json_object_object_foreach(json_val, key, val)
+            {
+                if(strcmp(key, "type") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    LOGTYPE = json_object_get_string(val);
+                }
+                else if(strcmp(key, "file") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    LOGFILE = json_object_get_string(val);
+                }
+                else if(strcmp(key, "level") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    parselogLevelConf(val, LOGLEVEL);
+                }
+                else if(strcmp(key, "name") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    LOGNAME = json_object_get_string(val);
+                }
+                else if(strcmp(key, "filesize") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_int));
+                    LOGFILESIZE = json_object_get_int(val);
+                }
+                else if(strcmp(key, "filenum") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_int));
+                    LOGFILENUM = json_object_get_int(val);
+                }
+                else if(strcmp(key, "flushlevel") == 0)
+                {
+                    assert(json_object_is_type(val, json_type_string));
+                    parseFlushLevelConf(val, FLUSHLEVEL);
+                }
+                else
+                {
+                    std::cerr << "[LogConf] Unknown log configuration: " << key << std::endl;
+                }
+            }
     }
+return 1;
+}
 
     int ChronoLog::VisorConfiguration::parseJsonConf(json_object*json_conf)
     {
@@ -199,7 +215,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown VisorClientPortalService "
+                        std::cerr << "[VisorConfiguration] [chrono_visor] Unknown VisorClientPortalService "
                                      "configuration: " << key << std::endl;
                     }
                 }
@@ -217,7 +233,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown VisorKeeperRegistryService "
+                        std::cerr << "[VisorConfiguration]  Unknown VisorKeeperRegistryService "
                                      "configuration: " << key << std::endl;
                     }
                 }
@@ -225,19 +241,8 @@ return 1;
             else if(strcmp(key, "Monitoring") == 0)
             {
                 assert(json_object_is_type(val, json_type_object));
-                json_object*chronovisor_log = json_object_object_get(json_conf, "Monitoring");
-                json_object_object_foreach(chronovisor_log, key, val)
-                {
-                    if(strcmp(key, "monitor") == 0)
-                    {
-                        VISOR_LOG_CONF.parseJsonConf(val);
-                    }
-                    else
-                    {
-                        std::cerr << "[ConfigurationManager] [chrono_visor] Unknown Monitoring configuration: "
-                                  << key << std::endl;
-                    }
-                }
+                json_object* chronovisor_log = json_object_object_get(json_conf, "Monitoring");
+                VISOR_LOG_CONF.parseJsonConf(chronovisor_log);
             }
             else if(strcmp(key, "delayed_data_admin_exit_in_secs") == 0)
             {
@@ -248,7 +253,7 @@ return 1;
             }
             else
             {
-                std::cerr << "[ConfigurationManager] [chrono_visor] Unknown Visor configuration: " << key << std::endl;
+                std::cerr << "[VisorConfiguration] Unknown Visor configuration: " << key << std::endl;
             }
         }
 return 1;
@@ -276,7 +281,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperRecordingService "
+                        std::cerr << "[KeeperConfiguration] Unknown KeeperRecordingService "
                                      "configuration: " << key << std::endl;
                     }
                 }
@@ -294,7 +299,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperDataStoreAdminService "
+                        std::cerr << "[KeeperConfiguration]  Unknown KeeperDataStoreAdminService "
                                      "configuration: " << key << std::endl;
                     }
                 }
@@ -312,7 +317,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown VisorKeeperRegistryService configuration: "
+                        std::cerr << "[KeeperConfiguration] Unknown VisorKeeperRegistryService configuration: "
                                   << key << std::endl;
                     }
                 }
@@ -330,7 +335,7 @@ return 1;
                     }
                     else
                     {
-                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown KeeperGrapherDrainService configuration: "
+                        std::cerr << "[KeeperConfiguration] Unknown KeeperGrapherDrainService configuration: "
                                   << key << std::endl;
                     }
                 }
@@ -338,8 +343,9 @@ return 1;
             else if(strcmp(key, "Monitoring") == 0)
             {
                 assert(json_object_is_type(val, json_type_object));
-                json_object*chronokeeper_log = json_object_object_get(json_conf, "Monitoring");
-                json_object_object_foreach(chronokeeper_log, key, val)
+                json_object* keeper_monitor = json_object_object_get(json_conf, "Monitoring");
+                LOG_CONF.parseJsonConf(keeper_monitor);
+               /* json_object_object_foreach(chronokeeper_log, key, val)
                 {
                     if(strcmp(key, "monitor") == 0)
                     {
@@ -350,26 +356,13 @@ return 1;
                         std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown Monitoring configuration: "
                                   << key << std::endl;
                     }
-                }
+                }*/
             }
             else if(strcmp(key, "DataStoreInternals") == 0)
             {
                 assert(json_object_is_type(val, json_type_object));
-                json_object*data_store_conf = json_object_object_get(json_conf, "DataStoreInternals");
+                json_object* data_store_conf = json_object_object_get(json_conf, "DataStoreInternals");
                 DATA_STORE_CONF.parseJsonConf(data_store_conf);
-                /*json_object_object_foreach(data_store_conf, key, val)
-                {
-                    if(strcmp(key, "max_story_chunk_size") == 0)
-                    {
-                        assert(json_object_is_type(val, json_type_int));
-                        KEEPER_CONF.DATA_STORE_CONF.max_story_chunk_size = json_object_get_int(val);
-                    }
-                    else
-                    {
-                        std::cerr << "[ConfigurationManager] [chrono_keeper] Unknown DataStoreInternals configuration: "
-                                  << key << std::endl;
-                    }
-                }*/
             }
             else if(strcmp(key, "Extractors") == 0)
             {
@@ -465,7 +458,9 @@ int ChronoLog::GrapherConfiguration::parseJsonConf(json_object*json_conf)
         else if(strcmp(key, "Monitoring") == 0)
         {
             assert(json_object_is_type(val, json_type_object));
-            json_object*chrono_logging = json_object_object_get(json_conf, "Monitoring");
+            json_object* grapher_monitor = json_object_object_get(json_conf, "Monitoring");
+            LOG_CONF.parseJsonConf(grapher_monitor);
+            /*
             json_object_object_foreach(chrono_logging, key, val)
             {
                 if(strcmp(key, "monitor") == 0)
@@ -477,28 +472,13 @@ int ChronoLog::GrapherConfiguration::parseJsonConf(json_object*json_conf)
                     std::cerr << "[GrapherConf] Unknown Monitoring configuration: " << key
                               << std::endl;
                 }
-            }
+            }*/
         }
         else if(strcmp(key, "DataStoreInternals") == 0)
         {
             assert(json_object_is_type(val, json_type_object));
             json_object*data_store_conf = json_object_object_get(json_conf, "DataStoreInternals");
             DATA_STORE_CONF.parseJsonConf(data_store_conf);
-/*                if(strcmp(key, "max_story_chunk_size") == 0)
-            json_object_object_foreach(data_store_conf, key, val)
-            {
-                if(strcmp(key, "max_story_chunk_size") == 0)
-                {
-                    assert(json_object_is_type(val, json_type_int));
-//max_story_chunk_size = json_object_get_int(val);
-                }
-                else
-                {
-                    std::cerr << "[ConfigurationManager] [chrono_grapher] Unknown DataStoreInternals configuration: "
-                              << key << std::endl;
-                }
-            }
-*/
         }
         else if(strcmp(key, "Extractors") == 0)
         {
@@ -592,37 +572,26 @@ int ChronoLog::PlayerConfiguration::parseJsonConf(json_object*json_conf)
         else if(strcmp(key, "Monitoring") == 0)
         {
             assert(json_object_is_type(val, json_type_object));
-            json_object*chrono_logging = json_object_object_get(json_conf, "Monitoring");
-            json_object_object_foreach(chrono_logging, key, val)
+            json_object* player_monitor = json_object_object_get(json_conf, "Monitoring");
+            LOG_CONF.parseJsonConf(player_monitor);
+            /*json_object_object_foreach(chrono_logging, key, val)
             {
                 if(strcmp(key, "monitor") == 0)
                 {
-                    LOG_CONF.parseJsonConf(val);
+                    LOG_CONF.parseJsonConf(palyer_monitor);
                 }
                 else
                 {
                     std::cerr << "[ConfigurationManager] [chrono_player] Unknown Monitoring configuration: " << key
                               << std::endl;
                 }
-            }
+            }*/
         }
         else if(strcmp(key, "DataStoreInternals") == 0)
         {
             assert(json_object_is_type(val, json_type_object));
             json_object*data_store_conf = json_object_object_get(json_conf, "DataStoreInternals");
             DATA_STORE_CONF.parseJsonConf(data_store_conf);//, key, val)
-            /*{
-                if(strcmp(key, "max_story_chunk_size") == 0)
-                {
-                    assert(json_object_is_type(val, json_type_int));
-                    DATA_STORE_CONF.max_story_chunk_size = json_object_get_int(val);
-                }
-                else
-                {
-                    std::cerr << "[ConfigurationManager] [chrono_player] Unknown DataStoreInternals configuration: "
-                              << key << std::endl;
-                }
-            }*/
         }
         else if(strcmp(key, "ArchiveReaders") == 0)
         {
@@ -652,7 +621,33 @@ return 1;
 
 int ChronoLog::DataStoreConf::parseJsonConf(json_object* data_store_json_conf)
 {
-//INNA: implement !!!
+    json_object_object_foreach(data_store_json_conf, key, val)
+    {
+        if(strcmp(key, "max_story_chunk_size") == 0)
+        {
+            assert(json_object_is_type(val, json_type_int));
+            max_story_chunk_size = json_object_get_int(val);
+        }
+        else if(strcmp(key, "story_chunk_duration_secs") == 0)
+        {
+            assert(json_object_is_type(val, json_type_int));
+            story_chunk_duration_secs = json_object_get_int(val);
+        }
+        else if(strcmp(key, "acceptance_window_secs") == 0)
+        {
+            assert(json_object_is_type(val, json_type_int));
+            acceptance_window_secs = json_object_get_int(val);
+        }
+        else if( strcmp(key, "inactive_story_delay_secs") == 0)
+        {
+            assert(json_object_is_type(val, json_type_int));
+            inactive_story_delay_secs = json_object_get_int(val);
+        }
+        else
+        {
+            std::cerr << "[DataStoreConf] Unknown DataStoreInternals configuration: " << key << std::endl;
+        }
+    }
 
 return 1;
 }

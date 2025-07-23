@@ -671,9 +671,269 @@ TEST(StoryChunk_TestMergeEvents, testEmptyAndHugePayloads)
   Tests on eraseEvents()
   ---------------------------------- */
 
+// We first insert three valid events and then erase a valid event at a particular timestamp
+TEST(StoryChunk_TestEraseEvents, testValidErase)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 100, 250, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 100, 0, 0, "test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 150, 0, 0, "test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 200, 0, 0, "test"));
+
+    chunk.eraseEvents(150, 151);
+
+    EXPECT_EQ(chunk.getEventCount(), 2);
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 2);
+    EXPECT_EQ(series[0].time(), 100);
+    EXPECT_EQ(series[1].time(), 200);
+}
+
+
+// Call erase events at a timestamp that does not exist in the events
+// others should not be touched
+TEST(StoryChunk_TestEraseEvents, testNonExistingTimestamp)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 10, 0, 0, "test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 90, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 2);
+
+    chunk.eraseEvents(50, 51);
+    EXPECT_EQ(chunk.getEventCount(), 2);
+}
+
+// erase at a timestamp with two events at the same time
+// both should be deleted and other should not be touched
+TEST(StoryChunk_TestEraseEvents, testEraseDuplicateTimestamps)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 200, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 150, 0, 0, "test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 150, 1, 1, "test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 100, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 3);
+
+    chunk.eraseEvents(150, 151);
+    EXPECT_EQ(chunk.getEventCount(), 1);
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 1);
+    EXPECT_EQ(series[0].time(), 100);
+}
+
+// erase events in a particular time range and ensure all in that timestamp range erase
+TEST(StoryChunk_TestEraseEvents, testEraseInRange)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 300, 10);
+    for (int t : {100, 120, 140, 160, 180})
+        chunk.insertEvent(chl::LogEvent(storyId, t, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 5);
+
+    chunk.eraseEvents(120, 160);
+    EXPECT_EQ(chunk.getEventCount(), 2);
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 2);
+    EXPECT_EQ(series[0].time(), 100);
+    EXPECT_EQ(series[1].time(), 180);
+}
+
+// erase events out of the time range of the story chunk
+TEST(StoryChunk_TestEraseEvents, testEraseOutOfTime)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 200, 10);
+    for (int t : {50, 150, 250})
+        chunk.insertEvent(chl::LogEvent(storyId, t, 0, 0, ""));
+    EXPECT_EQ(chunk.getEventCount(), 2);
+
+    chunk.eraseEvents(250, 300);
+    EXPECT_EQ(chunk.getEventCount(), 2);
+}
+
+// call erase events with an invalid input of start greater than end
+TEST(StoryChunk_TestEraseEvents, testEraseInvalidTime)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 10, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 1);
+
+    chunk.eraseEvents(200, 50);
+    EXPECT_EQ(chunk.getEventCount(), 1);
+}
+
+// test to erase all events
+TEST(StoryChunk_TestEraseEvents, testEraseAllEvents)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 10, 1000, 10);
+    for (int t = 250; t <= 1000; t += 250)
+        chunk.insertEvent(chl::LogEvent(storyId, t, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 3);
+
+    chunk.eraseEvents(10, 2000);
+    EXPECT_TRUE(chunk.empty());
+}
+
+// insert 100k events and erase a small subset, ensure only those erase
+TEST(StoryChunk_TestEraseEvents, testStressErase)
+{
+    int storyId = 1;
+    const int N = 100000;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, N, N);
+    for (int i = 0; i < N; ++i)
+        chunk.insertEvent(chl::LogEvent(storyId, i, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), N);
+
+    chunk.eraseEvents(40000, 60000);
+    EXPECT_EQ(chunk.getEventCount(), N-1 - (60000 - 40000));
+}
+
+TEST(StoryChunk_TestEraseEvents, testEraseEndTimeMinusOne)
+{
+    int storyId = 1;
+    int startTime = 100, endTime = 200;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, startTime, endTime, 10);
+
+    chunk.insertEvent(chl::LogEvent(storyId, 150, 0,0,"test"));
+    chunk.insertEvent(chl::LogEvent(storyId, endTime-1, 0,0,"test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 180, 0,0,"test"));
+    EXPECT_EQ(chunk.getEventCount(), 3);
+
+    chunk.eraseEvents(endTime-1, endTime);
+
+    EXPECT_EQ(chunk.getEventCount(), 2);
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 2);
+    EXPECT_EQ(series[0].time(), 150);
+    EXPECT_EQ(series[1].time(), 180);
+}
+
+TEST(StoryChunk_TestEraseEvents, testZeroRange)
+{
+    int storyId (1);
+    chl::StoryChunk chunk("ChronicleName", "StoryName",storyId,0,100,5);
+    chunk.insertEvent(chl::LogEvent(storyId, 20, 0,0,"test"));
+    chunk.insertEvent(chl::LogEvent(storyId, 40, 0,0,"test"));
+    EXPECT_EQ(chunk.getEventCount(), 2);
+
+    chunk.eraseEvents(40, 40);
+    EXPECT_EQ(chunk.getEventCount(), 2);
+}
+
+
 /* ----------------------------------
   Tests on extractEventSeries()
   ---------------------------------- */
+
+TEST(StoryChunk_TestExtractEventSeries, testExtractEmptyChunk)
+{
+    chl::StoryChunk chunk;
+    std::vector<chl::Event> series;
+    auto &ret = chunk.extractEventSeries(series);
+    EXPECT_EQ(&ret, &series);
+    EXPECT_TRUE(series.empty());
+    EXPECT_TRUE(chunk.empty());
+    EXPECT_EQ(chunk.getEventCount(), 0);
+}
+
+TEST(StoryChunk_TestExtractEventSeries, testExtractSingleEvent)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 25, 5, 2, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 1);
+
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 1);
+    EXPECT_EQ(series[0].time(), 25);
+    EXPECT_EQ(series[0].client_id(), 5);
+    EXPECT_EQ(series[0].index(), 2);
+    EXPECT_EQ(series[0].log_record(), "test");
+
+    EXPECT_TRUE(chunk.empty());
+    EXPECT_EQ(chunk.getEventCount(), 0);
+}
+
+TEST(StoryChunk_TestExtractEventSeries, testExtractEventsSorted)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+    for (auto t : {30, 10, 20,15,11,35,23})
+        chunk.insertEvent(chl::LogEvent(storyId, t, 0, 0, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 7);
+
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 7);
+    EXPECT_EQ(series[0].time(), 10);
+    EXPECT_EQ(series[1].time(), 11);
+    EXPECT_EQ(series[2].time(), 15);
+    EXPECT_EQ(series[3].time(), 20);
+    EXPECT_EQ(series[4].time(), 23);
+    EXPECT_EQ(series[5].time(), 30);
+    EXPECT_EQ(series[6].time(), 35);
+}
+
+// extract events once and then extract again and confirm if empty second time
+TEST(StoryChunk_TestExtractEventSeries, testExtractTwice)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+    chunk.insertEvent(chl::LogEvent(storyId, 50, 1, 1, "test"));
+    EXPECT_EQ(chunk.getEventCount(), 1);
+
+    std::vector<chl::Event> s1;
+    chunk.extractEventSeries(s1);
+    ASSERT_EQ(s1.size(), 1);
+
+    EXPECT_TRUE(chunk.empty());
+
+    std::vector<chl::Event> s2;
+    chunk.extractEventSeries(s2);
+    EXPECT_TRUE(s2.empty());
+}
+
+TEST(StoryChunk_TestExtractEventSeries, testExtractAfterReinsert)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 100, 10);
+
+    chunk.insertEvent(chl::LogEvent(storyId, 5, 0, 0, "one"));
+    std::vector<chl::Event> s1;
+    chunk.extractEventSeries(s1);
+    ASSERT_EQ(s1.size(), 1);
+    EXPECT_EQ(s1[0].log_record(), "one");
+
+    chunk.insertEvent(chl::LogEvent(storyId, 15, 0, 0, "two"));
+    std::vector<chl::Event> s2;
+    chunk.extractEventSeries(s2);
+    ASSERT_EQ(s2.size(), 1);
+    EXPECT_EQ(s2[0].log_record(), "two");
+    EXPECT_TRUE(chunk.empty());
+}
+
+TEST(StoryChunk_TestExtractEventSeries, testExtractLargePayload)
+{
+    int storyId = 1;
+    chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, 0, 1000, 10);
+    std::string big(5000, 't');
+    chunk.insertEvent(chl::LogEvent(storyId, 100, 0, 0, big));
+
+    std::vector<chl::Event> series;
+    chunk.extractEventSeries(series);
+    ASSERT_EQ(series.size(), 1);
+    EXPECT_EQ(series[0].log_record().size(), big.size());
+}
+
+
 
 /* ----------------------------------
   Tests on serialization?

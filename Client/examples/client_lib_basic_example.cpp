@@ -76,11 +76,11 @@ int main(int argc, char** argv) {
     story_handle->log_event("Event 3");
 
     // Wait for events to be processed
-    sleep(800);
+    sleep(120);
 
     // Read a story
     std::vector<chronolog::Event> events;
-    uint64_t start_time = 0;
+    uint64_t start_time = 1;
     uint64_t end_time = 2000000000000000000;
     int replay_ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
 

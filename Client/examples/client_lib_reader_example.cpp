@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
 
     // Replay the story
     std::vector<chronolog::Event> events;
-    uint64_t start_time = 0;
-    uint64_t end_time = UINT64_MAX;
+    uint64_t start_time = 1;
+    uint64_t end_time = 2000000000000000000;
 
     ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
     assert(ret == chronolog::CL_SUCCESS);

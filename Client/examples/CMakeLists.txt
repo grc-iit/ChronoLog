@@ -14,7 +14,7 @@ target_link_libraries(client_lib_writer_example chronolog_client -lpthread -lrt)
 add_executable(client_lib_basic_example client_lib_basic_example.cpp)
 target_include_directories(client_lib_basic_example PRIVATE ${CMAKE_BINARY_DIR}/Client/include)
 target_link_libraries(client_lib_basic_example chronolog_client -lpthread -lrt)
-)
+
 # Reader example
 add_executable(client_lib_reader_example client_lib_reader_example.cpp)
 target_include_directories(client_lib_reader_example PRIVATE ${CMAKE_BINARY_DIR}/Client/include)

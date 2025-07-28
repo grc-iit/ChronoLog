@@ -1,9 +1,10 @@
 #include <ClientConfiguration.h>
 #include <chronolog_client.h>
 
-#include <cassert>
 #include <chrono_monitor.h>
 #include <cmd_arg_parse.h>
+
+#include <cassert>
 #include <common.h>
 #include <unistd.h>
 

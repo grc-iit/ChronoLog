@@ -79,17 +79,27 @@ int main(int argc, char **argv) {
   auto story_handle = acquire_result.second;
 
   // Log a few events to the story
+  // Event values are hardcoded for example purposes.
   story_handle->log_event("Event 1");
   story_handle->log_event("Event 2");
   story_handle->log_event("Event 3");
 
-  // Wait for events to be processed
+  // Temporary workaround: wait to ensure data is persisted before reading.
+  // This sleep duration allows background processes to complete the required
+  // steps for persistence
+  // The exact time may vary depending on the system configuration.
+  // Future versions may revise or eliminate the need for this hardcoded delay.
   sleep(120);
+
+  // Use an intentionally wide time range to ensure all events are captured.
+  // 'start_time' is set to 1 to include any valid timestamp from the beginning.
+  // 'end_time' is set to a very large value to ensure we read up to the latest
+  // events. This approach avoids missing any data due to timing uncertainties.
+  uint64_t start_time = 1;
+  uint64_t end_time = 2000000000000000000;
 
   // Read a story
   std::vector<chronolog::Event> events;
-  uint64_t start_time = 1;
-  uint64_t end_time = 2000000000000000000;
   int replay_ret = client.ReplayStory(chronicle_name, story_name, start_time,
                                       end_time, events);
 

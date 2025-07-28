@@ -8,6 +8,13 @@
 #include <common.h>
 #include <unistd.h>
 
+// This file is the writer part of the reader example also available in the same
+// folder. Therefore, the code is responsible for creating the chronicle and
+// story that the reader example will later access.
+//
+// For this reason, the chronicle and story are not destroyed at the end of this
+// example — they must remain available for the reader to consume.
+
 int main(int argc, char **argv) {
   // Load configuration
   std::string conf_file_path = parse_conf_path_arg(argc, argv);
@@ -51,41 +58,35 @@ int main(int argc, char **argv) {
   // Create a ChronoLog client
   chronolog::Client client(portalConf);
 
-  // Connect to ChronoVisor
+  /// Connect to ChronoVisor
   int ret = client.Connect();
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] Connect returned: " << ret << "\n";
 
   // Create a chronicle
   std::string chronicle_name = "MyChronicle";
   std::map<std::string, std::string> chronicle_attrs;
   int flags = 0;
   ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] CreateChronicle returned: " << ret << "\n";
 
   // Acquire a story
   std::string story_name = "MyStory";
   std::map<std::string, std::string> story_attrs;
   auto acquire_result =
       client.AcquireStory(chronicle_name, story_name, story_attrs, flags);
-  assert(acquire_result.first == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] AcquireStory returned: " << acquire_result.first
+            << "\n";
   auto story_handle = acquire_result.second;
 
   // Log a few events to the story
+  // Event values are hardcoded for example purposes.
   story_handle->log_event("Event 1");
   story_handle->log_event("Event 2");
   story_handle->log_event("Event 3");
 
   // Release the story
   ret = client.ReleaseStory(chronicle_name, story_name);
-  assert(ret == chronolog::CL_SUCCESS);
-
-  // Destroy the story
-  ret = client.DestroyStory(chronicle_name, story_name);
-  assert(ret == chronolog::CL_SUCCESS);
-
-  // Destroy the chronicle
-  ret = client.DestroyChronicle(chronicle_name);
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] ReleaseStory returned: " << ret << "\n";
 
   // Disconnect from ChronoVisor
   ret = client.Disconnect();

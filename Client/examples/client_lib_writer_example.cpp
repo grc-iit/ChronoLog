@@ -48,17 +48,17 @@ int main(int argc, char** argv)
             confManager.LOG_CONF.FLUSHLEVEL);
     if(result == 1) { return EXIT_FAILURE; }
 
-    // Build portal config
-    chronolog::ClientPortalServiceConf portalConf;
-    portalConf.PROTO_CONF = confManager.PORTAL_CONF.PROTO_CONF;
-    portalConf.IP = confManager.PORTAL_CONF.IP;
-    portalConf.PORT = confManager.PORTAL_CONF.PORT;
-    portalConf.PROVIDER_ID = confManager.PORTAL_CONF.PROVIDER_ID;
+  // Build portal config
+  chronolog::ClientPortalServiceConf portalConf;
+  portalConf.PROTO_CONF = confManager.PORTAL_CONF.PROTO_CONF;
+  portalConf.IP = confManager.PORTAL_CONF.IP;
+  portalConf.PORT = confManager.PORTAL_CONF.PORT;
+  portalConf.PROVIDER_ID = confManager.PORTAL_CONF.PROVIDER_ID;
 
-    LOG_INFO("[ClientExample] Starting ChronoLog Client Example");
+  LOG_INFO("[ClientExample] Starting ChronoLog Client Example");
 
-    // Create a ChronoLog client
-    chronolog::Client client(portalConf);
+  // Create a ChronoLog client
+  chronolog::Client client(portalConf);
 
     /// Connect to ChronoVisor
     int ret = client.Connect();
@@ -92,6 +92,6 @@ int main(int argc, char** argv)
     ret = client.Disconnect();
     std::cout << "[ClientExample] Disconnect returned: " << chronolog::to_string_client(ret) << "\n";
 
-    LOG_INFO("[ClientExample] Finished successfully");
-    return 0;
+  LOG_INFO("[ClientExample] Finished successfully");
+  return 0;
 }

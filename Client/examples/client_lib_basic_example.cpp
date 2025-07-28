@@ -101,8 +101,8 @@ int main(int argc, char **argv) {
 
   // Read a story
   std::vector<chronolog::Event> events;
-  int ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time,
-                               events);
+  ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time,
+                           events);
   std::cout << "[ClientExample] ReplayStory returned: " << ret << "\n";
 
   if (ret == chronolog::CL_SUCCESS) {

@@ -1,8 +1,6 @@
 # Client/examples/CMakeLists.txt
 cmake_minimum_required(VERSION 3.25)
 
-find_package(MPI REQUIRED)
-
 message("Building Client/examples")
 
 # Writer example
@@ -23,6 +21,7 @@ target_link_libraries(client_lib_basic_example chronolog_client -lpthread -lrt)
 # Optionally: install the example binaries
 install(TARGETS
     client_lib_writer_example
+    client_lib_reader_example
     client_lib_basic_example
     DESTINATION bin
 )

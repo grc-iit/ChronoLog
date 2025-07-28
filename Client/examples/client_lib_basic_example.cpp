@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
                                events);
   std::cout << "[ClientExample] ReplayStory returned: " << ret << "\n";
 
-  if (ret != chronolog::CL_SUCCESS) {
+  if (ret == chronolog::CL_SUCCESS) {
     std::cout << "[ClientExample] Replay succeeded with " << events.size()
               << " event(s):\n";
     for (const auto &ev : events) {

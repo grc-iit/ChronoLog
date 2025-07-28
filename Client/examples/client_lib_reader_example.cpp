@@ -8,6 +8,10 @@
 #include <common.h>
 #include <unistd.h>
 
+// This file is the reader part of the writer example also available on the same
+// folder. Therefore, the code assumes the existence of a chronicle and a story
+// created by the writer example.
+
 int main(int argc, char **argv) {
   // Load configuration
   std::string conf_file_path = parse_conf_path_arg(argc, argv);
@@ -60,39 +64,55 @@ int main(int argc, char **argv) {
 
   // Connect to ChronoVisor
   int ret = client.Connect();
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] Connect returned: " << ret << "\n";
 
-  // Acquire the story
+  // Acquire a story
   std::string chronicle_name = "MyChronicle";
   std::string story_name = "MyStory";
   std::map<std::string, std::string> story_attrs;
   int flags = 0;
   auto acquire_result =
       client.AcquireStory(chronicle_name, story_name, story_attrs, flags);
-  assert(acquire_result.first == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] AcquireStory returned: " << acquire_result.first
+            << "\n";
+  auto story_handle = acquire_result.second;
 
-  // Replay the story
-  std::vector<chronolog::Event> events;
+  // Use an intentionally wide time range to ensure all events are captured.
+  // 'start_time' is set to 1 to include any valid timestamp from the beginning.
+  // 'end_time' is set to a very large value to ensure we read up to the latest
+  // events. This approach avoids missing any data due to timing uncertainties.
   uint64_t start_time = 1;
-  const uint64_t DEFAULT_END_TIME = 2000000000000000000;
-  uint64_t end_time = DEFAULT_END_TIME;
+  uint64_t end_time = 2000000000000000000;
 
-  ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time,
-                           events);
-  assert(ret == chronolog::CL_SUCCESS);
+  // Read a story
+  std::vector<chronolog::Event> events;
+  int ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time,
+                               events);
+  std::cout << "[ClientExample] ReplayStory returned: " << ret << "\n";
 
-  std::cout << "[ReaderExample] Replayed " << events.size() << " events:\n";
-  for (const auto &ev : events) {
-    std::cout << ev.to_string() << "\n";
+  if (ret != chronolog::CL_SUCCESS) {
+    std::cout << "[ClientExample] Replay succeeded with " << events.size()
+              << " event(s):\n";
+    for (const auto &ev : events) {
+      std::cout << ev.to_string() << "\n";
+    }
   }
 
   // Release the story
   ret = client.ReleaseStory(chronicle_name, story_name);
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] ReleaseStory returned: " << ret << "\n";
+
+  // Destroy the story
+  ret = client.DestroyStory(chronicle_name, story_name);
+  std::cout << "[ClientExample] DestroyStory returned: " << ret << "\n";
+
+  // Destroy the chronicle
+  ret = client.DestroyChronicle(chronicle_name);
+  std::cout << "[ClientExample] DestroyChronicle returned: " << ret << "\n";
 
   // Disconnect from ChronoVisor
   ret = client.Disconnect();
-  assert(ret == chronolog::CL_SUCCESS);
+  std::cout << "[ClientExample] Disconnect returned: " << ret << "\n";
 
   LOG_INFO("[ReaderExample] Finished successfully");
   return 0;

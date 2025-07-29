@@ -63,20 +63,20 @@ int main(int argc, char** argv)
 
     // Connect to ChronoVisor
     int ret = client.Connect();
-    std::cout << "[ClientExample] Connect returned: " << ret << "\n";
+    std::cout << "[ClientExample] Connect returned: " << chronolog::to_string_client(ret) << "\n";
 
     // Create a chronicle
     std::string chronicle_name = "MyChronicle";
     std::map<std::string, std::string> chronicle_attrs;
     int flags = 0;
     ret = client.CreateChronicle(chronicle_name, chronicle_attrs, flags);
-    std::cout << "[ClientExample] CreateChronicle returned: " << ret << "\n";
+    std::cout << "[ClientExample] CreateChronicle returned: " << chronolog::to_string_client(ret) << "\n";
 
     // Acquire a story
     std::string story_name = "MyStory";
     std::map<std::string, std::string> story_attrs;
     auto acquire_result = client.AcquireStory(chronicle_name, story_name, story_attrs, flags);
-    std::cout << "[ClientExample] AcquireStory returned: " << acquire_result.first << "\n";
+    std::cout << "[ClientExample] AcquireStory returned: " << chronolog::to_string_client(acquire_result.first) << "\n";
     auto story_handle = acquire_result.second;
 
     // Log a few events to the story
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     // Read a story
     std::vector<chronolog::Event> events;
     ret = client.ReplayStory(chronicle_name, story_name, start_time, end_time, events);
-    std::cout << "[ClientExample] ReplayStory returned: " << ret << "\n";
+    std::cout << "[ClientExample] ReplayStory returned: " << chronolog::to_string_client(ret) << "\n";
 
     if(ret == chronolog::CL_SUCCESS)
     {
@@ -112,19 +112,19 @@ int main(int argc, char** argv)
 
     // Release the story
     ret = client.ReleaseStory(chronicle_name, story_name);
-    std::cout << "[ClientExample] ReleaseStory returned: " << ret << "\n";
+    std::cout << "[ClientExample] ReleaseStory returned: " << chronolog::to_string_client(ret) << "\n";
 
     // Destroy the story
     ret = client.DestroyStory(chronicle_name, story_name);
-    std::cout << "[ClientExample] DestroyStory returned: " << ret << "\n";
+    std::cout << "[ClientExample] DestroyStory returned: " << chronolog::to_string_client(ret) << "\n";
 
     // Destroy the chronicle
     ret = client.DestroyChronicle(chronicle_name);
-    std::cout << "[ClientExample] DestroyChronicle returned: " << ret << "\n";
+    std::cout << "[ClientExample] DestroyChronicle returned: " << chronolog::to_string_client(ret) << "\n";
 
     // Disconnect from ChronoVisor
     ret = client.Disconnect();
-    std::cout << "[ClientExample] Disconnect returned: " << ret << "\n";
+    std::cout << "[ClientExample] Disconnect returned: " << chronolog::to_string_client(ret) << "\n";
 
     LOG_INFO("[ClientExample] Finished successfully");
     return 0;

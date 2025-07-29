@@ -203,11 +203,11 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
                 {
                     std::cout << "No event input file specified, use default/specified separate conf args ..."
                         << std::endl;
-                    std::cout << "Min event size (minimum of event payload length following a normal distirbution): "
+                    std::cout << "Min event size (minimum of event payload length following a normal distribution): "
                         << workload_args.min_event_size << " B" << std::endl;
-                    std::cout << "Ave event size (median of event payload length following a normal distirbution): "
+                    std::cout << "Ave event size (median of event payload length following a normal distribution): "
                         << workload_args.ave_event_size << " B" << std::endl;
-                    std::cout << "Max event size (maximum of event payload length following a normal distirbution): "
+                    std::cout << "Max event size (maximum of event payload length following a normal distribution): "
                         << workload_args.max_event_size << " B" << std::endl;
                     std::cout << "Event count (#events per proc): " << workload_args.event_count << std::endl;
                     std::cout << "Event interval (time in-between event accesses): "
@@ -230,11 +230,11 @@ std::pair <std::string, workload_conf_args> cmd_arg_parse(int argc, char**argv)
             std::cout << "Number of processes: " << size << std::endl;
             std::cout << "Chronicle count (#chronicles per proc): " << workload_args.chronicle_count << std::endl;
             std::cout << "Story count (#stories per proc) : " << workload_args.story_count << std::endl;
-            std::cout << "Min event size (minimum of event payload length following a normal distirbution): "
+            std::cout << "Min event size (minimum of event payload length following a normal distribution): "
                 << workload_args.min_event_size << " B" << std::endl;
-            std::cout << "Ave event size (median of event payload length following a normal distirbution): "
+            std::cout << "Ave event size (median of event payload length following a normal distribution): "
                 << workload_args.ave_event_size << " B" << std::endl;
-            std::cout << "Max event size (maximum of event payload length following a normal distirbution): "
+            std::cout << "Max event size (maximum of event payload length following a normal distribution): "
                 << workload_args.max_event_size << " B" << std::endl;
             std::cout << "Event count (#events per proc): " << workload_args.event_count << std::endl;
             std::cout << "Event interval (time in-between event accesses): "
@@ -847,7 +847,7 @@ std::vector <std::string> &command_subs)
         std::cout << "AcquireStory throughput: " << acquire_story_thpt << " acquisitions/s" << std::endl;
         std::cout << "ReleaseStory throughput: " << release_story_thpt << " releases/s" << std::endl;
         std::cout << "DestroyStory throughput: " << destroy_story_thpt << " destructions/s" << std::endl;
-        std::cout << "DestroyChronicle throughput: " << destroy_chronicle_thpt << " desctructions/s" << std::endl;
+        std::cout << "DestroyChronicle throughput: " << destroy_chronicle_thpt << " destructions/s" << std::endl;
         std::cout << "Disconnect throughput: " << disconnect_thpt << " disconnections/s" << std::endl;
         std::cout << "End-to-end (incl. metadata time) bandwidth: " << e2e_bandwith << " MB/s" << std::endl;
         std::cout << "Data-access (excl. metadata time) bandwidth: " << data_access_bw << " MB/s" << std::endl;

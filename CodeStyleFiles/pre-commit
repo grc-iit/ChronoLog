@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Get the root directory of the Git repository
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Adjust path to clang-format config if needed
+FORMAT_STYLE=file:"$REPO_ROOT/CodeStyleFiles/ChronoLog.clang-format"
+
+# Find all staged C++ files
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|c|h)$')
+
+for file in $FILES; do
+  clang-format -style=$FORMAT_STYLE -i "$file"
+  git add "$file"
+done

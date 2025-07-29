@@ -38,12 +38,12 @@ void reader_thread( int tid, struct thread_arg * t, std::vector<chronolog::Event
         sleep(60);
     }
 
-    int ret = chronolog::CL_ERR_UNKNOWN;;
+    int ret = chronolog::CL_ERR_UNKNOWN;
     std::map <std::string, std::string> chronicle_attrs;
     std::map <std::string, std::string> story_attrs;
     int flags = 1;
 
-   // std::vector<chronolog::Event> replay_events;
+    // std::vector<chronolog::Event> replay_events;
 
     // Create the chronicle
     ret= client->CreateChronicle(t->chronicle, chronicle_attrs, flags);
@@ -105,21 +105,21 @@ int parse_command_args(int argc, char**argv, std::string & config_file, std::str
 
 
     // Parse the command-line options
-    while((opt = getopt_long(argc, argv, "crsif:", long_options, nullptr)) != -1)
+    while((opt = getopt_long(argc, argv, "c:r:s:i:f:", long_options, nullptr)) != -1)
     {
         switch(opt)
         {
             case 'c':
-               config_file = std::string(argv[optind]);
+                config_file = std::string(optarg);
                 break;
             case 'r':
-                chronicle = std::string(argv[optind]);
+                chronicle = std::string(optarg);
                 break;
             case 's':
-                story = std::string(argv[optind]); 
+                story = std::string(optarg); 
                 break;
             case 'i':
-                interval = std::stol(argv[optind]);
+                interval = std::stol(optarg);
                 break;
             case 'f':
                 output_csv_file = std::string(optarg);
@@ -130,7 +130,7 @@ int parse_command_args(int argc, char**argv, std::string & config_file, std::str
         }
     }
 
-return 1;
+    return 1;
 }
 
 int main(int argc, char**argv)

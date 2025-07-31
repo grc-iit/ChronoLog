@@ -166,6 +166,7 @@ for i in $(seq 1 $NUM_CONTAINERS); do
 done
 
 # Force concretize and install dependencies in case of changes
+# This command is commented out because it forces concretization of dependencies, which is not always necessary. Uncomment if dependency changes require re-concretization.
 #docker exec -it chronolog-c1 bash -c "cd ~/chronolog_repo && source ~/spack/share/spack/setup-env.sh && spack env activate . && spack concretize --force"
 
 # Rebuild ChronoLog

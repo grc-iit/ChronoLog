@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.14)
+project(ChronoLogTests)
+
+find_package(GTest REQUIRED)
 
 add_executable(story_chunk_test StoryChunkTest.cpp)
 add_executable(story_pipeline_test StoryPipelineTest.cpp)

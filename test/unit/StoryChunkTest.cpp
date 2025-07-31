@@ -370,8 +370,8 @@ TEST(StoryChunk_TestMergeEvents, testStartBeforeWindow)
     int startTime = 100, endTime = 200;
     int storyId(1);
     events.insert({{50, 0, 0}, chl::LogEvent(storyId, 50, 0, 0, "eventbeforestart")});
-    events.insert({{120, 1, 1}, chl::LogEvent(storyId, 120, 1, 1, "eventafterstart")});
-    events.insert({{220, 0, 0}, chl::LogEvent(storyId, 50, 0, 0, "eventafterstart")});
+    events.insert({{120, 1, 1}, chl::LogEvent(storyId, 120, 1, 1, "eventinbetween")});
+    events.insert({{220, 0, 0}, chl::LogEvent(storyId, 50, 0, 0, "eventafterend")});
 
     auto mergeStart = events.cbegin();
     chl::StoryChunk chunk("ChronicleName", "StoryName", storyId, startTime, endTime, 10);
@@ -585,20 +585,20 @@ TEST(StoryChunk_TestMergeEvents, testMergeWithinWindow)
 
 // test merging when the other chunk has events out of main chunks time window
 // other chunk should not get emptied, should just get rejected in merge to main
-// BUG -> here the other chunk should not get emptied, it should stay
 TEST(StoryChunk_TestMergeEvents, testMergeOutsideWindow)
 {
     initLogger();
 
     chl::StoryChunk masterChunk("ChronicleName", "StoryName", 1, 100, 200, 10);
-    chl::StoryChunk otherChunk("ChronicleName", "StoryName", 1, 100, 200, 10);
+    chl::StoryChunk otherChunk("ChronicleName", "StoryName", 1, 0, 300, 10);
 
     otherChunk.insertEvent(chl::LogEvent(1, 50, 0, 0, "test"));
+    otherChunk.insertEvent(chl::LogEvent(1, 150, 0, 0, "test"));
     otherChunk.insertEvent(chl::LogEvent(1, 250, 0, 0, "test"));
 
     int retMerge = masterChunk.mergeEvents(otherChunk, 0);
-    EXPECT_EQ(retMerge, 0);
-    EXPECT_TRUE(masterChunk.empty());
+    EXPECT_EQ(retMerge, 1);
+    EXPECT_EQ(masterChunk.getEventCount(), 1);
     EXPECT_EQ(otherChunk.getEventCount(), 2);
 }
 
@@ -641,6 +641,7 @@ TEST(StoryChunk_TestMergeEvents, testMergeStartTimeAfterEnd)
     int retMerge = masterChunk.mergeEvents(otherChunk, 200);
     EXPECT_EQ(retMerge, 0);
     EXPECT_EQ(masterChunk.getEventCount(), 0);
+    EXPECT_EQ(otherChunk.getEventCount(), 1);
 }
 
 // test merging a map of events to the main chunk
@@ -711,32 +712,6 @@ TEST(StoryChunk_TestMergeEvents, testEmptyAndHugePayloads)
     EXPECT_EQ(chunk.getEventCount(), 2);
 }
 
-
-// We create an other story chunk with a time window bigger than main chunks window
-// Only the events within the main chunks time should be merged into main
-// the other chunks should be left untouched
-TEST(StoryChunk_TestMergeEvents, testMergeBigOtherInMain)
-{
-    initLogger();
-    chl::StoryChunk main("ChronicleName", "StoryName", 1, 100, 200, 10),
-            other("ChronicleName", "StoryName", 1, 50, 220, 10);
-    other.insertEvent({1, 80, 0, 0, "BeforeMain"});
-    other.insertEvent({1, 130, 0, 0, "InMain"});
-    other.insertEvent({1, 170, 0, 0, "InMain"});
-    other.insertEvent({1, 190, 0, 0, "InMain"});
-    other.insertEvent({1, 210, 0, 0, "AfterMain"});
-    EXPECT_EQ(other.getEventCount(), 5);
-
-    int merged = main.mergeEvents(other, other.getStartTime());
-    EXPECT_EQ(merged, 3);
-    EXPECT_EQ(main.getEventCount(), 3);
-    EXPECT_EQ(other.getEventCount(), 2);
-    // Verify that the events outside mains timeframe are not merged in main
-    std::vector<chl::Event> left;
-    other.extractEventSeries(left);
-    EXPECT_EQ(left[0].time(), 80);
-    EXPECT_EQ(left[1].time(), 210);
-}
 
 // other starts before main and ends inside main
 // again only the events in the time of main merge

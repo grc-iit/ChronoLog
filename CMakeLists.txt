@@ -204,18 +204,6 @@ add_subdirectory(ChronoGrapher)
 add_subdirectory(ChronoPlayer)
 add_subdirectory(ChronoStore)
 
-#-----------------------------------------------------------------------------
-# Installing GTest
-#-----------------------------------------------------------------------------
-include(FetchContent)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.13.0
-)
-FetchContent_MakeAvailable(googletest)
-
 #if(CHRONOLOG_ENABLE_PYTHON_BINDINGS)
 message("Python bindings enabled")
 add_subdirectory(python_client)

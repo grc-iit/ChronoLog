@@ -305,7 +305,7 @@ TEST(StoryPipeline_TestExtractDecayedChunks, testAppendBehaviorAfterMultiDecay)
     // confirm that both chunks got stashed
     EXPECT_EQ(q.size(), 2);
 
-    // now after the first first removal: pipeline size went from 3 to 2 and no append
+    // now after the first removal: pipeline size went from 3 to 2 and no append
     // after second removal: pipeline size went from 2 to 1 and so there should be a new chunk appended at TimelineEnd automatically
     // so the resulting pipeline has two chunks, the original third chunk at start=2s and the appended chunk at start=3s giving endtime as 4
     EXPECT_EQ(p.TimelineStart(), 2 * NS);
@@ -481,8 +481,6 @@ TEST(StoryPipeline_TestFinalize, testNoPendingChunks)
     EXPECT_NO_THROW(p.finalize());
     EXPECT_EQ(q.size(), 0);
 
-    // Prevent the destructor from double freeing the handle -> avoids segfault
-    p.activeIngestionHandle = nullptr;
 }
 
 // Test if finalize processes the chunk in the passive deque
@@ -501,7 +499,6 @@ TEST(StoryPipeline_TestFinalize, testOnlyPassiveDeque)
     p.finalize();
     EXPECT_EQ(q.size(), 1);
 
-    p.activeIngestionHandle = nullptr;
 }
 
 // Test if finalize processes the chunk in the active deque
@@ -520,7 +517,6 @@ TEST(StoryPipeline_TestFinalize, testOnlyActiveDeque)
     p.finalize();
     EXPECT_EQ(q.size(), 1);
 
-    p.activeIngestionHandle = nullptr;
 }
 
 // Test if finalize handles both passive and active deques in FIFO
@@ -541,7 +537,23 @@ TEST(StoryPipeline_TestFinalize, testMixedDeques)
 
     p.finalize();
     EXPECT_EQ(q.size(), 2);
-    p.activeIngestionHandle = nullptr;
+
+    // Now validate the order by checking payload of the event of the chunk
+    auto* firstChunk = q.ejectStoryChunk();
+    ASSERT_NE(firstChunk, nullptr);
+    std::vector<chl::Event> ev;
+    firstChunk->extractEventSeries(ev);
+    ASSERT_EQ(ev.size(), 1);
+    EXPECT_EQ(ev[0].log_record(), "passive");
+    delete firstChunk;
+
+    auto* secondChunk = q.ejectStoryChunk();
+    ASSERT_NE(secondChunk, nullptr);
+    ev.clear();
+    secondChunk->extractEventSeries(ev);
+    ASSERT_EQ(ev.size(), 1);
+    EXPECT_EQ(ev[0].log_record(), "active");
+    delete secondChunk;
 }
 
 // Test if finalize removes all initial empty chunks from the timeline and stashes the one non empty chunk
@@ -558,8 +570,6 @@ TEST(StoryPipeline_TestFinalize, testEmptyVsNonTimeline)
 
     p.finalize();
     EXPECT_EQ(q.size(), 1);
-
-    p.activeIngestionHandle = nullptr;
 }
 
 // Test calling finalize safely twice
@@ -579,8 +589,6 @@ TEST(StoryPipeline_TestFinalize, testFinalizeDoubleCall)
     EXPECT_NO_THROW(p.finalize());
     EXPECT_EQ(q.size(), 1);
 
-    // clear the pointer so destructor wont segfault
-    p.activeIngestionHandle = nullptr;
 
     // second finalize should not stash anything new
     EXPECT_NO_THROW(p.finalize());
@@ -612,6 +620,4 @@ TEST(StoryPipeline_TestFinalize, testFinalizeWithMixedTimeline)
     // all three non empty chunks should be stashed
     p.finalize();
     EXPECT_EQ(q.size(), 3);
-
-    p.activeIngestionHandle = nullptr;
 }

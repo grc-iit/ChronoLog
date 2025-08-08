@@ -16,7 +16,7 @@ gtest_discover_tests(story_chunk_test)
 # Build StoryPipelineTest
 set(STORYPIPE_SOURCES
   StoryPipelineTest.cpp
-  ${CMAKE_SOURCE_DIR}/chrono_common/StoryPipeline.cpp
+  ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryPipeline.cpp
 )
 add_executable(story_pipeline_test ${STORYPIPE_SOURCES})
 target_include_directories(story_pipeline_test

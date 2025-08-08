@@ -20,15 +20,14 @@ add_library(chronolog_client
     src/ChronologClient.cpp
     src/ChronologClientImpl.cpp
     src/ClientConfiguration.cpp
-    ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/src/chrono_monitor.cpp
-    ${CMAKE_SOURCE_DIR}/chrono_common/StoryChunk.cpp
+    ${CMAKE_SOURCE_DIR}/Client/src/chrono_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunk.cpp
 )
 
 # Include directories for the library
 target_include_directories(chronolog_client PUBLIC
     include
-    ${CMAKE_SOURCE_DIR}/ChronoAPI/ChronoLog/include
-    ${CMAKE_SOURCE_DIR}/chrono_common
+    ${CMAKE_SOURCE_DIR}/chrono_common/include
     ${CMAKE_SOURCE_DIR}/Client/include
 )
 
@@ -41,6 +40,7 @@ set(PUBLIC_HEADER_FILES
     include/chronolog_client.h
     include/ClientConfiguration.h
     include/client_errcode.h
+    include/chrono_monitor.h
 )
 
 # install library

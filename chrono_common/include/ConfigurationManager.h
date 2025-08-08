@@ -10,6 +10,7 @@
 #include <json-c/json.h>
 #include <sstream>
 #include <spdlog/common.h>
+
 #include "enum.h"
 #include "chronolog_errcode.h"
 

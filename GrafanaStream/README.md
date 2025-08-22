@@ -153,7 +153,7 @@ Sample output:
 ```
 
 ### 6. Launch the client reader
-Launch the client reader script to stream the events to Grafana through InfluxDB
+Launch the client reader script to stream the events to Grafana through InfluxDB after a few seconds (30-45 seconds)
 ``` bash
 $INSTALL_PREFIX/bin/client_reader_stream_influx -c $INSTALL_PREFIX/conf/client_conf.json -r "$CHRONICLE" -s cpu_usage,memory_usage,network_usage --window-sec 300  --poll-interval-sec 5 --influx-url "$INFLUX_URL" --influx-token "$INFLUX_TOKEN"
 ```

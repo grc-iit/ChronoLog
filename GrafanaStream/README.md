@@ -48,7 +48,7 @@ hostname -I | awk '{print $1}'
 export VM_IP=192.168.64.6
 export INSTALL_PREFIX=~/chronolog/Debug/
 export SRC_ROOT=~/Desktop/ChronoLog
-export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$SRC_ROOT/.spack-env/view/lib:$SRC_ROOT/.spack-env/view/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$INSTALL_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export INFLUX_ORG=chronolog
 export INFLUX_BUCKET=telemetry
 export INFLUX_TOKEN=chronolog-dev-token-123
@@ -91,6 +91,13 @@ docker compose --env-file .env up -d
 ### 4. Launch Chronolog components
 Launch the below commands on your terminal to get the session ready
 ``` bash
+# Reduce the acceptance window and max chunk size for chrono grapher and chrono player in the deafult config locally
+# Go to the installed location of chronolog
+cd ~/chronolog/Debug/conf
+vi default_conf.json
+# For the chrono_grapher and chrono_player in the config json
+# Make acceptance_window_secs: 60 and max_story_chunk_size: 1048576
+
 # To start chronolog locally
 ./local_single_user_deploy.sh --start --work-dir ~/chronolog/Debug
 

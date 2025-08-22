@@ -131,9 +131,9 @@
       }
     },
     "DataStoreInternals": {
-      "max_story_chunk_size": 1048576,
+      "max_story_chunk_size": 4096,
       "story_chunk_duration_secs": 60,
-      "acceptance_window_secs": 60,
+      "acceptance_window_secs": 180,
       "inactive_story_delay_secs": 300
     },
     "Extractors": {
@@ -178,9 +178,9 @@
       }
     },
     "DataStoreInternals": {
-      "max_story_chunk_size": 1048576,
+      "max_story_chunk_size": 4096,
       "story_chunk_duration_secs": 60,
-      "acceptance_window_secs": 60,
+      "acceptance_window_secs": 180,
       "inactive_story_delay_secs": 300
     },
     "ArchiveReaders": {

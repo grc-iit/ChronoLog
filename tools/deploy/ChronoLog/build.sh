@@ -130,6 +130,8 @@ build_project() {
     fi
 
     # Build (portable + parallel)
+    # Set LTO jobs to match parallel build jobs to avoid LTO warning
+    export MAKEFLAGS="-j$(nproc)"
     cmake --build . --parallel $(nproc)
 
     echo -e "${DEBUG}ChronoLog built in ${BUILD_TYPE} mode${NC}"

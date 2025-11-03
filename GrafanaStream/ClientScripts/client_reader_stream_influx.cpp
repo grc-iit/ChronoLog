@@ -23,7 +23,8 @@ using namespace std::chrono_literals;
 static volatile std::sig_atomic_t g_running = 1;
 static void handle_signal(int) { g_running = 0; }
 
-struct Args {
+struct Args
+{
     std::string config_path;
     std::string chronicle;
     std::vector<std::string> stories;
@@ -53,11 +54,13 @@ static std::vector<std::string> split_commas(const std::string& s)
     while(start < s.size())
     {
         size_t pos = s.find(',', start);
-        if(pos == std::string::npos) pos = s.size();
+        if(pos == std::string::npos)
+            pos = s.size();
         std::string tok = s.substr(start, pos - start);
         size_t b = tok.find_first_not_of(" \t\r\n");
         size_t e = tok.find_last_not_of(" \t\r\n");
-        if(b != std::string::npos) out.emplace_back(tok.substr(b, e - b + 1));
+        if(b != std::string::npos)
+            out.emplace_back(tok.substr(b, e - b + 1));
         start = pos + 1;
     }
     return out;
@@ -66,17 +69,21 @@ static std::vector<std::string> split_commas(const std::string& s)
 static Args parse_args(int argc, char** argv)
 {
     Args a;
-    static struct option long_opts[] = {
-            {"config", required_argument, nullptr, 'c'},          {"chronicle", required_argument, nullptr, 'r'},
-            {"stories", required_argument, nullptr, 's'},         {"window-sec", required_argument, nullptr, 1},
-            {"poll-interval-sec", required_argument, nullptr, 2}, {"influx-url", required_argument, nullptr, 3},
-            {"influx-token", required_argument, nullptr, 4},      {nullptr, 0, nullptr, 0}};
+    static struct option long_opts[] = {{"config", required_argument, nullptr, 'c'},
+                                        {"chronicle", required_argument, nullptr, 'r'},
+                                        {"stories", required_argument, nullptr, 's'},
+                                        {"window-sec", required_argument, nullptr, 1},
+                                        {"poll-interval-sec", required_argument, nullptr, 2},
+                                        {"influx-url", required_argument, nullptr, 3},
+                                        {"influx-token", required_argument, nullptr, 4},
+                                        {nullptr, 0, nullptr, 0}};
 
     while(true)
     {
         int idx = 0;
         int c = getopt_long(argc, argv, "c:r:s:", long_opts, &idx);
-        if(c == -1) break;
+        if(c == -1)
+            break;
         switch(c)
         {
             case 'c':
@@ -109,7 +116,8 @@ static Args parse_args(int argc, char** argv)
     if(a.influx_token.empty())
     {
         const char* t = std::getenv("INFLUX_TOKEN");
-        if(t) a.influx_token = t;
+        if(t)
+            a.influx_token = t;
     }
     return a;
 }
@@ -120,12 +128,12 @@ static inline uint64_t now_ns()
     return (uint64_t)duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 }
 
-static void log_replay_error(int rc, const std::string& chronicle, const std::string& story, uint64_t start_ns,
-                             uint64_t end_ns)
+static void
+log_replay_error(int rc, const std::string& chronicle, const std::string& story, uint64_t start_ns, uint64_t end_ns)
 {
     const uint64_t dur_s = (end_ns > start_ns) ? (end_ns - start_ns) / 1000000000ULL : 0ULL;
 
-    if(rc == -12)// CL_ERR_QUERY_TIMED_OUT
+    if(rc == -12) // CL_ERR_QUERY_TIMED_OUT
     {
         std::cerr << "[client_reader_stream] Replay timed out for " << chronicle << "/" << story << " window=["
                   << start_ns << "," << end_ns << "] (~" << dur_s << "s)"
@@ -159,7 +167,10 @@ int main(int argc, char** argv)
         {
             std::cerr << "[client_reader_stream] Failed to load config '" << args.config_path << std::endl;
         }
-        else { std::cout << "[client_reader_stream] Config loaded from '" << args.config_path << "'" << std::endl; }
+        else
+        {
+            std::cout << "[client_reader_stream] Config loaded from '" << args.config_path << "'" << std::endl;
+        }
     }
     confManager.log_configuration(std::cout);
 
@@ -227,7 +238,10 @@ int main(int argc, char** argv)
 
             std::vector<chronolog::Event> events;
             int ret = client.ReplayStory(args.chronicle, story, t_start, t_end, events);
-            if(ret != chronolog::CL_SUCCESS) { log_replay_error(ret, args.chronicle, story, t_start, t_end); }
+            if(ret != chronolog::CL_SUCCESS)
+            {
+                log_replay_error(ret, args.chronicle, story, t_start, t_end);
+            }
             else if(!events.empty())
             {
 

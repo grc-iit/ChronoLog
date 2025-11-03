@@ -4,14 +4,16 @@
 #include <string>
 #include <vector>
 
-struct TelemetryPoint {
+struct TelemetryPoint
+{
     std::string measurement;
     std::map<std::string, std::string> tags;
     std::map<std::string, double> fields;
     uint64_t ts_ns;
 };
 
-struct TelemetryBatch {
+struct TelemetryBatch
+{
     std::vector<TelemetryPoint> points;
 };
 

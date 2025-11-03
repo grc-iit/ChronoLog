@@ -16,7 +16,8 @@ static inline std::string trim_copy(const std::string& s)
 
 static bool parse_single_number(const std::string& payload, double& out)
 {
-    if(payload.empty()) return false;
+    if(payload.empty())
+        return false;
 
     {
         static const std::regex json_val_re(R"("value"\s*:\s*([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?))");
@@ -97,12 +98,14 @@ static bool parse_two_numbers(const std::string& payload, double& a, double& b)
     }
     static const std::regex any_num_re(R"([+-]?\d*\.?\d+(?:[eE][+-]?\d+)?)");
     std::sregex_iterator it(payload.begin(), payload.end(), any_num_re), end;
-    if(it == end) return false;
+    if(it == end)
+        return false;
     try
     {
         a = std::stod((*it).str());
         ++it;
-        if(it == end) return false;
+        if(it == end)
+            return false;
         b = std::stod((*it).str());
         return true;
     }
@@ -111,8 +114,8 @@ static bool parse_two_numbers(const std::string& payload, double& a, double& b)
     return false;
 }
 
-TelemetryBatch toTelemetry(const std::vector<chronolog::Event>& events, const std::string& chronicle,
-                           const std::string& story)
+TelemetryBatch
+toTelemetry(const std::vector<chronolog::Event>& events, const std::string& chronicle, const std::string& story)
 {
     TelemetryBatch batch;
     batch.points.reserve(events.size());
@@ -129,11 +132,15 @@ TelemetryBatch toTelemetry(const std::vector<chronolog::Event>& events, const st
         if(is_network)
         {
             double rx = 0.0, tx = 0.0;
-            if(parse_two_numbers(rec, rx, tx)) { p.fields = {{"rx_bytes", rx}, {"tx_bytes", tx}}; }
+            if(parse_two_numbers(rec, rx, tx))
+            {
+                p.fields = {{"rx_bytes", rx}, {"tx_bytes", tx}};
+            }
             else
             {
                 double v = 0.0;
-                if(parse_single_number(rec, v)) p.fields = {{"rx_bytes", v}};
+                if(parse_single_number(rec, v))
+                    p.fields = {{"rx_bytes", v}};
                 else
                     p.fields = {{"rx_bytes", 0.0}, {"tx_bytes", 0.0}};
             }
@@ -141,7 +148,8 @@ TelemetryBatch toTelemetry(const std::vector<chronolog::Event>& events, const st
         else
         {
             double value = 0.0;
-            if(!parse_single_number(rec, value)) value = 0.0;
+            if(!parse_single_number(rec, value))
+                value = 0.0;
             p.fields = {{"value", value}};
         }
 

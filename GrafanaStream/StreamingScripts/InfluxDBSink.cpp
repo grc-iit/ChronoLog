@@ -74,7 +74,8 @@ std::string InfluxDBSink::toLineProtocol(const TelemetryBatch& batch)
         bool first = true;
         for(const auto& [fk, fv]: p.fields)
         {
-            if(!first) payload += ",";
+            if(!first)
+                payload += ",";
             first = false;
             payload += escFieldKey(fk);
             payload += "=";
@@ -90,7 +91,8 @@ std::string InfluxDBSink::toLineProtocol(const TelemetryBatch& batch)
 bool InfluxDBSink::httpPost(const std::string& payload)
 {
     CURL* curl = curl_easy_init();
-    if(!curl) return false;
+    if(!curl)
+        return false;
 
     struct curl_slist* headers = nullptr;
     std::string auth = "Authorization: Token " + options.token;
@@ -114,13 +116,15 @@ bool InfluxDBSink::httpPost(const std::string& payload)
 
 bool InfluxDBSink::send(const TelemetryBatch& batch)
 {
-    if(batch.points.empty()) return true;
+    if(batch.points.empty())
+        return true;
     const std::string body = toLineProtocol(batch);
 
     int attempt = 0;
     while(attempt++ <= options.max_retries)
     {
-        if(httpPost(body)) return true;
+        if(httpPost(body))
+            return true;
         std::this_thread::sleep_for(std::chrono::milliseconds(250 * attempt));
     }
     return false;

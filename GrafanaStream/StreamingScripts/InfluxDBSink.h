@@ -6,7 +6,8 @@
 class InfluxDBSink: public StreamSink
 {
 public:
-    struct Options {
+    struct Options
+    {
         std::string url;
         std::string token;
         size_t max_batch_points = 5000;

@@ -29,16 +29,18 @@ static std::string get_hostname()
 {
     char buf[256];
     buf[0] = '\0';
-    if(gethostname(buf, sizeof(buf)) != 0) return "unknown-host";
+    if(gethostname(buf, sizeof(buf)) != 0)
+        return "unknown-host";
     buf[sizeof(buf) - 1] = '\0';
     return std::string(buf);
 }
 
-struct Args {
-    std::string config;    // -c
-    std::string chronicle; // -r
-    int duration_sec = 300;// -d
-    int interval_sec = 5;  // -i
+struct Args
+{
+    std::string config;     // -c
+    std::string chronicle;  // -r
+    int duration_sec = 300; // -d
+    int interval_sec = 5;   // -i
 };
 
 static void usage(const char* argv0)
@@ -81,7 +83,8 @@ static Args parse_args(int argc, char** argv)
                 std::exit(2);
         }
     }
-    if(a.chronicle.empty()) a.chronicle = get_hostname();
+    if(a.chronicle.empty())
+        a.chronicle = get_hostname();
     if(a.config.empty())
     {
         usage(argv[0]);
@@ -91,7 +94,8 @@ static Args parse_args(int argc, char** argv)
 }
 
 // Get the metrics
-struct CpuTracker {
+struct CpuTracker
+{
     unsigned long long last_total = 0, last_idle = 0;
     static void read_totals(unsigned long long& total, unsigned long long& idle)
     {
@@ -113,10 +117,13 @@ struct CpuTracker {
         unsigned long long di = i - last_idle;
         last_total = t;
         last_idle = i;
-        if(dt == 0) return 0.0;
+        if(dt == 0)
+            return 0.0;
         double busy = 100.0 * (1.0 - (double)di / (double)dt);
-        if(busy < 0) busy = 0;
-        if(busy > 100) busy = 100;
+        if(busy < 0)
+            busy = 0;
+        if(busy > 100)
+            busy = 100;
         return busy;
     }
 };
@@ -129,7 +136,8 @@ static double mem_used_mb()
     unsigned long long mem_total = 0, mem_free = 0, buffers = 0, cached = 0, sreclaim = 0;
     while(f >> key >> val >> unit)
     {
-        if(key == "MemTotal:") mem_total = val;
+        if(key == "MemTotal:")
+            mem_total = val;
         else if(key == "MemFree:")
             mem_free = val;
         else if(key == "Buffers:")
@@ -154,7 +162,8 @@ static void net_totals(long& rx, long& tx)
     std::getline(f, line);
     while(std::getline(f, line))
     {
-        if(line.find("lo:") != std::string::npos) continue;
+        if(line.find("lo:") != std::string::npos)
+            continue;
         std::istringstream iss(line);
         std::string ifname;
         long r;
@@ -168,7 +177,8 @@ static void net_totals(long& rx, long& tx)
     }
 }
 
-static chronolog::StoryHandle* acquire_or_create_story(chronolog::Client& client, const std::string& chronicle,
+static chronolog::StoryHandle* acquire_or_create_story(chronolog::Client& client,
+                                                       const std::string& chronicle,
                                                        const std::string& story,
                                                        const std::map<std::string, std::string>& create_attrs)
 {
@@ -176,15 +186,18 @@ static chronolog::StoryHandle* acquire_or_create_story(chronolog::Client& client
     std::map<std::string, std::string> empty_attrs;
     int f_open = 0;
     auto r_open1 = client.AcquireStory(chronicle, story, empty_attrs, f_open);
-    if(r_open1.first == chronolog::CL_SUCCESS && r_open1.second) return r_open1.second;
+    if(r_open1.first == chronolog::CL_SUCCESS && r_open1.second)
+        return r_open1.second;
 
     // Create the story with the attributes
     int f_create = 1;
     auto r_create = client.AcquireStory(chronicle, story, create_attrs, f_create);
-    if(r_create.first == chronolog::CL_SUCCESS && r_create.second) return r_create.second;
+    if(r_create.first == chronolog::CL_SUCCESS && r_create.second)
+        return r_create.second;
 
     auto r_open2 = client.AcquireStory(chronicle, story, empty_attrs, f_open);
-    if(r_open2.first == chronolog::CL_SUCCESS && r_open2.second) return r_open2.second;
+    if(r_open2.first == chronolog::CL_SUCCESS && r_open2.second)
+        return r_open2.second;
 
     std::vector<std::string> ss;
     client.ShowStories(chronicle, ss);
@@ -290,8 +303,10 @@ int main(int argc, char** argv)
         net_totals(rx, tx);
         rx_cum = (rx - rx0);
         tx_cum = (tx - tx0);
-        if(rx_cum < 0) rx_cum = 0;
-        if(tx_cum < 0) tx_cum = 0;
+        if(rx_cum < 0)
+            rx_cum = 0;
+        if(tx_cum < 0)
+            tx_cum = 0;
 
         h_cpu->log_event(std::to_string(cpu_pct));
         h_mem->log_event(std::to_string(mem_mb));

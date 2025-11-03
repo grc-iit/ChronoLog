@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.25)
 
 find_package(Threads REQUIRED)
 set(CHRONOLOG_GEN_INCLUDE_DIR "${CMAKE_BINARY_DIR}/Client/include")
@@ -42,8 +42,6 @@ if(UNIX AND NOT APPLE)
 endif()
 target_compile_features(client_reader_stream_influx PRIVATE cxx_std_17)
 
-install(TARGETS
-  client_writer
-  client_reader_stream_influx
-  RUNTIME DESTINATION bin
-)
+# Install executables
+chronolog_install_target(client_writer)
+chronolog_install_target(client_reader_stream_influx)

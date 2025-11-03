@@ -17,27 +17,25 @@ target_include_directories(chrono_keeper PRIVATE
 )
 
 target_sources(chrono_keeper PRIVATE
-    ChronoKeeperInstance.cpp
-    StoryPipeline.cpp
-    KeeperDataStore.cpp
-    CSVFileChunkExtractor.cpp
-    StoryChunkExtractorRDMA.cpp
+    src/ChronoKeeperInstance.cpp
+    src/StoryPipeline.cpp
+    src/KeeperDataStore.cpp
+    src/CSVFileChunkExtractor.cpp
+    src/StoryChunkExtractorRDMA.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunkExtractor.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunk.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/ConfigurationManager.cpp
-    ${CMAKE_SOURCE_DIR}/Client/src/chrono_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/Client/cpp/src/chrono_monitor.cpp
 )
 
 target_link_libraries(chrono_keeper chronolog_client thallium)
 
-set_target_properties(chrono_keeper PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(chrono_keeper PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    SKIP_BUILD_RPATH TRUE
+)
 
 # install binary
-install(
-    TARGETS chrono_keeper DESTINATION bin
-)
+chronolog_install_target(chrono_keeper)
 
-# install configuration file
-install(
-    FILES ${CMAKE_SOURCE_DIR}/default_conf.json.in DESTINATION ${CHRONOLOG_INSTALL_CONF_DIR} RENAME default_conf.json
-)
+# Configuration file is installed by ChronoVisor to avoid duplication

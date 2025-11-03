@@ -21,7 +21,7 @@ target_sources(chronovisor_server PRIVATE
     src/KeeperRegistry.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/ConfigurationManager.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/city.cpp
-    ${CMAKE_SOURCE_DIR}/Client/src/chrono_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/Client/cpp/src/chrono_monitor.cpp
 
 )
 
@@ -32,14 +32,13 @@ target_include_directories(chronovisor_server PRIVATE
 
 target_link_libraries(chronovisor_server chronolog_client thallium)
 
-#add_test(NAME ChronoVisorServerTest COMMAND chronovisor_server)
-
-set_target_properties(chronovisor_server PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(chronovisor_server PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    SKIP_BUILD_RPATH TRUE
+)
 
 # Install binary
-install(
-    TARGETS chronovisor_server DESTINATION ${CHRONOLOG_INSTALL_BIN_DIR}
-)
+chronolog_install_target(chronovisor_server)
 
 # Install configuration file
 install(

@@ -16,29 +16,27 @@ target_include_directories(chrono_grapher PRIVATE
 )
 
 target_sources(chrono_grapher PRIVATE
-    ChronoGrapher.cpp
-    GrapherDataStore.cpp
-    CSVFileChunkExtractor.cpp
-    HDF5FileChunkExtractor.cpp
+    src/ChronoGrapher.cpp
+    src/GrapherDataStore.cpp
+    src/CSVFileChunkExtractor.cpp
+    src/HDF5FileChunkExtractor.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunk.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunkWriter.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryPipeline.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/StoryChunkExtractor.cpp
     ${CMAKE_SOURCE_DIR}/chrono_common/src/ConfigurationManager.cpp
-    ${CMAKE_SOURCE_DIR}/Client/src/chrono_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/Client/cpp/src/chrono_monitor.cpp
 )
 
 target_link_libraries(chrono_grapher chronolog_client thallium)
 target_link_libraries(chrono_grapher ${HDF5_LIBRARIES})
 
-set_target_properties(chrono_grapher PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(chrono_grapher PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    SKIP_BUILD_RPATH TRUE
+)
 
 # install binary
-install(
-    TARGETS chrono_grapher DESTINATION bin
-)
+chronolog_install_target(chrono_grapher)
 
-# install configuration file
-install(
-    FILES ${CMAKE_SOURCE_DIR}/default_conf.json.in DESTINATION ${CHRONOLOG_INSTALL_CONF_DIR} RENAME default_conf.json
-)
+# Configuration file is installed by ChronoVisor to avoid duplication

@@ -5,7 +5,7 @@ datasources:
     type: influxdb
     access: proxy
     isDefault: true
-    url: http://192.168.64.6:8086 # IP of the machine you are launching on
+    url: http://127.0.0.1:8086 # IP of the machine you are launching on
     jsonData:
       version: Flux 
       organization: chronolog

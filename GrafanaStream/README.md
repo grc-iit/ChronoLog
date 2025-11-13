@@ -1,20 +1,20 @@
 # Streaming Plugin
-This folder contains all the development for the streaming plugin API. The goal is to have all the chronolog log events streamed to Grafana for users to have an easy to view and access web interface to see their chronicle,story,event data.
+This folder contains all the development for the streaming plugin API. The goal is to have all the ChronoLog log events streamed to Grafana for users to have an easy to view and access web interface to see their chronicle,story,event data.
 
 ## API v1 - Done
-As part of the initial version of the streaming plugin we have a client streaming writer which streams the events to Grafana through InfluxDB. 
-- The client_writer writes the hosts stories (CPU, Memory, Network) into ChronoLog
-- The client_reader_stream_influx reads these stories from ChronoLog and streams to InfluxDB
+As part of the initial version of the streaming plugin we have a client streaming writer application which streams the events to Grafana through InfluxDB. 
+- Application `client_writer` writes the hosts stories (CPU, Memory, Network) into ChronoLog
+- Application `client_reader_stream_influx` reads these stories from ChronoLog and streams to InfluxDB
 - The Grafana dashboard visualizes the metrics in Grafana for the particular Chronicle and Story
 
 ### 1. Scripts
 #### ClientScripts/client_writer.cpp
-- **Purpose:** This is a simple client producer that writes CPU/Memory/Network metrics to chronolog
+- **Purpose:** This is a simple client producer that writes CPU/Memory/Network metrics to ChronoLog
 - **How it works:** It reads real metrics from /proc, acquires/creates three stories (cpu_usage, memory_usage, network_usage), and logs values for every interval_sec
 
 #### ClientScripts/client_reader_stream_influx.cpp
 - **Purpose:** This script streams the events from ChronoLog to InfluxDB for Grafana
-- **How it works:** It connects to chronolog, ensures the chronicle/stories exist, then on a loop calls the ReplayStory(t_start, t_end) api. The events are converted to line protocol through the transform api created and sent in batches via InfluxDBSink. It also maintains a pe -story cursor to avoid re reading the events
+- **How it works:** It connects to ChronoLog, ensures the chronicle/stories exist, then on a loop calls the ReplayStory(t_start, t_end) api. The events are converted to line protocol through the transform api created and sent in batches via InfluxDBSink. It also maintains a pe -story cursor to avoid re reading the events
 
 #### StreamingScripts/InfluxDBSink.h and InfluxDBSink.cpp
 - **Purpose:** This is the HTTP sink that posts the TelemetryBatch to InfluxDB v2
@@ -24,16 +24,16 @@ As part of the initial version of the streaming plugin we have a client streamin
 - **Purpose:** This is the interface used for the streaming backends, it is generic so it can be re-used for api v2
 
 #### StreamingScripts/Transform.h and Transform.cpp
-- **Purpose:** This converts the chronolog events into TelemetryBatch customised for the influx sink
+- **Purpose:** This converts the ChronoLog events into TelemetryBatch customised for the Influx sink
 - **How it works:** It parses the payloads per story, adds tags (chronicle, story) and attaches the event timestamp (ns). It produces properly escaped line protocol ready for Influx
 
 #### GrafanaInfluxSetup/
 - **Purpose:** This contains all the references for setting up Grafana and Influx
-- The docker compose is for launching the containers
-- The .env defines the env variables needed by the setup yml scripts
-- The dashboards/..json is the json used for templating and auto provisioning the Grafana dashboard on start up so no manual intervention is needed on the UI
-- The provisioning/datasources/datasource.yml has all the details for provisioning the influxdb data source
-- The provisioning/dashboards/chronolog/yml has all the details for provisioning grafana 
+- File `docker-compose.yml` is for launching the containers
+- File `.env` defines the env variables needed by the setup yml scripts
+- File `dashboards/chronolog_telemetry.json` is the json used for templating and auto provisioning the Grafana dashboard on start up so no manual intervention is needed on the UI
+- File `provisioning/datasources/datasource.yml` has all the details for provisioning the InfluxDB data source
+- File `provisioning/dashboards/chronolog.yml` has all the details for provisioning Grafana 
 
 ### 2. Environment setup
 Launch the below commands on your terminal to get the session ready
@@ -45,28 +45,29 @@ spack env activate -p .
 # Get your VM IP
 hostname -I | awk '{print $1}'
 # Set that as an env variable
-export VM_IP=192.168.64.6
-export INSTALL_PREFIX=~/chronolog/Debug/
+export VM_IP=127.0.0.1
+export INSTALL_PREFIX=~/chronolog-install
+export INSTALL_DIR="$INSTALL_PREFIX/chronolog"
 export SRC_ROOT=~/Desktop/ChronoLog
-export LD_LIBRARY_PATH="$INSTALL_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$INSTALL_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export INFLUX_ORG=chronolog
 export INFLUX_BUCKET=telemetry
 export INFLUX_TOKEN=chronolog-dev-token-123
 export INFLUX_URL="http://$VM_IP:8086/api/v2/write?org=$INFLUX_ORG&bucket=$INFLUX_BUCKET&precision=ns"
 ```
-Once you have the IP of your machine you need to update the hardcoded IP in the influxdb datasources file.
-- Go to GrafanaStream/GrafanaInfluxSetup/provisioning/datasources/datasource.yml
+Once you have the IP of your machine you need to update the hardcoded IP in the InfluxDB datasources file.
+- Go to `GrafanaStream/GrafanaInfluxSetup/provisioning/datasources/datasource.yml`
 - Update the IP in the data source URL
 
-Now build chronolog code:
+Now build and install ChronoLog with the below commands:
 ``` bash 
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DCHRONOLOG_WITH_STREAMING=ON
-make install
+cd $SRC_ROOT/tools/deploy/ChronoLog
+./local_single_user_deploy.sh -b -I $INSTALL_PREFIX
+./local_single_user_deploy.sh -i -I $INSTALL_PREFIX
 ```
 
 ### 3. Launch Grafana and InfluxDB 
-Launch the below commands to start the grafana and influxdb docker containers
+Launch the below commands to start the Grafana and InfluxDB docker containers
 ``` bash
 cd GrafanaStream/GrafanaInfluxSetup/
 docker compose --env-file .env up -d
@@ -93,39 +94,40 @@ Launch the below commands on your terminal to get the session ready
 ``` bash
 # Reduce the acceptance window and max chunk size for chrono grapher and chrono player in the deafult config locally
 # Go to the installed location of chronolog
-cd ~/chronolog/Debug/conf
+cd ~/chronolog-install/chronolog/conf
 vi default_conf.json
 # For the chrono_grapher and chrono_player in the config json
 # Make acceptance_window_secs: 60 and max_story_chunk_size: 1048576
 
 # To start chronolog locally
-./local_single_user_deploy.sh --start --work-dir ~/chronolog/Debug
+./local_single_user_deploy.sh -d -w $INSTALL_DIR
 
 # Confirm if you see all four chrono processes up and running
-ps -ef | grep chron
+ps -ef | grep chrono
 
 # Sample output:
-shivi    3238201       1  0 Aug18 pts/7    00:02:20 /home/shivi/chronolog/Debug/bin/chronovisor_server --config /home/shivi/chronolog/Debug/conf/visor_conf.json
-shivi    3238284       1  0 Aug18 pts/7    00:01:21 /home/shivi/chronolog/Debug/bin/chrono_grapher --config /home/shivi/chronolog/Debug/conf/grapher_conf_1.json
-shivi    3238351       1  0 Aug18 pts/7    00:01:15 /home/shivi/chronolog/Debug/bin/chrono_player --config /home/shivi/chronolog/Debug/conf/player_conf_1.json
-shivi    3238431       1 11 Aug18 pts/7    00:41:17 /home/shivi/chronolog/Debug/bin/chrono_keeper --config /home/shivi/chronolog/Debug/conf/keeper_conf_1.json
+user    3238201       1  0 Aug18 pts/7    00:02:20 /home/user/chronolog-install/chronolog/bin/chronovisor_server --config /home/user/chronolog-install/chronolog/conf/visor_conf.json
+user    3238284       1  0 Aug18 pts/7    00:01:21 /home/user/chronolog-install/chronolog/bin/chrono_grapher --config /home/user/chronolog-install/chronolog/conf/grapher_conf_1.json
+user    3238351       1  0 Aug18 pts/7    00:01:15 /home/user/chronolog-install/chronolog/bin/chrono_player --config /home/user/chronolog-install/chronolog/conf/player_conf_1.json
+user    3238431       1 11 Aug18 pts/7    00:41:17 /home/user/chronolog-install/chronolog/bin/chrono_keeper --config /home/user/chronolog-install/chronolog/conf/keeper_conf_1.json
 
 # To stop the chronolog processes
-./local_single_user_deploy.sh -s --work-dir ~/chronolog/Debug
+./local_single_user_deploy.sh -s -w $INSTALL_DIR
 ```
 
 ### 5. Launch the client writer
 Launch the client writer script to write the story events
 ``` bash
-export CHRONICLE=chronname
-$INSTALL_PREFIX/bin/client_writer -c $INSTALL_PREFIX/conf/client_conf.json -r "$CHRONICLE" -d 120 -i 5 
+export CHRONICLE=grafana_chronicle
+$INSTALL_DIR/bin/client_writer -c $INSTALL_DIR/conf/default_client_conf.json -r "$CHRONICLE" -d 120 -i 5 
 ```
 Sample output:
 ``` bash
-[ChronoLog] shivi@shivi-QEMU-Virtual-Machine:~/Desktop/ChronoLog/build$ export CHRONICLE=test10
-[ChronoLog] shivi@shivi-QEMU-Virtual-Machine:~/Desktop/ChronoLog/build$ $INSTALL_PREFIX/bin/client_writer -c $INSTALL_PREFIX/conf/client_conf.json -r "$CHRONICLE" -d 120 -i 5 
-[writer] config=/home/shivi/chronolog/Debug//conf/client_conf.json chronicle=test10 duration=120s interval=5s[debug] chronicles: test8 test9 test7 test3 test5 test2 test1 test0
-[debug] stories under test10:
+[ChronoLog] user@localhost:~/Desktop/ChronoLog$ export CHRONICLE=grafana_chronicle
+[ChronoLog] user@localhost:~/Desktop/ChronoLog$ $INSTALL_DIR/bin/client_writer -c $INSTALL_DIR/conf/default_client_conf.json -r "$CHRONICLE" -d 120 -i 5 
+[writer] config=/home/user/chronolog-install/chronolog/conf/default_client_conf.json chronicle=grafana_chronicle duration=120s interval=5s
+[debug] chronicles: test8 test9 test7 test3 test5 test2 test1 test0
+[debug] stories under grafana_chronicle:
 [writer] cpu=0.0% mem=1341.2MB net=0,0 bytes
 [writer] cpu=3.9% mem=1338.8MB net=13614,35196 bytes
 [writer] cpu=6.0% mem=1342.0MB net=123221,631259 bytes
@@ -155,12 +157,12 @@ Sample output:
 ### 6. Launch the client reader
 Launch the client reader script to stream the events to Grafana through InfluxDB after a few seconds (30-45 seconds)
 ``` bash
-$INSTALL_PREFIX/bin/client_reader_stream_influx -c $INSTALL_PREFIX/conf/client_conf.json -r "$CHRONICLE" -s cpu_usage,memory_usage,network_usage --window-sec 300  --poll-interval-sec 5 --influx-url "$INFLUX_URL" --influx-token "$INFLUX_TOKEN"
+$INSTALL_DIR/bin/client_reader_stream_influx -c $INSTALL_DIR/conf/default_client_conf.json -r "$CHRONICLE" -s cpu_usage,memory_usage,network_usage --window-sec 300 --poll-interval-sec 5 --influx-url "$INFLUX_URL" --influx-token "$INFLUX_TOKEN"
 ```
 Sample output:
 ``` bash
-[ChronoLog] shivi@shivi-QEMU-Virtual-Machine:~/Desktop/ChronoLog/build$ $INSTALL_PREFIX/bin/client_reader_stream_influx -c $INSTALL_PREFIX/conf/client_conf.json -r "$CHRONICLE" -s cpu_usage,memory_usage,network_usage --window-sec 300  --poll-interval-sec 5 --influx-url "$INFLUX_URL" --influx-token "$INFLUX_TOKEN"
-[client_reader_stream] Config loaded from '/home/shivi/chronolog/Debug//conf/client_conf.json'
+[ChronoLog] user@localhost:~/Desktop/ChronoLog/build$ $INSTALL_DIR/bin/client_reader_stream_influx -c $INSTALL_DIR/conf/default_client_conf.json -r "$CHRONICLE" -s cpu_usage,memory_usage,network_usage --window-sec 300  --poll-interval-sec 5 --influx-url "$INFLUX_URL" --influx-token "$INFLUX_TOKEN"
+[client_reader_stream] Config loaded from '/home/user/chronolog-install/chronolog/conf/default_client_conf.json'
 ===== ChronoLog Client Configuration =====
 [PORTAL_CONF]
   protocol: ofi+sockets
@@ -174,16 +176,16 @@ Sample output:
   provider ID: 57
 [LOG_CONF]
   type: file
-  file: /home/shivi/chronolog/Debug/monitor/chrono_client.log
+  file: /home/user/chronolog-install/chronolog/monitor/chrono_client.log
   level: debug
   name: ChronoClient
   filesize: 1048576
   filenum: 3
   flushlevel: warning
-[client_reader_stream] Chronicle=test10 Stories=(cpu_usage,memory_usage,network_usage) window_sec=300 poll_interval_sec=5
-[client_reader_stream] Sent 11 points to Influx (test10/cpu_usage)
-[client_reader_stream] Sent 11 points to Influx (test10/memory_usage)
-[client_reader_stream] Sent 11 points to Influx (test10/network_usage)
+[client_reader_stream] Chronicle=grafana_chronicle Stories=(cpu_usage,memory_usage,network_usage) window_sec=300 poll_interval_sec=5
+[client_reader_stream] Sent 11 points to Influx (grafana_chronicle/cpu_usage)
+[client_reader_stream] Sent 11 points to Influx (grafana_chronicle/memory_usage)
+[client_reader_stream] Sent 11 points to Influx (grafana_chronicle/network_usage)
 ```
 To end the reader just enter Ctrl Z and clear the process manually if still running
 ``` bash
@@ -209,10 +211,10 @@ clang-format -style=file -i <fname>
 
 ## API v2 - In Progress
 As the next step the goal is to update Grafana to use Chronolog directly as the data source instead of third party data store like InfluxDB
-- We want to create a new chronolog data source visible on grafana
+- We want to create a new ChronoLog data source visible on Grafana
 - This will be used for the dashboards directly
 
 ## API v3 - To be done
-The next step is to stream directly from chronolog to grafana without relying on the explicit client streaming reader script
-- We will update the chronolog replay apis to directly stream all the events to grafana when they are created
-- This way the user does not have to launch the explicit stream reader, when the aplication that writes the events is launched, the chronolog api will automatically push the events to grafana through the chronolog data source so it will be readily available on the dashboard without any other actions needed
+The next step is to stream directly from ChronoLog to Grafana without relying on the explicit client streaming reader script
+- We will update the ChronoLog replay apis to directly stream all the events to Grafana when they are created
+- This way the user does not have to launch the explicit stream reader, when the application that writes the events is launched, the ChronoLog API will automatically push the events to Grafana through the ChronoLog data source so it will be readily available on the dashboard without any other actions needed

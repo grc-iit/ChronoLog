@@ -8,38 +8,46 @@ set(GRAFANA_STREAM_PUBLIC_INCLUDE
 )
 
 add_executable(client_writer
-  client_writer.cpp
+    client_writer.cpp
 )
+
 target_include_directories(client_writer
-  PRIVATE
+    PRIVATE
     ${GRAFANA_STREAM_PUBLIC_INCLUDE}
 )
+
 target_link_libraries(client_writer
-  PRIVATE
+    PRIVATE
     chronolog_client
     Threads::Threads
 )
+
 if(UNIX AND NOT APPLE)
-  target_link_libraries(client_writer PRIVATE rt)
+    target_link_libraries(client_writer PRIVATE rt)
 endif()
+
 target_compile_features(client_writer PRIVATE cxx_std_17)
 
 add_executable(client_reader_stream_influx
-  client_reader_stream_influx.cpp
+    client_reader_stream_influx.cpp
 )
+
 target_include_directories(client_reader_stream_influx
-  PRIVATE
+    PRIVATE
     ${GRAFANA_STREAM_PUBLIC_INCLUDE}
 )
+
 target_link_libraries(client_reader_stream_influx
-  PRIVATE
-    grafana_stream 
+    PRIVATE
+    grafana_stream
     chronolog_client
     Threads::Threads
 )
+
 if(UNIX AND NOT APPLE)
-  target_link_libraries(client_reader_stream_influx PRIVATE rt)
+    target_link_libraries(client_reader_stream_influx PRIVATE rt)
 endif()
+
 target_compile_features(client_reader_stream_influx PRIVATE cxx_std_17)
 
 # Install executables

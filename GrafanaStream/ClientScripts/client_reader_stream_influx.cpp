@@ -103,9 +103,11 @@ static Args parse_args(int argc, char** argv)
                 break;
             case 3:
                 a.influx_url = optarg;
+                std::cout << "[client_reader_stream] Influx URL from command line: " << a.influx_url << "\n";
                 break;
             case 4:
                 a.influx_token = optarg;
+                std::cout << "[client_reader_stream] Influx token from command line: " << a.influx_token << "\n";
                 break;
             default:
                 usage(argv[0]);
@@ -117,7 +119,16 @@ static Args parse_args(int argc, char** argv)
     {
         const char* t = std::getenv("INFLUX_TOKEN");
         if(t)
+        {
             a.influx_token = t;
+            std::cout << "[client_reader_stream] Influx token from ENV: " << a.influx_token << "\n";
+        }
+        else
+        {
+            std::cerr << "[client_reader_stream] Influx token not provided, exiting ...\n";
+            usage(argv[0]);
+            std::exit(2);
+        }
     }
     return a;
 }
@@ -125,7 +136,7 @@ static Args parse_args(int argc, char** argv)
 static inline uint64_t now_ns()
 {
     using namespace std::chrono;
-    return (uint64_t)duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
+    return high_resolution_clock::now().time_since_epoch().count();
 }
 
 static void
@@ -198,7 +209,7 @@ int main(int argc, char** argv)
     std::map<std::string, std::string> chronicle_attrs;
     std::map<std::string, std::string> story_attrs;
 
-    rc = client.CreateChronicle(args.chronicle, chronicle_attrs, flags);
+    // rc = client.CreateChronicle(args.chronicle, chronicle_attrs, flags);
 
     for(const auto& s: args.stories)
     {

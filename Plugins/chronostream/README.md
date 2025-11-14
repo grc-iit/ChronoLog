@@ -8,27 +8,27 @@ As part of the initial version of the streaming plugin we have a client streamin
 - The Grafana dashboard visualizes the metrics in Grafana for the particular Chronicle and Story
 
 ### 1. Scripts
-#### ClientScripts/client_writer.cpp
+#### `ClientScripts/client_writer.cpp`
 - **Purpose:** This is a simple client producer that writes CPU/Memory/Network metrics to ChronoLog
-- **How it works:** It reads real metrics from /proc, acquires/creates three stories (cpu_usage, memory_usage, network_usage), and logs values for every interval_sec
+- **How it works:** It reads real metrics from `/proc`, acquires/creates three stories (cpu_usage, memory_usage, network_usage), and logs values for every interval_sec
 
-#### ClientScripts/client_reader_stream_influx.cpp
+#### `ClientScripts/client_reader_stream_influx.cpp`
 - **Purpose:** This script streams the events from ChronoLog to InfluxDB for Grafana
 - **How it works:** It connects to ChronoLog, ensures the chronicle/stories exist, then on a loop calls the ReplayStory(t_start, t_end) api. The events are converted to line protocol through the transform api created and sent in batches via InfluxDBSink. It also maintains a pe -story cursor to avoid re reading the events
 
-#### StreamingScripts/InfluxDBSink.h and InfluxDBSink.cpp
+#### `StreamingScripts/InfluxDBSink.h and InfluxDBSink.cpp`
 - **Purpose:** This is the HTTP sink that posts the TelemetryBatch to InfluxDB v2
-- **How it works:** It Uses libcurl to POST line protocol to the configured write URL (org, bucket, precision=ns). It supports token auth, timeouts and retries
+- **How it works:** It uses libcurl to POST line protocol to the configured write URL (org, bucket, precision=ns). It supports token auth, timeouts and retries
 
-#### StreamingScripts/StreamSink.h
-- **Purpose:** This is the interface used for the streaming backends, it is generic so it can be re-used for api v2
+#### `StreamingScripts/StreamSink.h`
+- **Purpose:** This is the interface used for the streaming backends. It is generic so it can be re-used for API v2
 
-#### StreamingScripts/Transform.h and Transform.cpp
-- **Purpose:** This converts the ChronoLog events into TelemetryBatch customised for the Influx sink
-- **How it works:** It parses the payloads per story, adds tags (chronicle, story) and attaches the event timestamp (ns). It produces properly escaped line protocol ready for Influx
+#### `StreamingScripts/Transform.h and Transform.cpp`
+- **Purpose:** This converts the ChronoLog events into TelemetryBatch customized for the InfluxDB sink
+- **How it works:** It parses the payloads per story, adds tags (chronicle, story) and attaches the event timestamp (ns). It produces properly escaped line protocol ready for InfluxDB
 
-#### GrafanaInfluxSetup/
-- **Purpose:** This contains all the references for setting up Grafana and Influx
+#### `GrafanaInfluxSetup/`
+- **Purpose:** This contains all the references for setting up Grafana and InfluxDB
 - File `docker-compose.yml` is for launching the containers
 - File `.env` defines the env variables needed by the setup yml scripts
 - File `dashboards/chronolog_telemetry.json` is the json used for templating and auto provisioning the Grafana dashboard on start up so no manual intervention is needed on the UI
@@ -38,9 +38,9 @@ As part of the initial version of the streaming plugin we have a client streamin
 ### 2. Environment setup
 Launch the below commands on your terminal to get the session ready
 ``` bash
-cd Chronolog
+cd <ChronoLog code repo>
 source ~/<directory where spack is cloned>/spack/share/spack/setup-env.sh
-spack env activate -p .
+spack env activate .
 
 # Get your VM IP
 hostname -I | awk '{print $1}'
@@ -56,7 +56,7 @@ export INFLUX_TOKEN=chronolog-dev-token-123
 export INFLUX_URL="http://$VM_IP:8086/api/v2/write?org=$INFLUX_ORG&bucket=$INFLUX_BUCKET&precision=ns"
 ```
 Once you have the IP of your machine you need to update the hardcoded IP in the InfluxDB datasources file.
-- Go to `GrafanaStream/GrafanaInfluxSetup/provisioning/datasources/datasource.yml`
+- Go to `Plugins/chronostream/GrafanaInfluxSetup/provisioning/datasources/datasource.yml`
 - Update the IP in the data source URL
 
 Now build and install ChronoLog with the below commands:
@@ -69,7 +69,7 @@ cd $SRC_ROOT/tools/deploy/ChronoLog
 ### 3. Launch Grafana and InfluxDB 
 Launch the below commands to start the Grafana and InfluxDB docker containers
 ``` bash
-cd GrafanaStream/GrafanaInfluxSetup/
+cd Plugins/chronostream/GrafanaInfluxSetup/
 docker compose --env-file .env up -d
 
 # Confirm if the containers are up
@@ -79,7 +79,7 @@ CONTAINER ID   IMAGE                    COMMAND                  CREATED        
 5488475ce4b6   grafana/grafana:latest   "/run.sh"                48 minutes ago   Up 48 minutes   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp   grafana
 b8e1501da0f4   influxdb:2               "/entrypoint.sh infl…"   7 hours ago      Up 7 hours      0.0.0.0:8086->8086/tcp, [::]:8086->8086/tcp   influxdb
 ```
-To stop/cleanup/restart the containers launch this:
+To stop/cleanup/restart the containers launch these commands:
 ``` bash
 # Stop the containers
 docker compose down
@@ -89,29 +89,22 @@ docker volume rm $(docker volume ls -q | grep grafana-data)
 docker compose --env-file .env up -d
 ```
 
-### 4. Launch Chronolog components
+### 4. Launch ChronoLog components
 Launch the below commands on your terminal to get the session ready
 ``` bash
-# Reduce the acceptance window and max chunk size for chrono grapher and chrono player in the deafult config locally
-# Go to the installed location of chronolog
-cd ~/chronolog-install/chronolog/conf
-vi default_conf.json
-# For the chrono_grapher and chrono_player in the config json
-# Make acceptance_window_secs: 60 and max_story_chunk_size: 1048576
-
-# To start chronolog locally
+# To start ChronoLog locally
 ./local_single_user_deploy.sh -d -w $INSTALL_DIR
 
 # Confirm if you see all four chrono processes up and running
 ps -ef | grep chrono
 
 # Sample output:
-user    3238201       1  0 Aug18 pts/7    00:02:20 /home/user/chronolog-install/chronolog/bin/chronovisor_server --config /home/user/chronolog-install/chronolog/conf/visor_conf.json
-user    3238284       1  0 Aug18 pts/7    00:01:21 /home/user/chronolog-install/chronolog/bin/chrono_grapher --config /home/user/chronolog-install/chronolog/conf/grapher_conf_1.json
-user    3238351       1  0 Aug18 pts/7    00:01:15 /home/user/chronolog-install/chronolog/bin/chrono_player --config /home/user/chronolog-install/chronolog/conf/player_conf_1.json
-user    3238431       1 11 Aug18 pts/7    00:41:17 /home/user/chronolog-install/chronolog/bin/chrono_keeper --config /home/user/chronolog-install/chronolog/conf/keeper_conf_1.json
+user    3238201       1  0 Nov14 pts/7    00:02:20 /home/user/chronolog-install/chronolog/bin/chronovisor_server --config /home/user/chronolog-install/chronolog/conf/visor_conf.json
+user    3238284       1  0 Nov14 pts/7    00:01:21 /home/user/chronolog-install/chronolog/bin/chrono_grapher --config /home/user/chronolog-install/chronolog/conf/grapher_conf_1.json
+user    3238351       1  0 Nov14 pts/7    00:01:15 /home/user/chronolog-install/chronolog/bin/chrono_player --config /home/user/chronolog-install/chronolog/conf/player_conf_1.json
+user    3238431       1 11 Nov14 pts/7    00:41:17 /home/user/chronolog-install/chronolog/bin/chrono_keeper --config /home/user/chronolog-install/chronolog/conf/keeper_conf_1.json
 
-# To stop the chronolog processes
+# To stop the ChronoLog processes
 ./local_single_user_deploy.sh -s -w $INSTALL_DIR
 ```
 
@@ -210,7 +203,7 @@ clang-format -style=file -i <fname>
 ```
 
 ## API v2 - In Progress
-As the next step the goal is to update Grafana to use Chronolog directly as the data source instead of third party data store like InfluxDB
+As the next step the goal is to update Grafana to use ChronoLog directly as the data source instead of third party data store like InfluxDB
 - We want to create a new ChronoLog data source visible on Grafana
 - This will be used for the dashboards directly
 

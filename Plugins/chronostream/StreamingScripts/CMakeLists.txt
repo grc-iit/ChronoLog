@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.25)
 
 add_library(grafana_stream STATIC
-  InfluxDBSink.cpp
-  Transform.cpp
+    InfluxDBSink.cpp
+    Transform.cpp
 )
 
 set(CHRONOLOG_GEN_INCLUDE_DIR "${CMAKE_BINARY_DIR}/Client/cpp/include")
 set(CHRONOLOG_SRC_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Client/cpp/include")
 target_include_directories(grafana_stream
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}  
+    .
     ${CHRONOLOG_GEN_INCLUDE_DIR}   
     ${CHRONOLOG_SRC_INCLUDE_DIR} 
 )

@@ -119,7 +119,6 @@ Sample output:
 [ChronoLog] user@localhost:~/Desktop/ChronoLog$ export CHRONICLE=grafana_chronicle
 [ChronoLog] user@localhost:~/Desktop/ChronoLog$ $INSTALL_DIR/bin/client_writer -c $INSTALL_DIR/conf/default_client_conf.json -r "$CHRONICLE" -d 120 -i 5 
 [writer] config=/home/user/chronolog-install/chronolog/conf/default_client_conf.json chronicle=grafana_chronicle duration=120s interval=5s
-[debug] chronicles: test8 test9 test7 test3 test5 test2 test1 test0
 [debug] stories under grafana_chronicle:
 [writer] cpu=0.0% mem=1341.2MB net=0,0 bytes
 [writer] cpu=3.9% mem=1338.8MB net=13614,35196 bytes
@@ -189,18 +188,12 @@ kill -KILL <pid>
 ### 7. View the Grafana dashboards
 - Go to http://<vm_ip>:3000/
 - Login is admin,admin
-- Go to Dashboards -> Chronolog -> ChronologTelemetry -> View the panel for the dashboard
+- Go to Dashboards -> ChronoLog -> ChronoLog Telemetry -> View the panel for the dashboard
 - This is what it should look like:
 ![screenshot](readmeImgs/main.png)
 
 - You can now filter with the time/story name/chronicle name by manually entering the chronicle name or story name on the dashboard and click refresh:
 ![screenshot](readmeImgs/filtered.png)
-
-### 8. Code format before pushing
-``` bash
-cp CodeStyleFiles/ChronoLog.clang-format .clang-format
-clang-format -style=file -i <fname>
-```
 
 ## API v2 - In Progress
 As the next step the goal is to update Grafana to use ChronoLog directly as the data source instead of third party data store like InfluxDB

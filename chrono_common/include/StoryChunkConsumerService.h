@@ -1,43 +1,40 @@
-#ifndef GRAPHER_RECORDING_SERVICE_H
-#define GRAPHER_RECORDING_SERVICE_H
+#ifndef STORY_CHUNK_CONSUMER_SERVICE_H
+#define STORY_CHUNK_CONSUMER_SERVICE_H
 
 #include <iostream>
-#include <vector>
-#include <chrono>
-#include <sstream>
-#include <exception>
 #include <margo.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/string.hpp>
 #include <cereal/archives/binary.hpp>
 
 #include <chronolog_errcode.h>
-#include <KeeperIdCard.h>
+#include <ServiceId.h>
 #include <chronolog_types.h>
-#include <StoryChunk.h>
 
-#include "ChunkIngestionQueue.h"
+#include "StoryChunkIngestionQueue.h"
 
 namespace tl = thallium;
 
 namespace chronolog
 {
-class GrapherRecordingService: public tl::provider<GrapherRecordingService>
+class StoryChunkConsumerService: public tl::provider<StoryChunkConsumerService>
 {
 public:
-    // RecordingService should be created on the heap not the stack thus the constructor is private...
-    static GrapherRecordingService*
-    CreateRecordingService(tl::engine& tl_engine, uint16_t service_provider_id, ChunkIngestionQueue& ingestion_queue)
+    // Service should be created on the heap not the stack thus the constructor is private...
+    static StoryChunkConsumerService* CreateChunkConsumerService(tl::engine& tl_engine,
+                                                                 uint16_t service_provider_id,
+                                                                 StoryChunkIngestionQueue& ingestion_queue)
     {
-        return new GrapherRecordingService(tl_engine, service_provider_id, ingestion_queue);
+        return new StoryChunkConsumerService(tl_engine, service_provider_id, ingestion_queue);
     }
 
-    ~GrapherRecordingService()
+    ~StoryChunkConsumerService()
     {
-        LOG_DEBUG("[GrapherRecordingService] Destructor called. Cleaning up...");
+        LOG_DEBUG("[StoryChunkConsumerService] Destructor called. Cleaning up...");
         get_engine().pop_finalize_callback(this);
     }
 
+    void is_receiver_available(tl::request const& request) { request.respond(true); }
 
     void receive_story_chunk(tl::request const& request, tl::bulk& b)
     {
@@ -45,23 +42,24 @@ public:
         {
             std::vector<char> mem_vec(b.size());
             std::chrono::high_resolution_clock::time_point start, end;
-            LOG_DEBUG("[GrapherRecordingService] StoryChunk recording RPC invoked, ThreadID={}", tl::thread::self_id());
+            LOG_DEBUG("[StoryChunkConsumerService] StoryChunk recording RPC invoked, ThreadID={}",
+                      tl::thread::self_id());
             tl::endpoint ep = request.get_endpoint();
-            LOG_DEBUG("[GrapherRecordingService] Endpoint obtained, ThreadID={}", tl::thread::self_id());
+            LOG_DEBUG("[StoryChunkConsumerService] Endpoint obtained, ThreadID={}", tl::thread::self_id());
             std::vector<std::pair<void*, std::size_t>> segments(1);
             segments[0].first = (void*)(&mem_vec[0]);
             segments[0].second = mem_vec.size();
-            LOG_DEBUG("[GrapherRecordingService] Bulk memory prepared, size: {}, ThreadID={}",
+            LOG_DEBUG("[StoryChunkConsumerService] Bulk memory prepared, size: {}, ThreadID={}",
                       mem_vec.size(),
                       tl::thread::self_id());
             tl::engine tl_engine = get_engine();
-            LOG_DEBUG("[GrapherRecordingService] Engine addr: {}, ThreadID={}",
+            LOG_DEBUG("[StoryChunkConsumerService] Engine addr: {}, ThreadID={}",
                       (void*)&tl_engine,
                       tl::thread::self_id());
             tl::bulk local = tl_engine.expose(segments, tl::bulk_mode::write_only);
-            LOG_DEBUG("[GrapherRecordingService] Bulk memory exposed, ThreadID={}", tl::thread::self_id());
+            LOG_DEBUG("[StoryChunkConsumerService] Bulk memory exposed, ThreadID={}", tl::thread::self_id());
             b.on(ep) >> local;
-            LOG_DEBUG("[GrapherRecordingService] Received {} bytes of StoryChunk data, ThreadID={}",
+            LOG_DEBUG("[StoryChunkConsumerService] Received {} bytes of StoryChunk data, ThreadID={}",
                       b.size(),
                       tl::thread::self_id());
 
@@ -72,29 +70,29 @@ public:
             int ret = deserializedWithCereal(&mem_vec[0], b.size(), *story_chunk);
             if(ret != chronolog::CL_SUCCESS)
             {
-                LOG_ERROR("[GrapherRecordingService] Failed to deserialize a story chunk, ThreadID={}",
+                LOG_ERROR("[StoryChunkConsumerService] Failed to deserialize a story chunk, ThreadID={}",
                           tl::thread::self_id());
                 delete story_chunk;
                 ret = 10000000 + tl::thread::self_id(); // arbitrary error code encoded with thread id
-                LOG_ERROR("[GrapherRecordingService] Discarding the story chunk, responding {} to Keeper", ret);
+                LOG_ERROR("[StoryChunkConsumerService] Discarding the story chunk, responding {} to Keeper", ret);
                 request.respond(ret);
                 return;
             }
 #ifndef NDEBUG
             end = std::chrono::high_resolution_clock::now();
-            LOG_INFO("[GrapherRecordingService] Deserialization took {} us, ThreadID={}",
+            LOG_INFO("[StoryChunkConsumerService] Deserialization took {} us, ThreadID={}",
                      std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1000.0,
                      tl::thread::self_id());
 #endif
-            LOG_DEBUG(
-                    "[GrapherRecordingService] StoryChunk received: StoryId {} StartTime {} eventCount {} ThreadID={}",
-                    story_chunk->getStoryId(),
-                    story_chunk->getStartTime(),
-                    story_chunk->getEventCount(),
-                    tl::thread::self_id());
+            LOG_DEBUG("[StoryChunkConsumerService] StoryChunk received: StoryId {} StartTime {} eventCount {} "
+                      "ThreadID={}",
+                      story_chunk->getStoryId(),
+                      story_chunk->getStartTime(),
+                      story_chunk->getEventCount(),
+                      tl::thread::self_id());
 
             request.respond(b.size());
-            LOG_DEBUG("[GrapherRecordingService] StoryChunk recording RPC responded {}, ThreadID={}",
+            LOG_DEBUG("[StoryChunkConsumerService] StoryChunk recording RPC responded {}, ThreadID={}",
                       b.size(),
                       tl::thread::self_id());
 
@@ -102,7 +100,7 @@ public:
         }
         catch(std::bad_alloc const& ex)
         {
-            LOG_ERROR("[GrapherRecordingService] Failed to allocate memory for StoryChunk data, ThreadID={}",
+            LOG_ERROR("[StoryChunkConsumerService] Failed to allocate memory for StoryChunk data, ThreadID={}",
                       tl::thread::self_id());
             request.respond(20000000 + tl::thread::self_id());
             return;
@@ -110,11 +108,13 @@ public:
     }
 
 private:
-    GrapherRecordingService(tl::engine& tl_engine, uint16_t service_provider_id, ChunkIngestionQueue& ingestion_queue)
-        : tl::provider<GrapherRecordingService>(tl_engine, service_provider_id)
+    StoryChunkConsumerService(tl::engine& tl_engine,
+                              uint16_t service_provider_id,
+                              StoryChunkIngestionQueue& ingestion_queue)
+        : tl::provider<StoryChunkConsumerService>(tl_engine, service_provider_id)
         , theIngestionQueue(ingestion_queue)
     {
-        define("receive_story_chunk", &GrapherRecordingService::receive_story_chunk);
+        define("receive_story_chunk", &StoryChunkConsumerService::receive_story_chunk);
         //set up callback for the case when the engine is being finalized while this provider is still alive
         get_engine().push_finalize_callback(this, [p = this]() { delete p; });
     }
@@ -131,36 +131,36 @@ private:
         }
         catch(cereal::Exception const& ex)
         {
-            LOG_ERROR("[GrapherRecordingService] Failed to deserialize a story chunk, size={}, ThreadID={}. "
+            LOG_ERROR("[StoryChunkConsumerService] Failed to deserialize a story chunk, size={}, ThreadID={}. "
                       "Cereal exception encountered.",
                       ss.str().size(),
                       tl::thread::self_id());
-            LOG_ERROR("[GrapherRecordingService] Exception: {}", ex.what());
+            LOG_ERROR("[StoryChunkConsumerService] Exception: {}", ex.what());
             return chronolog::CL_ERR_UNKNOWN;
         }
         catch(std::exception const& ex)
         {
-            LOG_ERROR("[GrapherRecordingService] Failed to deserialize a story chunk, size={}, ThreadID={}. "
+            LOG_ERROR("[StoryChunkConsumerService] Failed to deserialize a story chunk, size={}, ThreadID={}. "
                       "std::exception encountered.",
                       ss.str().size(),
                       tl::thread::self_id());
-            LOG_ERROR("[GrapherRecordingService] Exception: {}", ex.what());
+            LOG_ERROR("[StoryChunkConsumerService] Exception: {}", ex.what());
             return chronolog::CL_ERR_UNKNOWN;
         }
         catch(...)
         {
-            LOG_ERROR("[GrapherRecordingService] Failed to deserialize a story chunk, ThreadID={}. Unknown exception "
+            LOG_ERROR("[StoryChunkConsumerService] Failed to deserialize a story chunk, ThreadID={}. Unknown exception "
                       "encountered.",
                       tl::thread::self_id());
             return chronolog::CL_ERR_UNKNOWN;
         }
     }
 
-    GrapherRecordingService(GrapherRecordingService const&) = delete;
+    StoryChunkConsumerService(StoryChunkConsumerService const&) = delete;
 
-    GrapherRecordingService& operator=(GrapherRecordingService const&) = delete;
+    StoryChunkConsumerService& operator=(StoryChunkConsumerService const&) = delete;
 
-    ChunkIngestionQueue& theIngestionQueue;
+    StoryChunkIngestionQueue& theIngestionQueue;
 };
 
 } // namespace chronolog

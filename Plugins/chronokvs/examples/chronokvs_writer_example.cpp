@@ -4,14 +4,24 @@
 #include <fstream>
 #include "chronokvs.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-    // Create ChronoKVS instance
-    // Option 1: Default configuration (connects to localhost:5555)
-    chronokvs::ChronoKVS chronoKVS;
+    // Parse command line arguments for -c config_file
+    std::string config_path;
+    for(int i = 1; i < argc; i++)
+    {
+        if(std::string(argv[i]) == "-c" && i + 1 < argc)
+        {
+            config_path = argv[i + 1];
+            std::cout << "Using configuration file: " << config_path << std::endl;
+            break;
+        }
+    }
 
-    // Option 2: With custom configuration file for distributed deployments
-    // chronokvs::ChronoKVS chronoKVS("/path/to/client_conf.json");
+    // Create ChronoKVS instance
+    // Default: connects to localhost:5555
+    // With -c flag: loads configuration from specified file
+    chronokvs::ChronoKVS chronoKVS(config_path);
 
     // Define key-value pairs
     std::string key1 = "key1";

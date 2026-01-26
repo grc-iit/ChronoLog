@@ -24,10 +24,22 @@ std::vector<std::uint64_t> readTimestampsFromFile(const std::string& filename)
     return timestamps;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    // Parse command line arguments for -c config_file
+    std::string config_path;
+    for(int i = 1; i < argc; i++)
+    {
+        if(std::string(argv[i]) == "-c" && i + 1 < argc)
+        {
+            config_path = argv[i + 1];
+            std::cout << "Using configuration file: " << config_path << std::endl;
+            break;
+        }
+    }
+
     // Create ChronoKVS instance
-    chronokvs::ChronoKVS chronoKVS;
+    chronokvs::ChronoKVS chronoKVS(config_path);
 
     // Read timestamps from file
     std::vector<std::uint64_t> timestamps = readTimestampsFromFile("chronokvs_timestamps.txt");

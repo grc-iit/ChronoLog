@@ -35,6 +35,12 @@ private:
     std::vector<int> random_indices;
     std::vector<chronokvs::EventData> history_events;
 
+public:
+    ChronoKVSTest() : kvs() {}
+    explicit ChronoKVSTest(const std::string& config_path) : kvs(config_path) {}
+
+private:
+
     void printHeader(const std::string& title)
     {
         std::cout << "\n" << std::string(60, '=') << std::endl;
@@ -632,11 +638,23 @@ public:
     }
 };
 
-int main()
+int main(int argc, char* argv[])
 {
     try
     {
-        ChronoKVSTest test;
+        // Parse command line arguments for -c config_file
+        std::string config_path;
+        for(int i = 1; i < argc; i++)
+        {
+            if(std::string(argv[i]) == "-c" && i + 1 < argc)
+            {
+                config_path = argv[i + 1];
+                std::cout << "Using configuration file: " << config_path << std::endl;
+                break;
+            }
+        }
+
+        ChronoKVSTest test(config_path);
         bool success = test.runAllTests();
         return success ? 0 : 1;
     }

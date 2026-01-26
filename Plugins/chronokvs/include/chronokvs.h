@@ -21,6 +21,7 @@ private:
 
 public:
     ChronoKVS();
+    explicit ChronoKVS(const std::string& config_path);
 
     ~ChronoKVS();
 

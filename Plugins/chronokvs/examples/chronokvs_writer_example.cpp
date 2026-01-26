@@ -7,7 +7,11 @@
 int main()
 {
     // Create ChronoKVS instance
+    // Option 1: Default configuration (connects to localhost:5555)
     chronokvs::ChronoKVS chronoKVS;
+
+    // Option 2: With custom configuration file for distributed deployments
+    // chronokvs::ChronoKVS chronoKVS("/path/to/client_conf.json");
 
     // Define key-value pairs
     std::string key1 = "key1";

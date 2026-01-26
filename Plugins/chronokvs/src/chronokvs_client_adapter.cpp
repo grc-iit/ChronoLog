@@ -14,9 +14,26 @@ namespace chronokvs
 // Default flags for ChronoLog operations - not const since the API requires non-const reference
 static int DEFAULT_FLAGS = 0;
 
-ChronoKVSClientAdapter::ChronoKVSClientAdapter()
+ChronoKVSClientAdapter::ChronoKVSClientAdapter() : ChronoKVSClientAdapter("") {}
+
+ChronoKVSClientAdapter::ChronoKVSClientAdapter(const std::string& config_path)
 {
     chronolog::ClientConfiguration confManager;
+
+    // Load config file if path provided
+    if(!config_path.empty())
+    {
+        std::cerr << "[ChronoKVS] Loading configuration from file: " << config_path << std::endl;
+        if(!confManager.load_from_file(config_path))
+        {
+            throw std::runtime_error("Failed to load configuration file: " + config_path);
+        }
+        std::cerr << "[ChronoKVS] Configuration loaded successfully" << std::endl;
+    }
+    else
+    {
+        std::cerr << "[ChronoKVS] Using default configuration (localhost)" << std::endl;
+    }
 
     // Configure portal and query services from the configuration manager
     chronolog::ClientPortalServiceConf portalConf{confManager.PORTAL_CONF.PROTO_CONF,

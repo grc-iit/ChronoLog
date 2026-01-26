@@ -32,6 +32,7 @@ private:
 
 public:
     ChronoKVSClientAdapter();
+    explicit ChronoKVSClientAdapter(const std::string& config_path);
 
     ~ChronoKVSClientAdapter();
 

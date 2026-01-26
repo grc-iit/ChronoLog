@@ -10,8 +10,10 @@
 namespace chronokvs
 {
 
-ChronoKVS::ChronoKVS()
-    : mapper(std::make_unique<ChronoKVSMapper>()) // Use member initializer list
+ChronoKVS::ChronoKVS() : ChronoKVS("") {}
+
+ChronoKVS::ChronoKVS(const std::string& config_path)
+    : mapper(std::make_unique<ChronoKVSMapper>(config_path))
 {}
 
 ChronoKVS::~ChronoKVS() = default;

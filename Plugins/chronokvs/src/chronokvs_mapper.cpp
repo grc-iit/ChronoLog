@@ -14,7 +14,12 @@ namespace chronokvs
 constexpr uint64_t MIN_TIMESTAMP = 1;                   // Earliest possible timestamp
 constexpr uint64_t MAX_TIMESTAMP = 2000000000000000000; // ~May 18, 2033 03:33:20 UTC
 
-ChronoKVSMapper::ChronoKVSMapper() { chronoClientAdapter = std::make_unique<ChronoKVSClientAdapter>(); }
+ChronoKVSMapper::ChronoKVSMapper() : ChronoKVSMapper("") {}
+
+ChronoKVSMapper::ChronoKVSMapper(const std::string& config_path)
+{
+    chronoClientAdapter = std::make_unique<ChronoKVSClientAdapter>(config_path);
+}
 
 std::uint64_t ChronoKVSMapper::storeKeyValue(const std::string& key, const std::string& value)
 {

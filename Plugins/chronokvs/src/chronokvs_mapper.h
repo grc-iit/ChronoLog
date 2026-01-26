@@ -20,6 +20,7 @@ private:
 
 public:
     ChronoKVSMapper();
+    explicit ChronoKVSMapper(const std::string& config_path);
 
     ~ChronoKVSMapper() = default;
 

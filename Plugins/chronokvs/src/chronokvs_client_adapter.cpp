@@ -14,7 +14,9 @@ namespace chronokvs
 // Default flags for ChronoLog operations - not const since the API requires non-const reference
 static int DEFAULT_FLAGS = 0;
 
-ChronoKVSClientAdapter::ChronoKVSClientAdapter() : ChronoKVSClientAdapter("") {}
+ChronoKVSClientAdapter::ChronoKVSClientAdapter()
+    : ChronoKVSClientAdapter("")
+{}
 
 ChronoKVSClientAdapter::ChronoKVSClientAdapter(const std::string& config_path)
 {

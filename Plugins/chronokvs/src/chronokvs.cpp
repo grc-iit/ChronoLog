@@ -10,7 +10,9 @@
 namespace chronokvs
 {
 
-ChronoKVS::ChronoKVS() : ChronoKVS("") {}
+ChronoKVS::ChronoKVS()
+    : ChronoKVS("")
+{}
 
 ChronoKVS::ChronoKVS(const std::string& config_path)
     : mapper(std::make_unique<ChronoKVSMapper>(config_path))

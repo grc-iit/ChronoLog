@@ -36,11 +36,14 @@ private:
     std::vector<chronokvs::EventData> history_events;
 
 public:
-    ChronoKVSTest() : kvs() {}
-    explicit ChronoKVSTest(const std::string& config_path) : kvs(config_path) {}
+    ChronoKVSTest()
+        : kvs()
+    {}
+    explicit ChronoKVSTest(const std::string& config_path)
+        : kvs(config_path)
+    {}
 
 private:
-
     void printHeader(const std::string& title)
     {
         std::cout << "\n" << std::string(60, '=') << std::endl;

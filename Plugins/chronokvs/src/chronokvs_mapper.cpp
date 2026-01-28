@@ -12,8 +12,8 @@ namespace chronokvs
 {
 
 // Constants for time range boundaries (used across multiple retrieval methods)
-constexpr uint64_t MIN_TIMESTAMP = 1;          // Earliest possible timestamp
-constexpr uint64_t MAX_TIMESTAMP = UINT64_MAX; // Maximum possible uint64_t value
+constexpr uint64_t MIN_TIMESTAMP = 1;                   // Earliest possible timestamp
+constexpr uint64_t MAX_TIMESTAMP = 2000000000000000000; // ~May 18, 2033 03:33:20 UTC (ChronoLog query limit)
 
 ChronoKVSMapper::ChronoKVSMapper()
     : ChronoKVSMapper("")

@@ -548,16 +548,24 @@ public:
         // Test 2: Get History
         test2_result = test2_get_history();
 
-        // Test 3: Get (only if we have data from previous tests)
-        if(test1_result && timestamps.size() > 0)
+        // Test 3: Get (only if we have data from previous tests AND random_indices was populated in Test 2)
+        if(test1_result && timestamps.size() > 0 && random_indices.size() > 0)
         {
             test3_result = test3_get();
         }
         else
         {
             printHeader("TEST 3: GET OPERATIONS");
-            std::cout << "  ⚠️  Skipping Test 3 (Get) - no data available from Test 1" << std::endl;
-            std::cout << "  This test requires successful put operations to proceed" << std::endl;
+            if(random_indices.empty())
+            {
+                std::cout << "  ⚠️  Skipping Test 3 (Get) - Test 2 failed to populate random indices" << std::endl;
+                std::cout << "  This test requires successful history retrieval in Test 2" << std::endl;
+            }
+            else
+            {
+                std::cout << "  ⚠️  Skipping Test 3 (Get) - no data available from Test 1" << std::endl;
+                std::cout << "  This test requires successful put operations to proceed" << std::endl;
+            }
             test3_result = false;
         }
 

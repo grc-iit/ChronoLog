@@ -69,6 +69,8 @@ ChronoKVSClientAdapter::ChronoKVSClientAdapter(const std::string& config_path)
     {
         std::cerr << "[ChronoKVS] Failed to create chronicle '" << defaultChronicle << "' with error code: " << ret
                   << std::endl;
+        chronolog->Disconnect();
+        chronolog.reset();
         throw std::runtime_error("Failed to create chronicle with error code: " + std::to_string(ret));
     }
     std::cerr << "[ChronoKVS] Chronicle '" << defaultChronicle << "' ready for operations" << std::endl;

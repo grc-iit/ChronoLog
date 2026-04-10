@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 find_package(Threads REQUIRED)
-set(CHRONOLOG_GEN_INCLUDE_DIR "${CMAKE_BINARY_DIR}/Client/include")
+set(CHRONOLOG_GEN_INCLUDE_DIR "${CMAKE_BINARY_DIR}/client/include")
 set(GRAFANA_STREAM_PUBLIC_INCLUDE
     ${CHRONOLOG_GEN_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/GrafanaStream/StreamingScripts
@@ -14,7 +14,7 @@ add_executable(client_writer
 target_include_directories(client_writer
     PRIVATE
     ${GRAFANA_STREAM_PUBLIC_INCLUDE}
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
 )
 
 target_link_libraries(client_writer

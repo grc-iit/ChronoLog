@@ -14,8 +14,8 @@ add_executable(story_chunk_test
 )
 
 target_include_directories(story_chunk_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/Client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
+    ${CMAKE_SOURCE_DIR}/client/cpp/include
 )
 
 target_link_libraries(story_chunk_test PRIVATE
@@ -36,8 +36,8 @@ add_executable(story_pipeline_test
 )
 
 target_include_directories(story_pipeline_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/Client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
+    ${CMAKE_SOURCE_DIR}/client/cpp/include
 )
 
 target_link_libraries(story_pipeline_test PRIVATE
@@ -61,8 +61,8 @@ add_executable(extraction_chain_test
 )
 
 target_include_directories(extraction_chain_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/Client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
+    ${CMAKE_SOURCE_DIR}/client/cpp/include
 )
 
 target_link_libraries(extraction_chain_test PRIVATE
@@ -90,8 +90,8 @@ add_executable(chunk_consumer_service_test
 )
 
 target_include_directories(chunk_consumer_service_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/Client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
+    ${CMAKE_SOURCE_DIR}/client/cpp/include
 )
 
 target_link_libraries(chunk_consumer_service_test PRIVATE

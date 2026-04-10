@@ -12,8 +12,8 @@ add_executable(client_admin
 )
 
 target_include_directories(client_admin PRIVATE
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
-    ${CMAKE_SOURCE_DIR}/Client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
+    ${CMAKE_SOURCE_DIR}/client/cpp/include
     ${MPI_INCLUDE_PATH}
     ${MARGO_INCLUDE_DIRS}
 )
@@ -35,7 +35,7 @@ set_target_properties(client_admin PROPERTIES
 )
 
 configure_file(
-    ${CMAKE_SOURCE_DIR}/default_conf.json.in
+    ${CMAKE_SOURCE_DIR}/conf/default_conf.json.in
     ${CMAKE_CURRENT_BINARY_DIR}/default_conf.json
     COPYONLY
 )

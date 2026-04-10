@@ -214,7 +214,7 @@ if(CHRONOLOG_ENABLE_DOXYGEN)
         BUILD_DIR
         ${CMAKE_CURRENT_BINARY_DIR}/_build
         DOXY_FILE
-        ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+        ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in
         TARGET_NAME
         dox
         COMMENT
@@ -229,8 +229,8 @@ add_custom_target(lint COMMAND cpplint --recursive
     --exclude=${CMAKE_CURRENT_SOURCE_DIR}/build
     --exclude=${CMAKE_CURRENT_SOURCE_DIR}/cmake-build-debug
     --exclude=${CMAKE_CURRENT_SOURCE_DIR}/external_libs
-    --exclude=${CMAKE_CURRENT_SOURCE_DIR}/doc
-    --exclude=${CMAKE_CURRENT_SOURCE_DIR}/CI
+    --exclude=${CMAKE_CURRENT_SOURCE_DIR}/docs
+    --exclude=${CMAKE_CURRENT_SOURCE_DIR}/ci
     ${CMAKE_CURRENT_SOURCE_DIR})
 
 #------------------------------------------------------------------------------
@@ -249,19 +249,19 @@ endif()
 #------------------------------------------------------------------------------
 # ChronoLog Components
 #------------------------------------------------------------------------------
-add_subdirectory(chrono_common)
-add_subdirectory(Client)
-add_subdirectory(ChronoVisor)
-add_subdirectory(ChronoKeeper)
-add_subdirectory(ChronoGrapher)
-add_subdirectory(ChronoPlayer)
+add_subdirectory(src/chrono-common)
+add_subdirectory(client)
+add_subdirectory(src/chrono-visor)
+add_subdirectory(src/chrono-keeper)
+add_subdirectory(src/chrono-grapher)
+add_subdirectory(src/chrono-player)
 add_subdirectory(ChronoStore)
 add_subdirectory(tools)
-add_subdirectory(Plugins)
+add_subdirectory(plugins)
 
 if(CHRONOLOG_BUILD_TESTS_NOW)
     enable_testing()
-    add_subdirectory(test)
+    add_subdirectory(tests)
 endif()
 
 #------------------------------------------------------------------------------

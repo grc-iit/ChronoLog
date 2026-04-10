@@ -13,7 +13,7 @@ add_executable(client_lib_writer_example
 )
 
 target_include_directories(client_lib_writer_example PRIVATE
-    ${CMAKE_BINARY_DIR}/Client/cpp/include
+    ${CMAKE_BINARY_DIR}/client/cpp/include
 )
 
 target_link_libraries(client_lib_writer_example
@@ -35,7 +35,7 @@ add_executable(client_lib_reader_example
 )
 
 target_include_directories(client_lib_reader_example PRIVATE
-    ${CMAKE_BINARY_DIR}/Client/cpp/include
+    ${CMAKE_BINARY_DIR}/client/cpp/include
 )
 
 target_link_libraries(client_lib_reader_example
@@ -57,7 +57,7 @@ add_executable(client_lib_basic_example
 )
 
 target_include_directories(client_lib_basic_example PRIVATE
-    ${CMAKE_BINARY_DIR}/Client/cpp/include
+    ${CMAKE_BINARY_DIR}/client/cpp/include
 )
 
 target_link_libraries(client_lib_basic_example
@@ -80,7 +80,7 @@ add_executable(client_lib_distributed_telemetry_writer_example
 )
 
 target_include_directories(client_lib_distributed_telemetry_writer_example PRIVATE
-    ${CMAKE_BINARY_DIR}/Client/cpp/include
+    ${CMAKE_BINARY_DIR}/client/cpp/include
 )
 
 target_link_libraries(client_lib_distributed_telemetry_writer_example
@@ -104,8 +104,8 @@ add_executable(client_lib_reader_to_csv_example
 )
 
 target_include_directories(client_lib_reader_to_csv_example PRIVATE
-    ${CMAKE_BINARY_DIR}/Client/cpp/include
-    ${CMAKE_SOURCE_DIR}/chrono_common/include
+    ${CMAKE_BINARY_DIR}/client/cpp/include
+    ${CMAKE_SOURCE_DIR}/src/chrono-common/include
 )
 
 target_link_libraries(client_lib_reader_to_csv_example

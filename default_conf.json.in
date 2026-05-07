@@ -41,6 +41,7 @@
   "chrono_keeper": {
     "RecordingGroup": 7,
     "KeeperRecordingService": {
+      "IngestionThreadCount": 4,
       "rpc": {
         "protocol_conf": "ofi+sockets",
         "service_ip": "127.0.0.1",
@@ -96,6 +97,7 @@
   "chrono_grapher": {
     "RecordingGroup": 7,
     "KeeperGrapherDrainService": {
+      "IngestionThreadCount": 1,
       "rpc": {
         "protocol_conf": "ofi+sockets",
         "service_ip": "127.0.0.1",
@@ -151,6 +153,7 @@
       }
     },
     "PlaybackQueryService": {
+      "IngestionThreadCount": 1,
       "rpc": {
         "protocol_conf": "ofi+sockets",
         "service_ip": "127.0.0.1",
